@@ -5,9 +5,11 @@ interface EngineCardProps {
   name: string;
   version: string;
   isDefault?: boolean;
+  onLaunch?: () => void;
+  onManage?: () => void;
 }
 
-export function EngineCard({ name, version, isDefault }: EngineCardProps) {
+export function EngineCard({ name, version, isDefault, onLaunch, onManage }: EngineCardProps) {
   return (
     <motion.div
       className="bg-card rounded-xl border border-border p-6 group cursor-pointer"
@@ -32,11 +34,23 @@ export function EngineCard({ name, version, isDefault }: EngineCardProps) {
           <p className="text-sm text-muted-foreground mb-4">Version {version}</p>
 
           <div className="flex gap-2">
-            <button className="flex-1 px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                onLaunch?.();
+              }}
+              className="flex-1 px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            >
               <Play className="w-4 h-4" />
               Launch
             </button>
-            <button className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                onManage?.();
+              }}
+              className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            >
               <Settings className="w-4 h-4" />
               Manage
             </button>

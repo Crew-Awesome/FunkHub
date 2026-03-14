@@ -413,6 +413,35 @@ export class FunkHubService {
     await window.funkhubDesktop.launchEngine({ installPath: engine.installPath });
   }
 
+  async launchEngine(engineId: string): Promise<void> {
+    const engine = this.installedEngines.find((entry) => entry.id === engineId);
+    if (!engine) {
+      throw new Error("Engine installation not found");
+    }
+
+    if (!window.funkhubDesktop?.launchEngine) {
+      throw new Error("Desktop bridge unavailable for launching");
+    }
+
+    await window.funkhubDesktop.launchEngine({ installPath: engine.installPath });
+  }
+
+  async openEngineFolder(engineId: string): Promise<void> {
+    const engine = this.installedEngines.find((entry) => entry.id === engineId);
+    if (!engine) {
+      throw new Error("Engine installation not found");
+    }
+
+    if (!window.funkhubDesktop?.openPath) {
+      throw new Error("Desktop bridge unavailable for folder management");
+    }
+
+    const result = await window.funkhubDesktop.openPath({ targetPath: engine.installPath });
+    if (!result.ok) {
+      throw new Error(result.error || "Failed to open engine folder");
+    }
+  }
+
   cancelDownload(taskId: string): void {
     const task = this.downloadHistory.find((entry) => entry.id === taskId);
     downloadManager.cancel(taskId);

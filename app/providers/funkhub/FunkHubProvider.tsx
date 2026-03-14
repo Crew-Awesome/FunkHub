@@ -39,6 +39,8 @@ interface FunkHubContextValue {
   getModProfile: (modId: number) => Promise<GameBananaModProfile>;
   installMod: (modId: number, fileId: number, selectedEngineId?: string, priority?: number) => void;
   installEngine: (slug: InstalledEngine["slug"], downloadUrl: string, version: string) => Promise<void>;
+  launchEngine: (engineId: string) => Promise<void>;
+  openEngineFolder: (engineId: string) => Promise<void>;
   launchInstalledMod: (installedId: string) => Promise<void>;
   cancelDownload: (taskId: string) => void;
   setDefaultEngine: (engineId: string) => void;
@@ -185,6 +187,12 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       installEngine: async (slug, downloadUrl, version) => {
         await funkHubService.installEngineFromRelease({ slug, releaseUrl: downloadUrl, releaseVersion: version });
         setInstalledEngines(funkHubService.getInstalledEngines());
+      },
+      launchEngine: async (engineId) => {
+        await funkHubService.launchEngine(engineId);
+      },
+      openEngineFolder: async (engineId) => {
+        await funkHubService.openEngineFolder(engineId);
       },
       launchInstalledMod: async (installedId) => {
         await funkHubService.launchInstalledMod(installedId);

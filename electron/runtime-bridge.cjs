@@ -526,6 +526,16 @@ async function findLaunchableExecutable(dirPath) {
       if (process.platform === "linux" && (lower.endsWith(".appimage") || lower.endsWith(".x86_64") || lower.endsWith(".sh"))) {
         return fullPath;
       }
+      if (process.platform === "linux") {
+        try {
+          const stats = await fs.stat(fullPath);
+          if ((stats.mode & 0o111) !== 0) {
+            return fullPath;
+          }
+        } catch {
+          // Ignore stat failures and continue searching.
+        }
+      }
     }
   }
   return null;
@@ -547,6 +557,17 @@ async function handleLaunchEngine(payload) {
     throw new Error("No launchable engine executable found");
   }
 
+  if (process.platform === "linux") {
+    try {
+      const stats = await fs.stat(launchable);
+      if ((stats.mode & 0o111) === 0) {
+        await fs.chmod(launchable, 0o755);
+      }
+    } catch {
+      // Keep going and let spawn surface the real error.
+    }
+  }
+
   const child = spawn(launchable, [], {
     detached: true,
     stdio: "ignore",
@@ -555,6 +576,26 @@ async function handleLaunchEngine(payload) {
   child.unref();
 
   return { ok: true, launchedPath: launchable };
+}
+
+async function handleOpenPath(payload) {
+  const targetPath = payload?.targetPath;
+  if (!targetPath) {
+    throw new Error("targetPath is required");
+  }
+
+  const { shell } = require("electron");
+  const { dataRootDirectory } = await getEffectiveSettings();
+  const rootPath = dataRootDirectory
+    ? path.resolve(dataRootDirectory)
+    : getDefaultDataRoot();
+  const absolutePath = safeJoin(rootPath, targetPath);
+  const error = await shell.openPath(absolutePath);
+  if (error) {
+    return { ok: false, error };
+  }
+
+  return { ok: true, openedPath: absolutePath };
 }
 
 async function handleGetSettings() {
@@ -584,6 +625,7 @@ module.exports = {
   handleInstallEngine,
   handleCancelInstall,
   handleLaunchEngine,
+  handleOpenPath,
   handleGetSettings,
   handleUpdateSettings,
 };

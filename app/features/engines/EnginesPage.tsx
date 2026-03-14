@@ -6,10 +6,19 @@ import { useFunkHub } from "../../providers";
 import { detectClientPlatform, pickBestReleaseForPlatform, type EngineSlug } from "../../services/funkhub";
 
 export function Engines() {
-  const { installedEngines, enginesCatalog, downloads, setDefaultEngine, installEngine } = useFunkHub();
+  const {
+    installedEngines,
+    enginesCatalog,
+    downloads,
+    setDefaultEngine,
+    installEngine,
+    launchEngine,
+    openEngineFolder,
+  } = useFunkHub();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [installingSlug, setInstallingSlug] = useState<string | null>(null);
   const [installError, setInstallError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const availableEngines = enginesCatalog;
   const hasEngines = installedEngines.length > 0;
@@ -28,6 +37,24 @@ export function Engines() {
       setInstallError(error instanceof Error ? error.message : "Engine install failed");
     } finally {
       setInstallingSlug(null);
+    }
+  };
+
+  const handleLaunch = async (engineId: string) => {
+    setActionError(null);
+    try {
+      await launchEngine(engineId);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to launch engine");
+    }
+  };
+
+  const handleManage = async (engineId: string) => {
+    setActionError(null);
+    try {
+      await openEngineFolder(engineId);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to open engine folder");
     }
   };
 
@@ -191,6 +218,13 @@ export function Engines() {
               {installError}
             </div>
           )}
+
+          {actionError && (
+            <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 p-3 text-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              {actionError}
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -204,11 +238,24 @@ export function Engines() {
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
             <div onDoubleClick={() => setDefaultEngine(engine.id)}>
-              <EngineCard name={engine.name} version={engine.version} isDefault={engine.isDefault} />
+              <EngineCard
+                name={engine.name}
+                version={engine.version}
+                isDefault={engine.isDefault}
+                onLaunch={() => handleLaunch(engine.id)}
+                onManage={() => handleManage(engine.id)}
+              />
             </div>
           </motion.div>
         ))}
       </div>
+
+      {actionError && (
+        <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 p-3 text-sm flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          {actionError}
+        </div>
+      )}
 
       {/* Engine Info */}
       <div className="mt-8 bg-card border border-border rounded-xl p-6">
