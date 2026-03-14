@@ -80,7 +80,7 @@ export interface DownloadTask {
   downloadedBytes: number;
   progress: number;
   speedBytesPerSecond?: number;
-  phase?: "download" | "extract" | "install" | "error";
+  phase?: "download" | "extract" | "validate" | "install" | "error";
   message?: string;
   status: "queued" | "downloading" | "installing" | "completed" | "cancelled" | "failed";
   error?: string;
@@ -141,7 +141,7 @@ export interface DesktopInstallRequest {
 
 export interface DesktopInstallProgress {
   jobId: string;
-  phase: "download" | "extract" | "install" | "error";
+  phase: "download" | "extract" | "validate" | "install" | "error";
   progress: number;
   message?: string;
   downloadedBytes?: number;
@@ -172,9 +172,30 @@ export interface DesktopBridge {
   installEngine: (payload: DesktopInstallRequest) => Promise<DesktopInstallResult>;
   cancelInstall: (payload: { jobId: string }) => Promise<{ ok: boolean }>;
   onInstallProgress: (listener: (payload: DesktopInstallProgress) => void) => () => void;
-  launchEngine: (payload: { installPath: string }) => Promise<{ ok: boolean; launchedPath?: string }>;
+  launchEngine: (payload: {
+    installPath: string;
+    launcher?: "native" | "wine" | "wine64" | "proton";
+    launcherPath?: string;
+  }) => Promise<{ ok: boolean; launchedPath?: string }>;
   openPath: (payload: { targetPath: string }) => Promise<{ ok: boolean; openedPath?: string; error?: string }>;
   deletePath: (payload: { targetPath: string }) => Promise<{ ok: boolean; deletedPath?: string; error?: string }>;
+  inspectEngineInstall: (payload: { installPath: string }) => Promise<{
+    ok: boolean;
+    health: "ready" | "missing_binary" | "broken_install";
+    launchablePath?: string;
+    message?: string;
+  }>;
+  importEngineFolder: (payload: {
+    sourcePath: string;
+    slug: EngineSlug;
+    version?: string;
+  }) => Promise<{
+    ok: boolean;
+    installPath?: string;
+    modsPath?: string;
+    detectedVersion?: string;
+    error?: string;
+  }>;
   pickFolder: (payload?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>;
   getSettings: () => Promise<Partial<FunkHubSettings>>;
   updateSettings: (payload: Partial<FunkHubSettings>) => Promise<Partial<FunkHubSettings>>;
@@ -200,6 +221,8 @@ export interface InstalledEngine {
   isDefault: boolean;
   installedAt: number;
 }
+
+export type EngineHealth = "ready" | "missing_binary" | "broken_install";
 
 export interface InstallPlan {
   type: "executable" | "standard_mod";

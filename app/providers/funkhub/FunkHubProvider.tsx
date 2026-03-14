@@ -39,14 +39,22 @@ interface FunkHubContextValue {
   getModProfile: (modId: number) => Promise<GameBananaModProfile>;
   installMod: (modId: number, fileId: number, selectedEngineId?: string, priority?: number) => void;
   installEngine: (slug: InstalledEngine["slug"], downloadUrl: string, version: string) => Promise<void>;
+  importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string) => Promise<void>;
   updateEngine: (engineId: string) => Promise<void>;
   uninstallEngine: (engineId: string) => Promise<void>;
-  launchEngine: (engineId: string) => Promise<void>;
+  launchEngine: (
+    engineId: string,
+    options?: { launcher?: "native" | "wine" | "wine64" | "proton"; launcherPath?: string },
+  ) => Promise<void>;
   openEngineFolder: (engineId: string) => Promise<void>;
+  openEngineModsFolder: (engineId: string) => Promise<void>;
+  getEngineHealth: (engineId: string) => { health: "ready" | "missing_binary" | "broken_install"; message?: string };
+  refreshEngineHealth: (engineId?: string) => Promise<void>;
   launchInstalledMod: (installedId: string) => Promise<void>;
   cancelDownload: (taskId: string) => void;
+  retryDownload: (taskId: string) => void;
   setDefaultEngine: (engineId: string) => void;
-  removeInstalledMod: (installedId: string) => void;
+  removeInstalledMod: (installedId: string, options?: { deleteFiles?: boolean }) => Promise<void>;
   updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
 }
@@ -115,6 +123,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
 
       setTrendingMods(trending);
       setCategories(categoryTree);
+      if (!selectedCategoryId && categoryTree.length > 0) {
+        setSelectedCategoryId(categoryTree[0].id);
+      }
       setEnginesCatalog(catalog);
       const filteredSorts = sorts.filter((sort) => ["Generic_Newest", "Generic_MostDownloaded", "Generic_MostLiked", "Generic_MostViewed"].includes(sort.alias));
       setModSortOptions(filteredSorts.length > 0
@@ -128,12 +139,13 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setInstalledMods(funkHubService.getInstalledMods());
       setInstalledEngines(funkHubService.getInstalledEngines());
       setSettings(funkHubService.getSettings());
+      await funkHubService.refreshEngineHealth();
       await refreshModUpdates();
       await refreshDiscover();
     } finally {
       setLoading(false);
     }
-  }, [refreshDiscover, refreshModUpdates]);
+  }, [refreshDiscover, refreshModUpdates, selectedCategoryId]);
 
   useEffect(() => {
     refreshAll();
@@ -190,6 +202,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         await funkHubService.installEngineFromRelease({ slug, releaseUrl: downloadUrl, releaseVersion: version });
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
+      importEngineFromFolder: async (slug, versionHint) => {
+        await funkHubService.importEngineFromFolder({ slug, versionHint });
+        setInstalledEngines(funkHubService.getInstalledEngines());
+      },
       updateEngine: async (engineId) => {
         await funkHubService.updateEngine(engineId);
         setInstalledEngines(funkHubService.getInstalledEngines());
@@ -198,11 +214,19 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         await funkHubService.uninstallEngine(engineId);
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
-      launchEngine: async (engineId) => {
-        await funkHubService.launchEngine(engineId);
+      launchEngine: async (engineId, options) => {
+        await funkHubService.launchEngine(engineId, options);
       },
       openEngineFolder: async (engineId) => {
         await funkHubService.openEngineFolder(engineId);
+      },
+      openEngineModsFolder: async (engineId) => {
+        await funkHubService.openEngineModsFolder(engineId);
+      },
+      getEngineHealth: (engineId) => funkHubService.getEngineHealth(engineId),
+      refreshEngineHealth: async (engineId) => {
+        await funkHubService.refreshEngineHealth(engineId);
+        setInstalledEngines(funkHubService.getInstalledEngines());
       },
       launchInstalledMod: async (installedId) => {
         await funkHubService.launchInstalledMod(installedId);
@@ -210,12 +234,15 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       cancelDownload: (taskId) => {
         funkHubService.cancelDownload(taskId);
       },
+      retryDownload: (taskId) => {
+        funkHubService.retryDownload(taskId);
+      },
       setDefaultEngine: (engineId) => {
         funkHubService.setDefaultEngine(engineId);
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
-      removeInstalledMod: (installedId) => {
-        funkHubService.removeInstalledMod(installedId);
+      removeInstalledMod: async (installedId, options) => {
+        await funkHubService.removeInstalledMod(installedId, options);
         setInstalledMods(funkHubService.getInstalledMods());
       },
       updateSettings: async (patch) => {
@@ -244,6 +271,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       searchQuery,
       refreshDiscover,
       refreshModUpdates,
+      selectedCategoryId,
     ],
   );
 

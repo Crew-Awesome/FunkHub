@@ -6,6 +6,7 @@ import { useFunkHub } from "../../providers";
 export function Library() {
   const { installedMods, removeInstalledMod, refreshModUpdates, installMod, launchInstalledMod } = useFunkHub();
   const [selectedModId, setSelectedModId] = useState(installedMods[0]?.id);
+  const [deleteFilesOnRemove, setDeleteFilesOnRemove] = useState(true);
 
   const selectedMod = installedMods.find((mod) => mod.id === selectedModId) ?? installedMods[0];
 
@@ -106,13 +107,22 @@ export function Library() {
               </button>
             )}
             <button
-              onClick={() => removeInstalledMod(selectedMod.id)}
+              onClick={() => removeInstalledMod(selectedMod.id, { deleteFiles: deleteFilesOnRemove })}
               className="px-6 py-3 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg font-medium transition-colors flex items-center gap-2"
             >
               <Trash2 className="w-5 h-5" />
               Remove
             </button>
           </div>
+
+          <label className="inline-flex items-center gap-2 text-sm text-muted-foreground mb-6">
+            <input
+              type="checkbox"
+              checked={deleteFilesOnRemove}
+              onChange={(event) => setDeleteFilesOnRemove(event.target.checked)}
+            />
+            Delete mod files from disk when removing
+          </label>
 
           {/* Info Cards */}
           <div className="grid grid-cols-3 gap-4 mb-8">

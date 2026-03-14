@@ -10,6 +10,7 @@ interface ModCardProps {
   downloads?: string | number;
   onInstall?: () => void;
   onView?: () => void;
+  statusLabel?: string;
 }
 
 function formatDownloads(value: string | number | undefined): string {
@@ -30,7 +31,7 @@ function formatDownloads(value: string | number | undefined): string {
   return "0";
 }
 
-export function ModCard({ title, author, thumbnail, rating = 0, downloads, onInstall, onView }: ModCardProps) {
+export function ModCard({ title, author, thumbnail, rating = 0, downloads, onInstall, onView, statusLabel }: ModCardProps) {
   return (
     <motion.div
       className="bg-card rounded-xl overflow-hidden border border-border group cursor-pointer"
@@ -67,7 +68,12 @@ export function ModCard({ title, author, thumbnail, rating = 0, downloads, onIns
       </div>
 
       <div className="p-4">
-        <h3 className="font-semibold text-foreground mb-1 line-clamp-1">{title}</h3>
+        <div className="flex items-center gap-2 mb-1">
+          <h3 className="font-semibold text-foreground line-clamp-1">{title}</h3>
+          {statusLabel && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary whitespace-nowrap">{statusLabel}</span>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground mb-3">by {author}</p>
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">

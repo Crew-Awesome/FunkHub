@@ -51,11 +51,12 @@ function plainText(value?: string): string {
 }
 
 export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalProps) {
-  const { getModProfile, installMod } = useFunkHub();
+  const { getModProfile, installMod, installedEngines } = useFunkHub();
   const [loading, setLoading] = useState(false);
   const [showLoadingState, setShowLoadingState] = useState(false);
   const [profile, setProfile] = useState<GameBananaModProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEngineId, setSelectedEngineId] = useState<string>("");
 
   useEffect(() => {
     if (!open || !modId) {
@@ -70,6 +71,8 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
       .then((next) => {
         if (!cancelled) {
           setProfile(next);
+          const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
+          setSelectedEngineId(defaultEngine?.id ?? "");
         }
       })
       .catch((err) => {
@@ -91,6 +94,8 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
 
   const heroImage = useMemo(() => profile?.imageUrl ?? profile?.thumbnailUrl, [profile]);
   const categoryLabel = profile?.rootCategory?.name ?? profile?.category?.name ?? profile?.superCategory?.name;
+  const selectedEngine = installedEngines.find((engine) => engine.id === selectedEngineId);
+  const hasDependencyWarning = Boolean(profile?.requiredEngine && selectedEngine && selectedEngine.slug !== profile.requiredEngine);
 
   useEffect(() => {
     if (!loading) {
@@ -172,11 +177,22 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  <select
+                    value={selectedEngineId}
+                    onChange={(event) => setSelectedEngineId(event.target.value)}
+                    className="px-3 py-2 bg-input-background border border-border rounded-lg text-sm text-foreground"
+                  >
+                    {installedEngines.map((engine) => (
+                      <option key={engine.id} value={engine.id}>
+                        {engine.name} v{engine.version}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     onClick={() => {
                       const targetFile = profile.files[0];
                       if (targetFile) {
-                        installMod(profile.id, targetFile.id);
+                        installMod(profile.id, targetFile.id, selectedEngineId || undefined);
                       }
                     }}
                     disabled={profile.files.length === 0}
@@ -191,7 +207,13 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
                     <ExternalLink className="w-4 h-4" />
                     Open on GameBanana
                   </button>
-                </div>
+              </div>
+
+                {hasDependencyWarning && (
+                  <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                    This mod targets <span className="font-medium">{profile?.requiredEngine}</span>, but selected engine is <span className="font-medium">{selectedEngine?.slug}</span>.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -217,7 +239,7 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
                       </div>
                     </div>
                     <button
-                      onClick={() => installMod(profile.id, file.id)}
+                      onClick={() => installMod(profile.id, file.id, selectedEngineId || undefined)}
                       className="px-3 py-2 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-medium"
                     >
                       Install

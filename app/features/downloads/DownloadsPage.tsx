@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Pause, X, FolderOpen, Download } from "lucide-react";
+import { RotateCcw, X, FolderOpen, Download } from "lucide-react";
 import { useFunkHub } from "../../providers";
 
 function formatBytes(bytes: number | undefined): string {
@@ -20,9 +20,10 @@ function formatBytes(bytes: number | undefined): string {
 }
 
 export function Downloads() {
-  const { downloads, cancelDownload } = useFunkHub();
+  const { downloads, cancelDownload, retryDownload } = useFunkHub();
   const activeDownloads = downloads.filter((task) => task.status === "queued" || task.status === "downloading" || task.status === "installing");
   const completedDownloads = downloads.filter((task) => task.status === "completed").slice(0, 5);
+  const failedDownloads = downloads.filter((task) => task.status === "failed").slice(0, 8);
 
   return (
     <div className="p-8">
@@ -58,9 +59,6 @@ export function Downloads() {
                   {download.message && <p className="text-xs text-muted-foreground mt-1">{download.message}</p>}
                 </div>
                 <div className="flex gap-2">
-                  <button className="p-2 hover:bg-secondary rounded-lg transition-colors">
-                    <Pause className="w-5 h-5 text-foreground" />
-                  </button>
                   <button
                     onClick={() => cancelDownload(download.id)}
                     className="p-2 hover:bg-secondary rounded-lg transition-colors"
@@ -120,6 +118,31 @@ export function Downloads() {
                   </div>
                 </div>
                 <span className="text-sm text-muted-foreground">{formatBytes(download.totalBytes)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {failedDownloads.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold text-foreground mb-4">Failed Downloads</h2>
+          <div className="space-y-3">
+            {failedDownloads.map((download) => (
+              <div key={download.id} className="bg-card border border-red-500/20 rounded-xl p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-medium text-foreground">{download.fileName}</h4>
+                    <p className="text-xs text-red-300 mt-1">{download.error || download.message || "Download failed"}</p>
+                  </div>
+                  <button
+                    onClick={() => retryDownload(download.id)}
+                    className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm inline-flex items-center gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Retry
+                  </button>
+                </div>
               </div>
             ))}
           </div>

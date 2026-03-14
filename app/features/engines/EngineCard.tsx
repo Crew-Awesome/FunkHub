@@ -7,11 +7,13 @@ interface EngineCardProps {
   isDefault?: boolean;
   onLaunch?: () => void;
   onManage?: () => void;
+  onSetDefault?: () => void;
+  onOpenMods?: () => void;
   onUpdate?: () => void;
   onUninstall?: () => void;
 }
 
-export function EngineCard({ name, version, isDefault, onLaunch, onManage, onUpdate, onUninstall }: EngineCardProps) {
+export function EngineCard({ name, version, isDefault, onLaunch, onManage, onSetDefault, onOpenMods, onUpdate, onUninstall }: EngineCardProps) {
   return (
     <motion.div
       className="bg-card rounded-xl border border-border p-6 group cursor-pointer"
@@ -55,6 +57,27 @@ export function EngineCard({ name, version, isDefault, onLaunch, onManage, onUpd
             >
               <Settings className="w-4 h-4" />
               Manage
+            </button>
+          </div>
+
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                onSetDefault?.();
+              }}
+              className="flex-1 px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium transition-colors"
+            >
+              Set Default
+            </button>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenMods?.();
+              }}
+              className="flex-1 px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium transition-colors"
+            >
+              Open Mods
             </button>
           </div>
 

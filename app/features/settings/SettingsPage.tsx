@@ -201,6 +201,14 @@ export function Settings() {
                 </select>
               </div>
             </div>
+
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
+              <p className="text-sm font-medium text-amber-200">itch.io base game install</p>
+              <p className="mt-1 text-xs text-amber-100/90">
+                FunkHub may require an itch.io login/API session to resolve fresh download links for base game installers.
+                If not connected, manual browser fallback will be used.
+              </p>
+            </div>
         </motion.section>
 
         {/* Appearance Settings */}

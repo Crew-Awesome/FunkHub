@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Cpu, FolderOpen, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Cpu, FolderOpen, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
 import { EngineCard } from "./EngineCard";
 import { useFunkHub } from "../../providers";
 import { detectClientPlatform, pickBestReleaseForPlatform, type EngineSlug } from "../../services/funkhub";
@@ -12,16 +12,23 @@ export function Engines() {
     downloads,
     setDefaultEngine,
     installEngine,
+    importEngineFromFolder,
     updateEngine,
     uninstallEngine,
     launchEngine,
     openEngineFolder,
+    openEngineModsFolder,
+    getEngineHealth,
+    refreshEngineHealth,
   } = useFunkHub();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [installingSlug, setInstallingSlug] = useState<string | null>(null);
   const [installError, setInstallError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyEngineId, setBusyEngineId] = useState<string | null>(null);
+  const [confirmUninstall, setConfirmUninstall] = useState<{ id: string; name: string; version: string; path: string } | null>(null);
+  const [linuxLauncher, setLinuxLauncher] = useState<"native" | "wine" | "wine64" | "proton">("native");
+  const [linuxLauncherPath, setLinuxLauncherPath] = useState("");
 
   const availableEngines = enginesCatalog;
   const hasEngines = installedEngines.length > 0;
@@ -35,6 +42,7 @@ export function Engines() {
     setInstallingSlug(engineSlug);
     try {
       await installEngine(engineSlug, releaseUrl, releaseVersion);
+      await refreshEngineHealth();
       setShowAddDialog(false);
     } catch (error) {
       setInstallError(error instanceof Error ? error.message : "Engine install failed");
@@ -46,7 +54,12 @@ export function Engines() {
   const handleLaunch = async (engineId: string) => {
     setActionError(null);
     try {
-      await launchEngine(engineId);
+      await launchEngine(engineId, {
+        launcher: currentPlatform === "linux" ? linuxLauncher : "native",
+        launcherPath: currentPlatform === "linux" && linuxLauncher !== "native"
+          ? linuxLauncherPath || undefined
+          : undefined,
+      });
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Failed to launch engine");
     }
@@ -66,6 +79,7 @@ export function Engines() {
     setBusyEngineId(engineId);
     try {
       await updateEngine(engineId);
+      await refreshEngineHealth();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Failed to update engine");
     } finally {
@@ -83,6 +97,50 @@ export function Engines() {
     } finally {
       setBusyEngineId(null);
     }
+  };
+
+  const handleImport = async (slug: EngineSlug) => {
+    setInstallError(null);
+    setInstallingSlug(slug);
+    try {
+      await importEngineFromFolder(slug, "imported");
+      await refreshEngineHealth();
+      setShowAddDialog(false);
+    } catch (error) {
+      setInstallError(error instanceof Error ? error.message : "Engine import failed");
+    } finally {
+      setInstallingSlug(null);
+    }
+  };
+
+  const healthMeta = (engineId: string) => {
+    const health = getEngineHealth(engineId);
+    if (health.health === "ready") {
+      return { label: "Ready", tone: "text-emerald-300 bg-emerald-500/10 border-emerald-500/20", icon: ShieldCheck };
+    }
+    if (health.health === "missing_binary") {
+      return { label: "Missing Binary", tone: "text-amber-300 bg-amber-500/10 border-amber-500/20", icon: ShieldAlert };
+    }
+    return { label: "Broken", tone: "text-red-300 bg-red-500/10 border-red-500/20", icon: ShieldX };
+  };
+
+  const hasUpdateForEngine = (engineSlug: EngineSlug, installedVersion: string) => {
+    const definition = enginesCatalog.find((entry) => entry.slug === engineSlug);
+    const release = definition ? pickBestReleaseForPlatform(definition.releases, currentPlatform) : undefined;
+    if (!release) {
+      return false;
+    }
+    const normalize = (value?: string) =>
+      (value || "0").replace(/^v/i, "").split(/[^0-9]+/).filter(Boolean).slice(0, 3).map((n) => Number(n));
+    const a = normalize(release.version);
+    const b = normalize(installedVersion);
+    while (a.length < 3) a.push(0);
+    while (b.length < 3) b.push(0);
+    for (let i = 0; i < 3; i += 1) {
+      if (a[i] > b[i]) return true;
+      if (a[i] < b[i]) return false;
+    }
+    return false;
   };
 
   if (!hasEngines) {
@@ -143,9 +201,12 @@ export function Engines() {
                     );
                   })()
                 ))}
-                <button className="w-full px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3">
+                <button
+                  onClick={() => handleImport("ale-psych")}
+                  className="w-full px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
+                >
                   <FolderOpen className="w-5 h-5 text-primary" />
-                  Import From Folder
+                  Import ALE Psych Folder
                 </button>
               </div>
 
@@ -228,9 +289,12 @@ export function Engines() {
                 );
               })()
             ))}
-            <button className="px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3">
+            <button
+              onClick={() => handleImport("ale-psych")}
+              className="px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
+            >
               <FolderOpen className="w-5 h-5 text-primary" />
-              Import From Folder
+              Import ALE Psych Folder
             </button>
           </div>
 
@@ -277,6 +341,23 @@ export function Engines() {
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
             <div onDoubleClick={() => setDefaultEngine(engine.id)}>
+              <div className="mb-2 flex items-center gap-2">
+                {(() => {
+                  const meta = healthMeta(engine.id);
+                  const Icon = meta.icon;
+                  return (
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded border ${meta.tone}`}>
+                      <Icon className="w-3.5 h-3.5" />
+                      {meta.label}
+                    </span>
+                  );
+                })()}
+                {hasUpdateForEngine(engine.slug, engine.version) && (
+                  <span className="inline-flex items-center px-2 py-1 text-xs rounded border border-primary/20 bg-primary/10 text-primary">
+                    Update available
+                  </span>
+                )}
+              </div>
               <EngineCard
                 name={engine.name}
                 version={engine.version}
@@ -291,6 +372,14 @@ export function Engines() {
                     handleManage(engine.id);
                   }
                 }}
+                onSetDefault={() => setDefaultEngine(engine.id)}
+                onOpenMods={() => {
+                  if (!busyEngineId) {
+                    openEngineModsFolder(engine.id).catch((error) => {
+                      setActionError(error instanceof Error ? error.message : "Failed to open mods folder");
+                    });
+                  }
+                }}
                 onUpdate={() => {
                   if (!busyEngineId) {
                     handleUpdate(engine.id);
@@ -298,7 +387,7 @@ export function Engines() {
                 }}
                 onUninstall={() => {
                   if (!busyEngineId) {
-                    handleUninstall(engine.id);
+                    setConfirmUninstall({ id: engine.id, name: engine.name, version: engine.version, path: engine.installPath });
                   }
                 }}
               />
@@ -325,7 +414,62 @@ export function Engines() {
         <p className="mt-2 text-xs text-muted-foreground">
           Detected device platform: {currentPlatform}
         </p>
+        {currentPlatform === "linux" && (
+          <div className="mt-4 space-y-2">
+            <label className="text-xs text-muted-foreground">Executable launcher</label>
+            <div className="flex gap-2">
+              <select
+                value={linuxLauncher}
+                onChange={(event) => setLinuxLauncher(event.target.value as "native" | "wine" | "wine64" | "proton")}
+                className="px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+              >
+                <option value="native">Native</option>
+                <option value="wine">Wine</option>
+                <option value="wine64">Wine64</option>
+                <option value="proton">Proton</option>
+              </select>
+              {linuxLauncher !== "native" && (
+                <input
+                  value={linuxLauncherPath}
+                  onChange={(event) => setLinuxLauncherPath(event.target.value)}
+                  placeholder="Optional custom launcher path"
+                  className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {confirmUninstall && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5">
+            <h3 className="text-lg font-semibold text-foreground">Confirm engine uninstall</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Remove <span className="text-foreground font-medium">{confirmUninstall.name}</span> v{confirmUninstall.version}?
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground break-all">{confirmUninstall.path}</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmUninstall(null)}
+                className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const target = confirmUninstall;
+                  setConfirmUninstall(null);
+                  await handleUninstall(target.id);
+                }}
+                className="px-3 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm"
+              >
+                Uninstall
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

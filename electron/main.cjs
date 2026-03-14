@@ -7,6 +7,8 @@ const {
   handleLaunchEngine,
   handleOpenPath,
   handleDeletePath,
+  handleInspectEngineInstall,
+  handleImportEngineFolder,
   handleGetSettings,
   handleUpdateSettings,
 } = require("./runtime-bridge.cjs");
@@ -56,6 +58,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:deletePath", async (_event, payload) => {
     return handleDeletePath(payload);
+  });
+
+  ipcMain.handle("funkhub:inspectEngineInstall", async (_event, payload) => {
+    return handleInspectEngineInstall(payload);
+  });
+
+  ipcMain.handle("funkhub:importEngineFolder", async (_event, payload) => {
+    return handleImportEngineFolder(payload);
   });
 
   ipcMain.handle("funkhub:pickFolder", async (_event, payload) => {

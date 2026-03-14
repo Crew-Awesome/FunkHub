@@ -8,6 +8,7 @@ import {
   CategoryNode,
   DownloadTask,
   EngineDefinition,
+  EngineHealth,
   EngineSlug,
   FunkHubSettings,
   GameBananaModProfile,
@@ -81,6 +82,8 @@ export class FunkHubService {
   private updateCache: ModUpdateInfo[] = [];
 
   private settings: FunkHubSettings;
+
+  private engineHealthCache = new Map<string, { health: EngineHealth; message?: string }>();
 
   private desktopProgressUnsubscribe: (() => void) | undefined;
 
@@ -186,7 +189,7 @@ export class FunkHubService {
 
       const status = payload.phase === "error"
         ? "failed"
-        : payload.phase === "install"
+        : payload.phase === "install" || payload.phase === "validate"
           ? "installing"
           : "downloading";
 
@@ -218,6 +221,36 @@ export class FunkHubService {
 
   getInstalledEngines(): InstalledEngine[] {
     return [...this.installedEngines].sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+  }
+
+  getEngineHealth(engineId: string): { health: EngineHealth; message?: string } {
+    return this.engineHealthCache.get(engineId) ?? { health: "broken_install", message: "Not inspected yet" };
+  }
+
+  async refreshEngineHealth(engineId?: string): Promise<void> {
+    const targets = engineId
+      ? this.installedEngines.filter((engine) => engine.id === engineId)
+      : this.installedEngines;
+
+    for (const engine of targets) {
+      if (window.funkhubDesktop?.inspectEngineInstall) {
+        try {
+          const result = await window.funkhubDesktop.inspectEngineInstall({ installPath: engine.installPath });
+          this.engineHealthCache.set(engine.id, {
+            health: result.health,
+            message: result.message,
+          });
+          continue;
+        } catch {
+          // fallback below
+        }
+      }
+
+      this.engineHealthCache.set(engine.id, {
+        health: "broken_install",
+        message: "Desktop inspection unavailable",
+      });
+    }
   }
 
   getDownloadHistory(): DownloadTask[] {
@@ -281,6 +314,7 @@ export class FunkHubService {
               installPath,
               modsPath: `${installPath}/mods`,
             });
+            await this.refreshEngineHealth(installed.id);
 
             update({
               ...task,
@@ -432,6 +466,7 @@ export class FunkHubService {
     }
 
     this.installedEngines = this.installedEngines.filter((engine) => engine.id !== engineId);
+    this.engineHealthCache.delete(engineId);
 
     if (this.installedEngines.length > 0 && !this.installedEngines.some((engine) => engine.isDefault)) {
       this.installedEngines = this.installedEngines.map((engine, index) => ({
@@ -451,7 +486,19 @@ export class FunkHubService {
     funkHubStorageService.saveInstalledEngines(this.installedEngines);
   }
 
-  removeInstalledMod(installedId: string): void {
+  async removeInstalledMod(installedId: string, options?: { deleteFiles?: boolean }): Promise<void> {
+    const installed = this.installedMods.find((mod) => mod.id === installedId);
+    if (!installed) {
+      return;
+    }
+
+    if (options?.deleteFiles && window.funkhubDesktop?.deletePath) {
+      const result = await window.funkhubDesktop.deletePath({ targetPath: installed.installPath });
+      if (!result.ok) {
+        throw new Error(result.error || "Failed to remove mod files");
+      }
+    }
+
     this.installedMods = this.installedMods.filter((mod) => mod.id !== installedId);
     this.updateCache = this.updateCache.filter((update) => update.installedId !== installedId);
     funkHubStorageService.saveInstalledMods(this.installedMods);
@@ -478,7 +525,10 @@ export class FunkHubService {
     await window.funkhubDesktop.launchEngine({ installPath: engine.installPath });
   }
 
-  async launchEngine(engineId: string): Promise<void> {
+  async launchEngine(
+    engineId: string,
+    options?: { launcher?: "native" | "wine" | "wine64" | "proton"; launcherPath?: string },
+  ): Promise<void> {
     const engine = this.installedEngines.find((entry) => entry.id === engineId);
     if (!engine) {
       throw new Error("Engine installation not found");
@@ -488,7 +538,11 @@ export class FunkHubService {
       throw new Error("Desktop bridge unavailable for launching");
     }
 
-    await window.funkhubDesktop.launchEngine({ installPath: engine.installPath });
+    await window.funkhubDesktop.launchEngine({
+      installPath: engine.installPath,
+      launcher: options?.launcher,
+      launcherPath: options?.launcherPath,
+    });
   }
 
   async openEngineFolder(engineId: string): Promise<void> {
@@ -505,6 +559,63 @@ export class FunkHubService {
     if (!result.ok) {
       throw new Error(result.error || "Failed to open engine folder");
     }
+  }
+
+  async openEngineModsFolder(engineId: string): Promise<void> {
+    const engine = this.installedEngines.find((entry) => entry.id === engineId);
+    if (!engine) {
+      throw new Error("Engine installation not found");
+    }
+
+    if (!window.funkhubDesktop?.openPath) {
+      throw new Error("Desktop bridge unavailable for folder management");
+    }
+
+    const result = await window.funkhubDesktop.openPath({ targetPath: engine.modsPath });
+    if (!result.ok) {
+      throw new Error(result.error || "Failed to open engine mods folder");
+    }
+  }
+
+  async importEngineFromFolder(input: { slug: EngineSlug; versionHint?: string; sourcePath?: string }): Promise<InstalledEngine> {
+    const sourcePath = input.sourcePath || await this.pickFolder({ title: "Select engine folder to import" });
+    if (!sourcePath) {
+      throw new Error("Engine import cancelled");
+    }
+
+    if (!window.funkhubDesktop?.importEngineFolder) {
+      throw new Error("Desktop bridge unavailable for import");
+    }
+
+    const result = await window.funkhubDesktop.importEngineFolder({
+      sourcePath,
+      slug: input.slug,
+      version: input.versionHint,
+    });
+
+    if (!result.ok || !result.installPath || !result.modsPath) {
+      throw new Error(result.error || "Failed to import engine folder");
+    }
+
+    const installed = this.addEngineInstallation({
+      slug: input.slug,
+      version: result.detectedVersion || input.versionHint || "imported",
+      installPath: result.installPath,
+      modsPath: result.modsPath,
+    });
+    await this.refreshEngineHealth(installed.id);
+    return installed;
+  }
+
+  retryDownload(taskId: string): void {
+    const task = this.downloadHistory.find((entry) => entry.id === taskId);
+    if (!task) {
+      throw new Error("Download task not found");
+    }
+    if (task.modId <= 0) {
+      throw new Error("Retry currently supports mod downloads only");
+    }
+    this.queueInstall(task.modId, task.fileId, undefined, task.priority ?? 0);
   }
 
   cancelDownload(taskId: string): void {

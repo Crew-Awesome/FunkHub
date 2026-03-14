@@ -84,6 +84,13 @@ function safeJoin(base, requestedPath) {
   return path.join(base, normalized);
 }
 
+function isPathInside(basePath, targetPath) {
+  const baseResolved = path.resolve(basePath);
+  const targetResolved = path.resolve(targetPath);
+  const relative = path.relative(baseResolved, targetResolved);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
 async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
 }
@@ -345,11 +352,11 @@ async function resolveInstallDirs(mode, installPath) {
     : path.join(rootPath, "downloads");
   const resolvedInstallPath = safeJoin(rootPath, installPath || "");
 
-  if (!resolvedInstallPath.startsWith(rootPath)) {
+  if (!isPathInside(rootPath, resolvedInstallPath)) {
     throw new Error("Invalid install path");
   }
 
-  if (mode === "engine" && !resolvedInstallPath.startsWith(enginesPath)) {
+  if (mode === "engine" && !isPathInside(enginesPath, resolvedInstallPath)) {
     throw new Error("Engine installation must target /engines/");
   }
 
@@ -394,6 +401,7 @@ async function installArchiveInternal(webContents, payload) {
 
   await removePath(extractTempPath);
   await ensureDir(extractTempPath);
+  let finalizedInstall = false;
 
   try {
     if (downloadUrl) {
@@ -403,6 +411,14 @@ async function installArchiveInternal(webContents, payload) {
     } else {
       throw new Error("Either downloadUrl or archiveBase64 is required");
     }
+
+    emitProgress(webContents, {
+      jobId,
+      phase: "validate",
+      progress: 0,
+      message: "Validating package",
+      timestamp: now(),
+    });
 
     emitProgress(webContents, {
       jobId,
@@ -433,7 +449,22 @@ async function installArchiveInternal(webContents, payload) {
       await ensureDir(path.dirname(resolvedInstallPath));
       await fs.rename(extractTempPath, resolvedInstallPath);
       await ensureDir(path.join(resolvedInstallPath, "mods"));
+
+      emitProgress(webContents, {
+        jobId,
+        phase: "validate",
+        progress: 0.85,
+        message: "Validating engine launch files",
+        timestamp: now(),
+      });
+
+      const launchable = await findLaunchableExecutable(resolvedInstallPath, [path.basename(resolvedInstallPath), "funkin", "engine"]);
+      if (!launchable) {
+        throw new Error("Installed engine does not contain a launchable executable for this platform");
+      }
     }
+
+    finalizedInstall = true;
 
     emitProgress(webContents, {
       jobId,
@@ -455,8 +486,9 @@ async function installArchiveInternal(webContents, payload) {
     }
     jobState.delete(jobId);
     await removePath(tempArchivePath);
-    if (mode !== "engine") {
-      await removePath(extractTempPath);
+    await removePath(extractTempPath);
+    if (mode === "engine" && !finalizedInstall) {
+      await removePath(resolvedInstallPath);
     }
   }
 }
@@ -553,8 +585,54 @@ async function findLaunchableExecutable(dirPath, hints = []) {
   return hintedCandidate;
 }
 
+async function collectFileHints(dirPath) {
+  const queue = [dirPath];
+  const names = [];
+  while (queue.length > 0 && names.length < 60) {
+    const current = queue.shift();
+    const entries = await readDirEntries(current);
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        queue.push(fullPath);
+      } else {
+        names.push(entry.name.toLowerCase());
+      }
+      if (names.length >= 60) {
+        break;
+      }
+    }
+  }
+  return names;
+}
+
+async function getLaunchFailureHint(dirPath) {
+  const names = await collectFileHints(dirPath);
+  const hasWindowsBinary = names.some((name) => name.endsWith(".exe") || name.endsWith(".msi") || name.endsWith(".bat"));
+  const hasMacBinary = names.some((name) => name.endsWith(".app") || name.endsWith(".dmg") || name.endsWith(".pkg"));
+  const hasLinuxBinary = names.some((name) => name.endsWith(".appimage") || name.endsWith(".x86_64") || name.endsWith(".sh"));
+  const hasAnyBinLike = names.some((name) => !name.includes("."));
+
+  if (process.platform === "linux" && hasWindowsBinary && !hasLinuxBinary) {
+    return "This looks like a Windows build. Install the Linux engine artifact or run via Wine/Proton launcher mode.";
+  }
+  if (process.platform === "win32" && hasLinuxBinary && !hasWindowsBinary) {
+    return "This looks like a Linux build. Install the Windows engine artifact.";
+  }
+  if (process.platform === "darwin" && hasWindowsBinary && !hasMacBinary) {
+    return "This looks like a Windows build. Install the macOS engine artifact.";
+  }
+  if (process.platform === "linux" && hasAnyBinLike && !hasLinuxBinary) {
+    return "Found binary-like files, but none are executable. Ensure execute permissions are set (chmod +x).";
+  }
+
+  return "No launchable engine executable found.";
+}
+
 async function handleLaunchEngine(payload) {
   const installPath = payload?.installPath;
+  const launcher = payload?.launcher || "native";
+  const launcherPath = payload?.launcherPath;
   if (!installPath) {
     throw new Error("installPath is required");
   }
@@ -572,7 +650,8 @@ async function handleLaunchEngine(payload) {
     "engine",
   ]);
   if (!launchable) {
-    throw new Error(`No launchable engine executable found '${absolutePath}'`);
+    const hint = await getLaunchFailureHint(absolutePath);
+    throw new Error(`${hint} (${absolutePath})`);
   }
 
   if (process.platform === "linux") {
@@ -586,7 +665,18 @@ async function handleLaunchEngine(payload) {
     }
   }
 
-  const child = spawn(launchable, [], {
+  let command = launchable;
+  let args = [];
+
+  if (launcher !== "native") {
+    if (process.platform !== "linux") {
+      throw new Error("Custom launchers are only supported on Linux");
+    }
+    command = launcherPath || launcher;
+    args = [launchable];
+  }
+
+  const child = spawn(command, args, {
     detached: true,
     stdio: "ignore",
     windowsHide: true,
@@ -608,6 +698,9 @@ async function handleOpenPath(payload) {
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
   const absolutePath = safeJoin(rootPath, targetPath);
+  if (!isPathInside(rootPath, absolutePath)) {
+    throw new Error("targetPath must be inside FunkHub data root");
+  }
   const error = await shell.openPath(absolutePath);
   if (error) {
     return { ok: false, error };
@@ -627,6 +720,9 @@ async function handleDeletePath(payload) {
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
   const absolutePath = safeJoin(rootPath, targetPath);
+  if (!isPathInside(rootPath, absolutePath)) {
+    throw new Error("targetPath must be inside FunkHub data root");
+  }
 
   try {
     await fs.rm(absolutePath, { recursive: true, force: true });
@@ -637,6 +733,88 @@ async function handleDeletePath(payload) {
       error: error instanceof Error ? error.message : "Failed to delete path",
     };
   }
+}
+
+async function handleInspectEngineInstall(payload) {
+  const installPath = payload?.installPath;
+  if (!installPath) {
+    throw new Error("installPath is required");
+  }
+
+  const { dataRootDirectory } = await getEffectiveSettings();
+  const rootPath = dataRootDirectory
+    ? path.resolve(dataRootDirectory)
+    : getDefaultDataRoot();
+  const absolutePath = safeJoin(rootPath, installPath);
+
+  if (!isPathInside(rootPath, absolutePath)) {
+    throw new Error("installPath must be inside FunkHub data root");
+  }
+
+  try {
+    const stats = await fs.stat(absolutePath);
+    if (!stats.isDirectory()) {
+      return { ok: true, health: "broken_install", message: "Engine path is not a directory" };
+    }
+  } catch {
+    return { ok: true, health: "broken_install", message: "Engine directory is missing" };
+  }
+
+  const launchablePath = await findLaunchableExecutable(absolutePath, [path.basename(installPath), "funkin", "engine"]);
+  if (!launchablePath) {
+    const hint = await getLaunchFailureHint(absolutePath);
+    return { ok: true, health: "missing_binary", message: hint };
+  }
+
+  return {
+    ok: true,
+    health: "ready",
+    launchablePath,
+  };
+}
+
+async function handleImportEngineFolder(payload) {
+  const sourcePath = payload?.sourcePath;
+  const slug = payload?.slug;
+  const version = payload?.version;
+
+  if (!sourcePath || !slug) {
+    throw new Error("sourcePath and slug are required");
+  }
+
+  const sourceAbsolute = path.resolve(sourcePath);
+  const sourceStats = await fs.stat(sourceAbsolute);
+  if (!sourceStats.isDirectory()) {
+    throw new Error("sourcePath must be a directory");
+  }
+
+  const { rootPath, enginesPath } = await resolveInstallDirs("engine", `engines/${slug}`);
+  await ensureDir(enginesPath);
+
+  const safeVersion = (version || "imported").toString().replace(/[^A-Za-z0-9._-]+/g, "-") || "imported";
+  const relInstallPath = `engines/${slug}/${safeVersion}-${Date.now()}`;
+  const absoluteInstallPath = safeJoin(rootPath, relInstallPath);
+
+  await removePath(absoluteInstallPath);
+  await ensureDir(path.dirname(absoluteInstallPath));
+  await fs.cp(sourceAbsolute, absoluteInstallPath, { recursive: true });
+  await ensureDir(path.join(absoluteInstallPath, "mods"));
+
+  const launchablePath = await findLaunchableExecutable(absoluteInstallPath, [slug, path.basename(sourceAbsolute), "funkin", "engine"]);
+  if (!launchablePath) {
+    await removePath(absoluteInstallPath);
+    return {
+      ok: false,
+      error: "Imported folder has no launchable executable for this platform",
+    };
+  }
+
+  return {
+    ok: true,
+    installPath: relInstallPath,
+    modsPath: `${relInstallPath}/mods`,
+    detectedVersion: detectVersionFromName(path.basename(sourceAbsolute)) || version || "imported",
+  };
 }
 
 async function handleGetSettings() {
@@ -668,6 +846,8 @@ module.exports = {
   handleLaunchEngine,
   handleOpenPath,
   handleDeletePath,
+  handleInspectEngineInstall,
+  handleImportEngineFolder,
   handleGetSettings,
   handleUpdateSettings,
 };

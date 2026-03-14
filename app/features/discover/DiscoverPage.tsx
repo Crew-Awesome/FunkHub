@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall } from "lucide-react";
 import { motion } from "motion/react";
 import { ModCard, ModVisualizerModal } from "../mods";
@@ -21,10 +21,62 @@ export function Discover() {
     searchQuery,
     setSearchQuery,
     installMod,
+    installedMods,
+    modUpdates,
   } = useFunkHub();
 
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<number[]>([]);
+  const [categorySearch, setCategorySearch] = useState("");
   const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!selectedCategoryId && categories.length > 0) {
+      setSelectedCategoryId(categories[0].id);
+    }
+  }, [categories, selectedCategoryId, setSelectedCategoryId]);
+
+  const filteredCategoryTree = useMemo(() => {
+    const term = categorySearch.trim().toLowerCase();
+    if (!term) {
+      return categories;
+    }
+
+    const filterNodes = (nodes: CategoryNode[]): CategoryNode[] => nodes
+      .map((node) => ({
+        ...node,
+        children: filterNodes(node.children),
+      }))
+      .filter((node) => node.name.toLowerCase().includes(term) || node.children.length > 0);
+
+    return filterNodes(categories);
+  }, [categories, categorySearch]);
+
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      return;
+    }
+
+    const findPath = (nodes: CategoryNode[], target: number, path: number[] = []): number[] | null => {
+      for (const node of nodes) {
+        const nextPath = [...path, node.id];
+        if (node.id === target) {
+          return nextPath;
+        }
+        const nested = findPath(node.children, target, nextPath);
+        if (nested) {
+          return nested;
+        }
+      }
+      return null;
+    };
+
+    const path = findPath(categories, selectedCategoryId);
+    if (!path || path.length <= 1) {
+      return;
+    }
+
+    setExpandedCategoryIds((current) => Array.from(new Set([...current, ...path.slice(0, -1)])));
+  }, [categories, selectedCategoryId]);
 
   const toggleExpanded = (categoryId: number) => {
     setExpandedCategoryIds((current) => (
@@ -154,6 +206,15 @@ export function Discover() {
                   downloads={mod.downloadCount ?? mod.viewCount}
                   onInstall={() => installMod(mod.id, 0)}
                   onView={() => setSelectedModId(mod.id)}
+                  statusLabel={(() => {
+                    const installed = installedMods.find((entry) => entry.modId === mod.id);
+                    if (!installed) {
+                      return undefined;
+                    }
+                    return modUpdates.some((update) => update.installedId === installed.id)
+                      ? "Update"
+                      : "Installed";
+                  })()}
                 />
               </motion.div>
             ))}
@@ -175,8 +236,16 @@ export function Discover() {
               All
             </button>
           </div>
+          <div className="mb-3">
+            <input
+              value={categorySearch}
+              onChange={(event) => setCategorySearch(event.target.value)}
+              placeholder="Search categories"
+              className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
           <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-1">
-            {renderCategoryTree(categories)}
+            {renderCategoryTree(filteredCategoryTree)}
           </div>
         </aside>
       </div>
