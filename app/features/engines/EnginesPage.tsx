@@ -2,18 +2,14 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { Plus, Cpu, FolderOpen } from "lucide-react";
 import { EngineCard } from "./EngineCard";
-import { engines } from "../mods";
+import { useFunkHub } from "../../providers";
 
 export function Engines() {
-  const [showEngines, setShowEngines] = useState(engines.length > 0);
+  const { installedEngines, enginesCatalog, setDefaultEngine } = useFunkHub();
+  const [showEngines, setShowEngines] = useState(installedEngines.length > 0);
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  const availableEngines = [
-    "Psych Engine",
-    "Kade Engine",
-    "Codename Engine",
-    "Vanilla FNF",
-  ];
+  const availableEngines = enginesCatalog;
 
   if (!showEngines) {
     return (
@@ -47,11 +43,11 @@ export function Engines() {
               animate={{ opacity: 1, y: 0 }}
               className="mt-4 bg-card border border-border rounded-xl p-6"
             >
-              <h3 className="font-semibold text-foreground mb-4">Select an engine to install</h3>
-              <div className="space-y-2">
+                <h3 className="font-semibold text-foreground mb-4">Select an engine to install</h3>
+                <div className="space-y-2">
                 {availableEngines.map((engine) => (
                   <button
-                    key={engine}
+                    key={engine.slug}
                     onClick={() => {
                       setShowEngines(true);
                       setShowAddDialog(false);
@@ -59,7 +55,7 @@ export function Engines() {
                     className="w-full px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
                   >
                     <Cpu className="w-5 h-5 text-primary" />
-                    {engine}
+                    {engine.name}
                   </button>
                 ))}
                 <button className="w-full px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3">
@@ -98,11 +94,11 @@ export function Engines() {
           <div className="grid grid-cols-2 gap-3">
             {availableEngines.map((engine) => (
               <button
-                key={engine}
+                key={engine.slug}
                 className="px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
               >
                 <Cpu className="w-5 h-5 text-primary" />
-                {engine}
+                {engine.name}
               </button>
             ))}
             <button className="px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3">
@@ -115,14 +111,16 @@ export function Engines() {
 
       {/* Engines Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {engines.map((engine, index) => (
+        {installedEngines.map((engine, index) => (
           <motion.div
             key={engine.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
-            <EngineCard {...engine} />
+            <div onDoubleClick={() => setDefaultEngine(engine.id)}>
+              <EngineCard name={engine.name} version={engine.version} isDefault={engine.isDefault} />
+            </div>
           </motion.div>
         ))}
       </div>

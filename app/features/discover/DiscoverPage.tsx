@@ -1,16 +1,38 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { motion } from "motion/react";
-import { ModCard, trendingMods, recentlyUpdatedMods, recommendedMods } from "../mods";
+import { ModCard } from "../mods";
+import { useFunkHub } from "../../providers";
 
-const categories = ["All", "Characters", "Weeks", "Songs", "Skins", "UI Mods", "Full Conversions"];
 const sortOptions = ["Most Downloaded", "Newest", "Trending", "Top Rated"];
 
 export function Discover() {
-  const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedSort, setSelectedSort] = useState("Trending");
+  const {
+    loading,
+    discoverMods,
+    categories,
+    selectedCategoryId,
+    setSelectedCategoryId,
+    searchQuery,
+    setSearchQuery,
+    installMod,
+  } = useFunkHub();
 
-  const allMods = [...trendingMods, ...recentlyUpdatedMods, ...recommendedMods];
+  const flatCategories = useMemo(() => {
+    const list: Array<{ id?: number; name: string }> = [{ id: undefined, name: "All" }];
+    const walk = (nodes: typeof categories) => {
+      for (const node of nodes) {
+        list.push({ id: node.id, name: node.name });
+        if (node.children.length > 0) {
+          walk(node.children);
+        }
+      }
+    };
+
+    walk(categories);
+    return list;
+  }, [categories]);
 
   return (
     <div className="p-8">
@@ -24,6 +46,8 @@ export function Discover() {
             <input
               type="text"
               placeholder="Search for mods..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full bg-input-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             />
           </div>
@@ -35,20 +59,20 @@ export function Discover() {
 
         {/* Category Pills */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-          {categories.map((category) => (
+          {flatCategories.map((category) => (
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
+              key={category.id ?? -1}
+              onClick={() => setSelectedCategoryId(category.id)}
               className={`
                 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all
                 ${
-                  selectedCategory === category
+                  selectedCategoryId === category.id
                     ? "bg-primary text-white"
                     : "bg-secondary hover:bg-secondary/80 text-foreground"
                 }
               `}
             >
-              {category}
+              {category.name}
             </button>
           ))}
         </div>
@@ -76,17 +100,25 @@ export function Discover() {
 
       {/* Results Grid */}
       <div className="mb-4 text-sm text-muted-foreground">
-        Showing {allMods.length} mods
+        {loading ? "Loading mods..." : `Showing ${discoverMods.length} mods`}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {allMods.map((mod, index) => (
+        {discoverMods.map((mod, index) => (
           <motion.div
             key={mod.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.05 }}
           >
-            <ModCard {...mod} />
+            <ModCard
+              id={mod.id}
+              title={mod.name}
+              author={mod.submitter?.name ?? "Unknown"}
+              thumbnail={mod.thumbnailUrl ?? mod.imageUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
+              rating={mod.likeCount ? Math.max(3.8, Math.min(5, mod.likeCount / 100 + 3.5)) : 4.5}
+              downloads={mod.downloadCount ?? mod.viewCount}
+              onInstall={() => installMod(mod.id, 0)}
+            />
           </motion.div>
         ))}
       </div>
