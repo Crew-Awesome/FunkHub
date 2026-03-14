@@ -14,6 +14,9 @@ FunkHub now includes an Electron desktop bridge implementation used by the front
 - `installEngine(payload)`
 - `cancelInstall({ jobId })`
 - `onInstallProgress(listener)`
+- `pickFolder({ title, defaultPath })`
+- `getSettings()`
+- `updateSettings(patch)`
 
 ## Installation flow
 
@@ -40,6 +43,8 @@ Desktop installs are written under Electron user data directory:
 
 - `<userData>/funkhub/engines/`
 - `<userData>/funkhub/downloads/`
+
+The data root and download temp directory can now be overridden from the Settings UI via desktop bridge runtime settings.
 
 ## Notes
 

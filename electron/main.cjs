@@ -1,10 +1,12 @@
 const path = require("node:path");
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const {
   handleInstallArchive,
   handleInstallEngine,
   handleCancelInstall,
   handleLaunchEngine,
+  handleGetSettings,
+  handleUpdateSettings,
 } = require("./runtime-bridge.cjs");
 
 function createWindow() {
@@ -44,6 +46,31 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:launchEngine", async (_event, payload) => {
     return handleLaunchEngine(payload);
+  });
+
+  ipcMain.handle("funkhub:pickFolder", async (_event, payload) => {
+    const result = await dialog.showOpenDialog({
+      title: payload?.title || "Select folder",
+      defaultPath: payload?.defaultPath,
+      properties: ["openDirectory", "createDirectory"],
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true };
+    }
+
+    return {
+      canceled: false,
+      path: result.filePaths[0],
+    };
+  });
+
+  ipcMain.handle("funkhub:getSettings", async () => {
+    return handleGetSettings();
+  });
+
+  ipcMain.handle("funkhub:updateSettings", async (_event, payload) => {
+    return handleUpdateSettings(payload);
   });
 
   createWindow();

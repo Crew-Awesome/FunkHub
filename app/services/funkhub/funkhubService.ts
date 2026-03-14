@@ -2,12 +2,13 @@ import { downloadManager } from "./downloadManager";
 import { engineCatalogService } from "./engineCatalog";
 import { gameBananaApiService } from "./gamebananaApi";
 import { modInstallerService } from "./installer";
-import { funkHubStorageService } from "./storage";
+import { DEFAULT_SETTINGS, funkHubStorageService } from "./storage";
 import {
   CategoryNode,
   DownloadTask,
   EngineDefinition,
   EngineSlug,
+  FunkHubSettings,
   GameBananaModProfile,
   GameBananaModSummary,
   InstalledEngine,
@@ -74,12 +75,16 @@ export class FunkHubService {
 
   private updateCache: ModUpdateInfo[] = [];
 
+  private settings: FunkHubSettings;
+
   private desktopProgressUnsubscribe: (() => void) | undefined;
 
   constructor() {
+    this.settings = funkHubStorageService.getSettings();
     this.installedMods = funkHubStorageService.getInstalledMods();
     this.installedEngines = funkHubStorageService.getInstalledEngines();
     this.downloadHistory = funkHubStorageService.getDownloadHistory();
+    downloadManager.setMaxConcurrent(this.settings.maxConcurrentDownloads);
 
     if (this.installedEngines.length === 0) {
       this.installedEngines = [
@@ -98,6 +103,75 @@ export class FunkHubService {
     }
 
     this.setupDesktopProgressBridge();
+  }
+
+  getSettings(): FunkHubSettings {
+    return { ...this.settings };
+  }
+
+  async syncDesktopSettings(): Promise<FunkHubSettings> {
+    if (!window.funkhubDesktop?.getSettings) {
+      return this.getSettings();
+    }
+
+    try {
+      const runtimeSettings = await window.funkhubDesktop.getSettings();
+      this.settings = {
+        ...DEFAULT_SETTINGS,
+        ...this.settings,
+        ...runtimeSettings,
+      };
+      downloadManager.setMaxConcurrent(this.settings.maxConcurrentDownloads);
+      funkHubStorageService.saveSettings(this.settings);
+    } catch {
+      // Keep local settings if desktop runtime settings are unavailable.
+    }
+
+    return this.getSettings();
+  }
+
+  async updateSettings(patch: Partial<FunkHubSettings>): Promise<FunkHubSettings> {
+    const nextSettings: FunkHubSettings = {
+      ...this.settings,
+      ...patch,
+    };
+
+    nextSettings.maxConcurrentDownloads = Math.max(
+      1,
+      Number(nextSettings.maxConcurrentDownloads) || DEFAULT_SETTINGS.maxConcurrentDownloads,
+    );
+
+    if (window.funkhubDesktop?.updateSettings) {
+      try {
+        const runtimeSettings = await window.funkhubDesktop.updateSettings(nextSettings);
+        this.settings = {
+          ...DEFAULT_SETTINGS,
+          ...nextSettings,
+          ...runtimeSettings,
+        };
+      } catch {
+        this.settings = nextSettings;
+      }
+    } else {
+      this.settings = nextSettings;
+    }
+
+    downloadManager.setMaxConcurrent(this.settings.maxConcurrentDownloads);
+    funkHubStorageService.saveSettings(this.settings);
+    return this.getSettings();
+  }
+
+  async pickFolder(options?: { title?: string; defaultPath?: string }): Promise<string | undefined> {
+    if (!window.funkhubDesktop?.pickFolder) {
+      return undefined;
+    }
+
+    const result = await window.funkhubDesktop.pickFolder(options);
+    if (result.canceled) {
+      return undefined;
+    }
+
+    return result.path;
   }
 
   private setupDesktopProgressBridge(): void {

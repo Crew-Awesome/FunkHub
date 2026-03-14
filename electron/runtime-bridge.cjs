@@ -8,6 +8,14 @@ const { path7za } = require("7zip-bin");
 const ARCHIVE_EXTENSIONS = [".zip", ".rar", ".7z"];
 const jobState = new Map();
 
+function getDefaultDataRoot() {
+  return path.join(app.getPath("userData"), "funkhub");
+}
+
+function getSettingsFilePath() {
+  return path.join(getDefaultDataRoot(), "settings.json");
+}
+
 function now() {
   return Date.now();
 }
@@ -34,6 +42,42 @@ function safeJoin(base, requestedPath) {
 
 async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
+}
+
+async function readRuntimeSettings() {
+  const settingsPath = getSettingsFilePath();
+  try {
+    const content = await fs.readFile(settingsPath, "utf-8");
+    const parsed = JSON.parse(content);
+    if (!parsed || typeof parsed !== "object") {
+      return {};
+    }
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+async function writeRuntimeSettings(settings) {
+  const settingsPath = getSettingsFilePath();
+  await ensureDir(path.dirname(settingsPath));
+  await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
+}
+
+async function getEffectiveSettings() {
+  const runtimeSettings = await readRuntimeSettings();
+  const dataRootDirectory = typeof runtimeSettings.dataRootDirectory === "string"
+    ? runtimeSettings.dataRootDirectory.trim()
+    : "";
+  const downloadsDirectory = typeof runtimeSettings.downloadsDirectory === "string"
+    ? runtimeSettings.downloadsDirectory.trim()
+    : "";
+
+  return {
+    ...runtimeSettings,
+    dataRootDirectory,
+    downloadsDirectory,
+  };
 }
 
 async function removePath(targetPath) {
@@ -244,10 +288,16 @@ function detectVersionFromName(name) {
   return match ? match[0].replace(/^v/i, "") : "unknown";
 }
 
-function resolveInstallDirs(mode, installPath) {
-  const rootPath = path.join(app.getPath("userData"), "funkhub");
+async function resolveInstallDirs(mode, installPath) {
+  const settings = await getEffectiveSettings();
+  const defaultRoot = getDefaultDataRoot();
+  const rootPath = settings.dataRootDirectory
+    ? path.resolve(settings.dataRootDirectory)
+    : defaultRoot;
   const enginesPath = path.join(rootPath, "engines");
-  const downloadsPath = path.join(rootPath, "downloads");
+  const downloadsPath = settings.downloadsDirectory
+    ? path.resolve(settings.downloadsDirectory)
+    : path.join(rootPath, "downloads");
   const resolvedInstallPath = safeJoin(rootPath, installPath || "");
 
   if (!resolvedInstallPath.startsWith(rootPath)) {
@@ -289,7 +339,7 @@ async function installArchiveInternal(webContents, payload) {
 
   jobState.set(jobId, cancelState);
 
-  const { downloadsPath, resolvedInstallPath } = resolveInstallDirs(mode, installPath);
+  const { downloadsPath, resolvedInstallPath } = await resolveInstallDirs(mode, installPath);
   await ensureDir(downloadsPath);
   await ensureDir(resolvedInstallPath);
 
@@ -442,7 +492,10 @@ async function handleLaunchEngine(payload) {
     throw new Error("installPath is required");
   }
 
-  const rootPath = path.join(app.getPath("userData"), "funkhub");
+  const { dataRootDirectory } = await getEffectiveSettings();
+  const rootPath = dataRootDirectory
+    ? path.resolve(dataRootDirectory)
+    : getDefaultDataRoot();
   const absolutePath = safeJoin(rootPath, installPath);
   const launchable = await findLaunchableExecutable(absolutePath);
   if (!launchable) {
@@ -459,9 +512,33 @@ async function handleLaunchEngine(payload) {
   return { ok: true, launchedPath: launchable };
 }
 
+async function handleGetSettings() {
+  return getEffectiveSettings();
+}
+
+async function handleUpdateSettings(payload) {
+  const current = await getEffectiveSettings();
+  const next = {
+    ...current,
+    ...(payload && typeof payload === "object" ? payload : {}),
+  };
+
+  if (typeof next.dataRootDirectory === "string") {
+    next.dataRootDirectory = next.dataRootDirectory.trim();
+  }
+  if (typeof next.downloadsDirectory === "string") {
+    next.downloadsDirectory = next.downloadsDirectory.trim();
+  }
+
+  await writeRuntimeSettings(next);
+  return next;
+}
+
 module.exports = {
   handleInstallArchive,
   handleInstallEngine,
   handleCancelInstall,
   handleLaunchEngine,
+  handleGetSettings,
+  handleUpdateSettings,
 };

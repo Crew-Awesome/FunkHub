@@ -1,9 +1,60 @@
 import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { Folder, Download, Palette, Sliders, Info } from "lucide-react";
-import { useTheme } from "../../providers";
+import { useFunkHub, useTheme } from "../../providers";
 
 export function Settings() {
   const { theme, toggleTheme } = useTheme();
+  const {
+    settings,
+    installedEngines,
+    setDefaultEngine,
+    updateSettings,
+    browseFolder,
+  } = useFunkHub();
+  const [gameDirectory, setGameDirectory] = useState(settings.gameDirectory);
+  const [downloadsDirectory, setDownloadsDirectory] = useState(settings.downloadsDirectory);
+  const [dataRootDirectory, setDataRootDirectory] = useState(settings.dataRootDirectory);
+
+  useEffect(() => {
+    setGameDirectory(settings.gameDirectory);
+    setDownloadsDirectory(settings.downloadsDirectory);
+    setDataRootDirectory(settings.dataRootDirectory);
+  }, [settings.gameDirectory, settings.downloadsDirectory, settings.dataRootDirectory]);
+
+  const defaultEngineId = installedEngines.find((engine) => engine.isDefault)?.id ?? "";
+
+  const saveStringSetting = async (
+    key: "gameDirectory" | "downloadsDirectory" | "dataRootDirectory",
+    value: string,
+  ) => {
+    await updateSettings({ [key]: value.trim() });
+  };
+
+  const browseForSetting = async (
+    key: "gameDirectory" | "downloadsDirectory" | "dataRootDirectory",
+    title: string,
+    fallbackValue: string,
+  ) => {
+    const selected = await browseFolder({
+      title,
+      defaultPath: fallbackValue || undefined,
+    });
+
+    if (!selected) {
+      return;
+    }
+
+    if (key === "gameDirectory") {
+      setGameDirectory(selected);
+    } else if (key === "downloadsDirectory") {
+      setDownloadsDirectory(selected);
+    } else {
+      setDataRootDirectory(selected);
+    }
+
+    await updateSettings({ [key]: selected });
+  };
 
   return (
     <div className="p-8 max-w-4xl">
@@ -24,20 +75,25 @@ export function Settings() {
           </div>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Game Directory
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  defaultValue="C:/Games/FridayNightFunkin"
-                  className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-                <button className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                  <Folder className="w-4 h-4" />
-                  Browse
-                </button>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Game Directory
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={gameDirectory}
+                    onChange={(event) => setGameDirectory(event.target.value)}
+                    onBlur={() => saveStringSetting("gameDirectory", gameDirectory)}
+                    className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                  <button
+                    onClick={() => browseForSetting("gameDirectory", "Choose your FNF game folder", gameDirectory)}
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  >
+                    <Folder className="w-4 h-4" />
+                    Browse
+                  </button>
               </div>
             </div>
 
@@ -45,11 +101,23 @@ export function Settings() {
               <label className="block text-sm font-medium text-foreground mb-2">
                 Default Engine
               </label>
-              <select className="w-full px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                <option>Psych Engine</option>
-                <option>Kade Engine</option>
-                <option>Codename Engine</option>
-                <option>Vanilla FNF</option>
+              <select
+                value={defaultEngineId}
+                onChange={(event) => {
+                  if (event.target.value) {
+                    setDefaultEngine(event.target.value);
+                  }
+                }}
+                className="w-full px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                <option value="" disabled={installedEngines.length > 0}>
+                  {installedEngines.length > 0 ? "Select default engine" : "No installed engines"}
+                </option>
+                {installedEngines.map((engine) => (
+                  <option key={engine.id} value={engine.id}>
+                    {engine.name} ({engine.version})
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -71,34 +139,68 @@ export function Settings() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Download Location
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  defaultValue="C:/Users/User/Downloads/FunkHub"
-                  className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-                <button className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                  <Folder className="w-4 h-4" />
-                  Browse
-                </button>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Download Location
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={downloadsDirectory}
+                    onChange={(event) => setDownloadsDirectory(event.target.value)}
+                    onBlur={() => saveStringSetting("downloadsDirectory", downloadsDirectory)}
+                    className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                  <button
+                    onClick={() => browseForSetting("downloadsDirectory", "Choose a download temp folder", downloadsDirectory)}
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  >
+                    <Folder className="w-4 h-4" />
+                    Browse
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Engine Data Root
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={dataRootDirectory}
+                    onChange={(event) => setDataRootDirectory(event.target.value)}
+                    onBlur={() => saveStringSetting("dataRootDirectory", dataRootDirectory)}
+                    className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="Defaults to app data directory"
+                  />
+                  <button
+                    onClick={() => browseForSetting("dataRootDirectory", "Choose engine install root", dataRootDirectory)}
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  >
+                    <Folder className="w-4 h-4" />
+                    Browse
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Max Concurrent Downloads
+                </label>
+                <select
+                  value={String(settings.maxConcurrentDownloads)}
+                  onChange={(event) => {
+                    updateSettings({ maxConcurrentDownloads: Number(event.target.value) });
+                  }}
+                  className="w-full px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="5">5</option>
+                </select>
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Max Concurrent Downloads
-              </label>
-              <select defaultValue="3" className="w-full px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                <option>1</option>
-                <option>2</option>
-                <option>3</option>
-                <option>5</option>
-              </select>
-            </div>
-          </div>
         </motion.section>
 
         {/* Appearance Settings */}
@@ -142,7 +244,10 @@ export function Settings() {
               </div>
               <input
                 type="checkbox"
-                defaultChecked
+                checked={settings.showAnimations}
+                onChange={(event) => {
+                  updateSettings({ showAnimations: event.target.checked });
+                }}
                 className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
                          checked:bg-primary transition-colors
                          after:content-[''] after:absolute after:top-1 after:left-1 
@@ -177,7 +282,10 @@ export function Settings() {
               </div>
               <input
                 type="checkbox"
-                defaultChecked
+                checked={settings.compatibilityChecks}
+                onChange={(event) => {
+                  updateSettings({ compatibilityChecks: event.target.checked });
+                }}
                 className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
                          checked:bg-primary transition-colors
                          after:content-[''] after:absolute after:top-1 after:left-1 
@@ -195,6 +303,10 @@ export function Settings() {
               </div>
               <input
                 type="checkbox"
+                checked={settings.autoUpdateMods}
+                onChange={(event) => {
+                  updateSettings({ autoUpdateMods: event.target.checked });
+                }}
                 className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
                          checked:bg-primary transition-colors
                          after:content-[''] after:absolute after:top-1 after:left-1 
@@ -212,6 +324,10 @@ export function Settings() {
               </div>
               <input
                 type="checkbox"
+                checked={settings.sendAnalytics}
+                onChange={(event) => {
+                  updateSettings({ sendAnalytics: event.target.checked });
+                }}
                 className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
                          checked:bg-primary transition-colors
                          after:content-[''] after:absolute after:top-1 after:left-1 

@@ -5,6 +5,9 @@ contextBridge.exposeInMainWorld("funkhubDesktop", {
   installEngine: (payload) => ipcRenderer.invoke("funkhub:installEngine", payload),
   cancelInstall: (payload) => ipcRenderer.invoke("funkhub:cancelInstall", payload),
   launchEngine: (payload) => ipcRenderer.invoke("funkhub:launchEngine", payload),
+  pickFolder: (payload) => ipcRenderer.invoke("funkhub:pickFolder", payload),
+  getSettings: () => ipcRenderer.invoke("funkhub:getSettings"),
+  updateSettings: (payload) => ipcRenderer.invoke("funkhub:updateSettings", payload),
   onInstallProgress: (listener) => {
     const wrapped = (_event, payload) => listener(payload);
     ipcRenderer.on("funkhub:install-progress", wrapped);

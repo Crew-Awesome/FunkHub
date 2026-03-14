@@ -4,6 +4,7 @@ import {
   CategoryNode,
   DownloadTask,
   EngineDefinition,
+  FunkHubSettings,
   GameBananaModProfile,
   GameBananaModSummary,
   InstalledEngine,
@@ -22,6 +23,7 @@ interface FunkHubContextValue {
   downloads: DownloadTask[];
   enginesCatalog: EngineDefinition[];
   installedEngines: InstalledEngine[];
+  settings: FunkHubSettings;
   selectedCategoryId?: number;
   setSelectedCategoryId: (categoryId?: number) => void;
   discoverSort: string;
@@ -41,6 +43,8 @@ interface FunkHubContextValue {
   cancelDownload: (taskId: string) => void;
   setDefaultEngine: (engineId: string) => void;
   removeInstalledMod: (installedId: string) => void;
+  updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
+  browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
 }
 
 const FunkHubContext = createContext<FunkHubContextValue | undefined>(undefined);
@@ -56,6 +60,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [installedMods, setInstalledMods] = useState<InstalledMod[]>(funkHubService.getInstalledMods());
   const [modUpdates, setModUpdates] = useState<ModUpdateInfo[]>(funkHubService.getModUpdates());
   const [installedEngines, setInstalledEngines] = useState<InstalledEngine[]>(funkHubService.getInstalledEngines());
+  const [settings, setSettings] = useState<FunkHubSettings>(funkHubService.getSettings());
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
   const [discoverSort, setDiscoverSort] = useState("Generic_Newest");
   const [discoverPage, setDiscoverPage] = useState(1);
@@ -101,6 +106,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         funkHubService.getFunkHubCategories(),
         funkHubService.getEngineCatalog(),
         funkHubService.getModSortOptions(),
+        funkHubService.syncDesktopSettings(),
       ]);
 
       setTrendingMods(trending);
@@ -117,6 +123,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         ]);
       setInstalledMods(funkHubService.getInstalledMods());
       setInstalledEngines(funkHubService.getInstalledEngines());
+      setSettings(funkHubService.getSettings());
       await refreshModUpdates();
       await refreshDiscover();
     } finally {
@@ -158,6 +165,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       downloads,
       enginesCatalog,
       installedEngines,
+      settings,
       selectedCategoryId,
       setSelectedCategoryId,
       discoverSort,
@@ -192,6 +200,11 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         funkHubService.removeInstalledMod(installedId);
         setInstalledMods(funkHubService.getInstalledMods());
       },
+      updateSettings: async (patch) => {
+        const next = await funkHubService.updateSettings(patch);
+        setSettings(next);
+      },
+      browseFolder: async (options) => funkHubService.pickFolder(options),
     }),
     [
       loading,
@@ -204,6 +217,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       downloads,
       enginesCatalog,
       installedEngines,
+      settings,
       selectedCategoryId,
       discoverSort,
       discoverPage,

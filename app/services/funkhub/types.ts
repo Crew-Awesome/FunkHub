@@ -156,12 +156,26 @@ export interface DesktopInstallResult {
   normalized?: boolean;
 }
 
+export interface FunkHubSettings {
+  gameDirectory: string;
+  downloadsDirectory: string;
+  dataRootDirectory: string;
+  maxConcurrentDownloads: number;
+  compatibilityChecks: boolean;
+  autoUpdateMods: boolean;
+  sendAnalytics: boolean;
+  showAnimations: boolean;
+}
+
 export interface DesktopBridge {
   installArchive: (payload: DesktopInstallRequest) => Promise<DesktopInstallResult>;
   installEngine: (payload: DesktopInstallRequest) => Promise<DesktopInstallResult>;
   cancelInstall: (payload: { jobId: string }) => Promise<{ ok: boolean }>;
   onInstallProgress: (listener: (payload: DesktopInstallProgress) => void) => () => void;
   launchEngine: (payload: { installPath: string }) => Promise<{ ok: boolean; launchedPath?: string }>;
+  pickFolder: (payload?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>;
+  getSettings: () => Promise<Partial<FunkHubSettings>>;
+  updateSettings: (payload: Partial<FunkHubSettings>) => Promise<Partial<FunkHubSettings>>;
 }
 
 export interface ModUpdateInfo {

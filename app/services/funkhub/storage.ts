@@ -1,10 +1,22 @@
-import { DownloadTask, InstalledEngine, InstalledMod } from "./types";
+import { DownloadTask, FunkHubSettings, InstalledEngine, InstalledMod } from "./types";
 
 const STORAGE_KEYS = {
   installedMods: "funkhub-installed-mods",
   installedEngines: "funkhub-installed-engines",
   downloadHistory: "funkhub-download-history",
+  settings: "funkhub-settings",
 } as const;
+
+const DEFAULT_SETTINGS: FunkHubSettings = {
+  gameDirectory: "",
+  downloadsDirectory: "",
+  dataRootDirectory: "",
+  maxConcurrentDownloads: 3,
+  compatibilityChecks: true,
+  autoUpdateMods: false,
+  sendAnalytics: false,
+  showAnimations: true,
+};
 
 function safeParse<T>(value: string | null, fallback: T): T {
   if (!value) {
@@ -42,6 +54,19 @@ export class FunkHubStorageService {
   saveDownloadHistory(history: DownloadTask[]): void {
     localStorage.setItem(STORAGE_KEYS.downloadHistory, JSON.stringify(history));
   }
+
+  getSettings(): FunkHubSettings {
+    const parsed = safeParse<Partial<FunkHubSettings>>(localStorage.getItem(STORAGE_KEYS.settings), {});
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+    };
+  }
+
+  saveSettings(settings: FunkHubSettings): void {
+    localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+  }
 }
 
 export const funkHubStorageService = new FunkHubStorageService();
+export { DEFAULT_SETTINGS };
