@@ -1,7 +1,10 @@
 node_modules/
 dist/
+dist-desktop/
 .DS_Store
 *.log
 /.megamemory
 /.megamemory
 *.db-wal
+.megamemory/knowledge.db-shm
+.megamemory/knowledge.db-wal

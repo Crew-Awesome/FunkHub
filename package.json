@@ -3,12 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "electron:dev": "vite --host 127.0.0.1 --port 5173 & electron ./electron/main.cjs",
-    "electron:start": "electron ./electron/main.cjs"
+    "electron:start": "electron ./electron/main.cjs",
+    "typecheck": "tsc --noEmit -p tsconfig.ci.json",
+    "build:renderer": "vite build",
+    "build:desktop:linux": "bun run build:renderer && electron-builder --linux AppImage --x64 --publish never",
+    "build:desktop:win": "bun run build:renderer && electron-builder --win nsis portable --x64 --publish never"
   },
   "dependencies": {
     "7zip-bin": "^5.2.0",
@@ -26,8 +31,35 @@
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.0.4",
+    "electron-builder": "^24.13.3",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
     "vite": "^7.1.7"
+  },
+  "build": {
+    "appId": "com.funkhub.desktop",
+    "productName": "FunkHub",
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    }
   }
 }
