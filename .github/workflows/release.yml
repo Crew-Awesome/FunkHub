@@ -19,16 +19,6 @@ jobs:
           - os: ubuntu-latest
             artifact: FunkHub-linux
             package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never
-            verify_shell: bash
-            verify_cmd: |
-              set -euo pipefail
-              shopt -s globstar nullglob
-              files=(dist-desktop/**/*.AppImage)
-              if [[ ${#files[@]} -eq 0 ]]; then
-                echo "No Linux installer (.AppImage) was produced under dist-desktop/."
-                exit 1
-              fi
-              printf 'Found Linux installer: %s\n' "${files[@]}"
             artifact_glob: |
               dist-desktop/**/*.AppImage
               dist-desktop/**/builder-*.yml
@@ -36,13 +26,6 @@ jobs:
           - os: windows-latest
             artifact: FunkHub-windows
             package_cmd: node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never
-            verify_shell: pwsh
-            verify_cmd: |
-              $files = Get-ChildItem -Path dist-desktop -Filter *.exe -Recurse -File
-              if ($files.Count -eq 0) {
-                Write-Error "No Windows installers (.exe) were produced under dist-desktop/."
-              }
-              $files | ForEach-Object { Write-Host "Found Windows installer: $($_.FullName)" }
             artifact_glob: |
               dist-desktop/**/*.exe
               dist-desktop/**/builder-*.yml
@@ -79,9 +62,28 @@ jobs:
       - name: Package desktop app
         run: ${{ matrix.package_cmd }}
 
-      - name: Verify packaged installers
-        shell: ${{ matrix.verify_shell }}
-        run: ${{ matrix.verify_cmd }}
+      - name: Verify Linux installer output
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          files=(dist-desktop/**/*.AppImage)
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "No Linux installer (.AppImage) was produced under dist-desktop/."
+            exit 1
+          fi
+          printf 'Found Linux installer: %s\n' "${files[@]}"
+
+      - name: Verify Windows installer output
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path dist-desktop -Filter *.exe -Recurse -File
+          if ($files.Count -eq 0) {
+            Write-Error "No Windows installers (.exe) were produced under dist-desktop/."
+          }
+          $files | ForEach-Object { Write-Host "Found Windows installer: $($_.FullName)" }
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
