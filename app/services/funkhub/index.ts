@@ -4,4 +4,5 @@ export { downloadManager } from "./downloadManager";
 export { modInstallerService } from "./installer";
 export { funkHubStorageService } from "./storage";
 export { funkHubService } from "./funkhubService";
+export { detectClientPlatform, pickBestReleaseForPlatform } from "./platform";
 export * from "./types";

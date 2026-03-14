@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Plus, Cpu, FolderOpen, Loader2, AlertCircle } from "lucide-react";
 import { EngineCard } from "./EngineCard";
 import { useFunkHub } from "../../providers";
-import type { EngineSlug } from "../../services/funkhub";
+import { detectClientPlatform, pickBestReleaseForPlatform, type EngineSlug } from "../../services/funkhub";
 
 export function Engines() {
   const { installedEngines, enginesCatalog, downloads, setDefaultEngine, installEngine } = useFunkHub();
@@ -13,6 +13,7 @@ export function Engines() {
 
   const availableEngines = enginesCatalog;
   const hasEngines = installedEngines.length > 0;
+  const currentPlatform = detectClientPlatform();
   const engineDownloads = downloads
     .filter((task) => task.modId === -1)
     .filter((task) => ["queued", "downloading", "installing", "failed"].includes(task.status));
@@ -69,7 +70,7 @@ export function Engines() {
                     key={engine.slug}
                     disabled={Boolean(installingSlug)}
                     onClick={async () => {
-                      const primaryRelease = engine.releases[0];
+                      const primaryRelease = pickBestReleaseForPlatform(engine.releases, currentPlatform);
                       if (primaryRelease) {
                         await installSelectedEngine(engine.slug, primaryRelease.downloadUrl, primaryRelease.version);
                       }
@@ -145,7 +146,7 @@ export function Engines() {
                 key={engine.slug}
                 disabled={Boolean(installingSlug)}
                 onClick={async () => {
-                  const primaryRelease = engine.releases[0];
+                  const primaryRelease = pickBestReleaseForPlatform(engine.releases, currentPlatform);
                   if (primaryRelease) {
                     await installSelectedEngine(engine.slug, primaryRelease.downloadUrl, primaryRelease.version);
                   }
@@ -156,7 +157,9 @@ export function Engines() {
                   ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
                   : <Cpu className="w-5 h-5 text-primary" />}
                 <span className="flex-1">{engine.name}</span>
-                <span className="text-xs text-muted-foreground">{engine.releases[0]?.version ?? "latest"}</span>
+                <span className="text-xs text-muted-foreground">
+                  {(pickBestReleaseForPlatform(engine.releases, currentPlatform)?.version ?? "latest")}
+                </span>
               </button>
             ))}
             <button className="px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3">
@@ -214,6 +217,9 @@ export function Engines() {
           Different mods require different game engines to run. FunkHub manages multiple engine installations
           so you can play any mod. Set a default engine for quick launches, or switch between engines based on
           mod requirements.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Detected device platform: {currentPlatform}
         </p>
       </div>
     </div>

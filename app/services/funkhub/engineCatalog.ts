@@ -127,13 +127,43 @@ const staticOnlyEngines: EngineDefinition[] = [
   {
     slug: "ale-psych",
     name: "ALE Psych Engine",
-    description: "ALE Psych CI workflow page.",
+    description: "ALE Psych nightly workflow artifacts.",
     releases: [
       {
+        platform: "windows",
+        version: "nightly",
+        sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
+        downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/Windows%20Build.zip",
+      },
+      {
+        platform: "windows",
+        version: "nightly-x32",
+        sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
+        downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/Windows%20x32%20Build.zip",
+      },
+      {
+        platform: "linux",
+        version: "nightly",
+        sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
+        downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/Linux%20Build.zip",
+      },
+      {
+        platform: "macos",
+        version: "nightly",
+        sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
+        downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/MacOS%20Build.zip",
+      },
+      {
+        platform: "macos",
+        version: "nightly-x64",
+        sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
+        downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/MacOS%20x64%20Build.zip",
+      },
+      {
         platform: "any",
-        version: "workflow",
-        sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions",
-        downloadUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions",
+        version: "nightly-android",
+        sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
+        downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/Android%20Build.zip",
       },
     ],
   },
