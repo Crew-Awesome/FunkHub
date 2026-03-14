@@ -287,7 +287,26 @@ export class FunkHubService {
   }
 
   async getEngineCatalog(): Promise<EngineDefinition[]> {
-    return engineCatalogService.getEngineCatalog();
+    const catalog = await engineCatalogService.getEngineCatalog();
+    const basegame = catalog.find((entry) => entry.slug === "basegame");
+
+    if (basegame && window.funkhubDesktop?.listItchBaseGameReleases) {
+      try {
+        const itch = await window.funkhubDesktop.listItchBaseGameReleases();
+        if (itch.ok && itch.releases.length > 0) {
+          basegame.releases = itch.releases.map((release) => ({
+            platform: release.platform,
+            version: release.version,
+            sourceUrl: release.sourceUrl,
+            downloadUrl: release.downloadUrl,
+          }));
+        }
+      } catch {
+        // Keep static fallback catalog when itch API isn't connected.
+      }
+    }
+
+    return catalog;
   }
 
   async installEngineFromRelease(input: {
@@ -307,8 +326,12 @@ export class FunkHubService {
       const clientPlatform = detectClientPlatform();
       const itchPlatform = clientPlatform === "any" ? "linux" : clientPlatform;
 
+      const uploadIdMatch = input.releaseUrl.match(/^itch:\/\/upload\/(\d+)$/);
+      const uploadId = uploadIdMatch ? Number(uploadIdMatch[1]) : undefined;
+
       const itch = await window.funkhubDesktop.resolveItchBaseGameDownload({
         platform: itchPlatform,
+        uploadId,
       });
 
       if (!itch.ok || !itch.downloadUrl) {
@@ -577,7 +600,11 @@ export class FunkHubService {
 
   async launchEngine(
     engineId: string,
-    options?: { launcher?: "native" | "wine" | "wine64" | "proton"; launcherPath?: string },
+    options?: {
+      launcher?: "native" | "wine" | "wine64" | "proton";
+      launcherPath?: string;
+      executablePath?: string;
+    },
   ): Promise<void> {
     const engine = this.installedEngines.find((entry) => entry.id === engineId);
     if (!engine) {
@@ -592,6 +619,7 @@ export class FunkHubService {
       installPath: engine.installPath,
       launcher: options?.launcher,
       launcherPath: options?.launcherPath,
+      executablePath: options?.executablePath,
     });
   }
 

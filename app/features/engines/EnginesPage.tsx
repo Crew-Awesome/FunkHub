@@ -10,6 +10,8 @@ export function Engines() {
     installedEngines,
     enginesCatalog,
     downloads,
+    settings,
+    updateSettings,
     setDefaultEngine,
     installEngine,
     importEngineFromFolder,
@@ -25,10 +27,14 @@ export function Engines() {
   const [installingSlug, setInstallingSlug] = useState<string | null>(null);
   const [installError, setInstallError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busyEngineId, setBusyEngineId] = useState<string | null>(null);
   const [confirmUninstall, setConfirmUninstall] = useState<{ id: string; name: string; version: string; path: string } | null>(null);
-  const [linuxLauncher, setLinuxLauncher] = useState<"native" | "wine" | "wine64" | "proton">("native");
-  const [linuxLauncherPath, setLinuxLauncherPath] = useState("");
+  const [manageEngineId, setManageEngineId] = useState<string | null>(null);
+  const [manageLauncher, setManageLauncher] = useState<"native" | "wine" | "wine64" | "proton">("native");
+  const [manageLauncherPath, setManageLauncherPath] = useState("");
+  const [manageExecutablePath, setManageExecutablePath] = useState("");
+  const [selectedReleaseBySlug, setSelectedReleaseBySlug] = useState<Record<string, string>>({});
 
   const availableEngines = enginesCatalog;
   const hasEngines = installedEngines.length > 0;
@@ -36,6 +42,8 @@ export function Engines() {
   const engineDownloads = downloads
     .filter((task) => task.modId === -1)
     .filter((task) => ["queued", "downloading", "installing", "failed"].includes(task.status));
+
+  const getLaunchOverride = (engineId: string) => settings.engineLaunchOverrides[engineId] ?? { launcher: "native" as const };
 
   const installSelectedEngine = async (engineSlug: EngineSlug, releaseUrl: string, releaseVersion: string) => {
     setInstallError(null);
@@ -53,25 +61,28 @@ export function Engines() {
 
   const handleLaunch = async (engineId: string) => {
     setActionError(null);
+    setNotice(null);
     try {
+      const override = getLaunchOverride(engineId);
       await launchEngine(engineId, {
-        launcher: currentPlatform === "linux" ? linuxLauncher : "native",
-        launcherPath: currentPlatform === "linux" && linuxLauncher !== "native"
-          ? linuxLauncherPath || undefined
+        launcher: currentPlatform === "linux" ? override.launcher : "native",
+        launcherPath: currentPlatform === "linux" && override.launcher !== "native"
+          ? override.launcherPath
           : undefined,
+        executablePath: override.executablePath,
       });
+      setNotice("Engine launch command sent.");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Failed to launch engine");
     }
   };
 
-  const handleManage = async (engineId: string) => {
-    setActionError(null);
-    try {
-      await openEngineFolder(engineId);
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Failed to open engine folder");
-    }
+  const handleManage = (engineId: string) => {
+    const override = getLaunchOverride(engineId);
+    setManageEngineId(engineId);
+    setManageLauncher(override.launcher);
+    setManageLauncherPath(override.launcherPath ?? "");
+    setManageExecutablePath(override.executablePath ?? "");
   };
 
   const handleUpdate = async (engineId: string) => {
@@ -113,6 +124,23 @@ export function Engines() {
     }
   };
 
+  const saveManageOverrides = async () => {
+    if (!manageEngineId) {
+      return;
+    }
+    await updateSettings({
+      engineLaunchOverrides: {
+        ...settings.engineLaunchOverrides,
+        [manageEngineId]: {
+          launcher: manageLauncher,
+          launcherPath: manageLauncherPath.trim() || undefined,
+          executablePath: manageExecutablePath.trim() || undefined,
+        },
+      },
+    });
+    setNotice("Engine launch settings saved.");
+  };
+
   const healthMeta = (engineId: string) => {
     const health = getEngineHealth(engineId);
     if (health.health === "ready") {
@@ -141,6 +169,34 @@ export function Engines() {
       if (a[i] < b[i]) return false;
     }
     return false;
+  };
+
+  const getInstallableReleases = (engineSlug: EngineSlug) => {
+    const definition = availableEngines.find((engine) => engine.slug === engineSlug);
+    if (!definition) {
+      return [];
+    }
+
+    const byPlatform = definition.releases.filter((release) => release.platform === currentPlatform || release.platform === "any");
+    const list = byPlatform.length > 0 ? byPlatform : definition.releases;
+    const deduped = new Map<string, (typeof list)[number]>();
+    for (const release of list) {
+      const key = `${release.version}|${release.downloadUrl}`;
+      if (!deduped.has(key)) {
+        deduped.set(key, release);
+      }
+    }
+    return Array.from(deduped.values());
+  };
+
+  const getSelectedRelease = (engineSlug: EngineSlug) => {
+    const releases = getInstallableReleases(engineSlug);
+    if (releases.length === 0) {
+      return undefined;
+    }
+    const selectedUrl = selectedReleaseBySlug[engineSlug];
+    const selected = selectedUrl ? releases.find((release) => release.downloadUrl === selectedUrl) : undefined;
+    return selected ?? pickBestReleaseForPlatform(releases, currentPlatform) ?? releases[0];
   };
 
   if (!hasEngines) {
@@ -181,23 +237,45 @@ export function Engines() {
                   (() => {
                     const installedCount = installedEngines.filter((entry) => entry.slug === engine.slug).length;
                     return (
-                  <button
-                    key={engine.slug}
-                    disabled={Boolean(installingSlug)}
-                    onClick={async () => {
-                      const primaryRelease = pickBestReleaseForPlatform(engine.releases, currentPlatform);
-                      if (primaryRelease) {
-                        await installSelectedEngine(engine.slug, primaryRelease.downloadUrl, primaryRelease.version);
-                      }
-                    }}
-                    className="w-full px-4 py-3 bg-secondary hover:bg-secondary/80 disabled:opacity-60 disabled:cursor-not-allowed text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
-                  >
-                    {installingSlug === engine.slug
-                      ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                      : <Cpu className="w-5 h-5 text-primary" />}
-                    <span className="flex-1">{engine.name}</span>
-                    <span className="text-xs text-muted-foreground">{installedCount > 0 ? `${installedCount} installed` : "new"}</span>
-                  </button>
+                  <div key={engine.slug} className="w-full px-4 py-3 bg-secondary rounded-lg text-left font-medium">
+                    <div className="flex items-center gap-3 mb-2">
+                      {installingSlug === engine.slug
+                        ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                        : <Cpu className="w-5 h-5 text-primary" />}
+                      <span className="flex-1 text-foreground">{engine.name}</span>
+                      <span className="text-xs text-muted-foreground">{installedCount > 0 ? `${installedCount} installed` : "new"}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <select
+                        value={getSelectedRelease(engine.slug)?.downloadUrl ?? ""}
+                        onChange={(event) => {
+                          setSelectedReleaseBySlug((current) => ({
+                            ...current,
+                            [engine.slug]: event.target.value,
+                          }));
+                        }}
+                        className="flex-1 px-2 py-1.5 bg-input-background border border-border rounded text-xs"
+                      >
+                        {getInstallableReleases(engine.slug).map((release) => (
+                          <option key={`${release.version}-${release.downloadUrl}`} value={release.downloadUrl}>
+                            {release.version} ({release.platform})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        disabled={Boolean(installingSlug)}
+                        onClick={async () => {
+                          const release = getSelectedRelease(engine.slug);
+                          if (release) {
+                            await installSelectedEngine(engine.slug, release.downloadUrl, release.version);
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:opacity-60 text-white rounded text-xs"
+                      >
+                        Install
+                      </button>
+                    </div>
+                  </div>
                     );
                   })()
                 ))}
@@ -266,26 +344,48 @@ export function Engines() {
               (() => {
                 const installedCount = installedEngines.filter((entry) => entry.slug === engine.slug).length;
                 return (
-              <button
-                key={engine.slug}
-                disabled={Boolean(installingSlug)}
-                onClick={async () => {
-                  const primaryRelease = pickBestReleaseForPlatform(engine.releases, currentPlatform);
-                  if (primaryRelease) {
-                    await installSelectedEngine(engine.slug, primaryRelease.downloadUrl, primaryRelease.version);
-                  }
-                }}
-                className="px-4 py-3 bg-secondary hover:bg-secondary/80 disabled:opacity-60 disabled:cursor-not-allowed text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
-              >
-                {installingSlug === engine.slug
-                  ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                  : <Cpu className="w-5 h-5 text-primary" />}
-                <span className="flex-1">{engine.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {(pickBestReleaseForPlatform(engine.releases, currentPlatform)?.version ?? "latest")}
-                  {installedCount > 0 ? ` • ${installedCount} installed` : ""}
-                </span>
-              </button>
+              <div key={engine.slug} className="px-4 py-3 bg-secondary rounded-lg text-left font-medium">
+                <div className="flex items-center gap-3 mb-2">
+                  {installingSlug === engine.slug
+                    ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                    : <Cpu className="w-5 h-5 text-primary" />}
+                  <span className="flex-1 text-foreground">{engine.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {(getSelectedRelease(engine.slug)?.version ?? "latest")}
+                    {installedCount > 0 ? ` • ${installedCount} installed` : ""}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={getSelectedRelease(engine.slug)?.downloadUrl ?? ""}
+                    onChange={(event) => {
+                      setSelectedReleaseBySlug((current) => ({
+                        ...current,
+                        [engine.slug]: event.target.value,
+                      }));
+                    }}
+                    className="flex-1 px-2 py-1.5 bg-input-background border border-border rounded text-xs"
+                  >
+                    {getInstallableReleases(engine.slug).map((release) => (
+                      <option key={`${release.version}-${release.downloadUrl}`} value={release.downloadUrl}>
+                        {release.version} ({release.platform})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    disabled={Boolean(installingSlug)}
+                    onClick={async () => {
+                      const release = getSelectedRelease(engine.slug);
+                      if (release) {
+                        await installSelectedEngine(engine.slug, release.downloadUrl, release.version);
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:opacity-60 text-white rounded text-xs"
+                  >
+                    Install
+                  </button>
+                </div>
+              </div>
                 );
               })()
             ))}
@@ -372,24 +472,6 @@ export function Engines() {
                     handleManage(engine.id);
                   }
                 }}
-                onSetDefault={() => setDefaultEngine(engine.id)}
-                onOpenMods={() => {
-                  if (!busyEngineId) {
-                    openEngineModsFolder(engine.id).catch((error) => {
-                      setActionError(error instanceof Error ? error.message : "Failed to open mods folder");
-                    });
-                  }
-                }}
-                onUpdate={() => {
-                  if (!busyEngineId) {
-                    handleUpdate(engine.id);
-                  }
-                }}
-                onUninstall={() => {
-                  if (!busyEngineId) {
-                    setConfirmUninstall({ id: engine.id, name: engine.name, version: engine.version, path: engine.installPath });
-                  }
-                }}
               />
             </div>
           </motion.div>
@@ -400,6 +482,12 @@ export function Engines() {
         <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 p-3 text-sm flex items-center gap-2">
           <AlertCircle className="w-4 h-4" />
           {actionError}
+        </div>
+      )}
+
+      {notice && (
+        <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 p-3 text-sm">
+          {notice}
         </div>
       )}
 
@@ -414,32 +502,75 @@ export function Engines() {
         <p className="mt-2 text-xs text-muted-foreground">
           Detected device platform: {currentPlatform}
         </p>
-        {currentPlatform === "linux" && (
-          <div className="mt-4 space-y-2">
-            <label className="text-xs text-muted-foreground">Executable launcher</label>
-            <div className="flex gap-2">
-              <select
-                value={linuxLauncher}
-                onChange={(event) => setLinuxLauncher(event.target.value as "native" | "wine" | "wine64" | "proton")}
-                className="px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
-              >
-                <option value="native">Native</option>
-                <option value="wine">Wine</option>
-                <option value="wine64">Wine64</option>
-                <option value="proton">Proton</option>
-              </select>
-              {linuxLauncher !== "native" && (
-                <input
-                  value={linuxLauncherPath}
-                  onChange={(event) => setLinuxLauncherPath(event.target.value)}
-                  placeholder="Optional custom launcher path"
-                  className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
-                />
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {manageEngineId && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center">
+          <div className="w-full max-w-xl rounded-xl border border-border bg-card p-5">
+            {(() => {
+              const engine = installedEngines.find((entry) => entry.id === manageEngineId);
+              if (!engine) {
+                return null;
+              }
+              return (
+                <>
+                  <h3 className="text-lg font-semibold text-foreground">Manage {engine.name}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">v{engine.version}</p>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button onClick={() => setDefaultEngine(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Set Default</button>
+                    <button onClick={() => openEngineFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : "Failed to open folder"))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Open Folder</button>
+                    <button onClick={() => openEngineModsFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : "Failed to open mods folder"))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Open Mods Folder</button>
+                    <button onClick={() => handleUpdate(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Update</button>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    <label className="text-xs text-muted-foreground">Executable launcher</label>
+                    <select
+                      value={manageLauncher}
+                      onChange={(event) => setManageLauncher(event.target.value as "native" | "wine" | "wine64" | "proton")}
+                      className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                    >
+                      <option value="native">Native</option>
+                      <option value="wine">Wine</option>
+                      <option value="wine64">Wine64</option>
+                      <option value="proton">Proton</option>
+                    </select>
+                    {manageLauncher !== "native" && (
+                      <input
+                        value={manageLauncherPath}
+                        onChange={(event) => setManageLauncherPath(event.target.value)}
+                        placeholder="Optional launcher binary path (eg /usr/bin/wine)"
+                        className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                      />
+                    )}
+                    <input
+                      value={manageExecutablePath}
+                      onChange={(event) => setManageExecutablePath(event.target.value)}
+                      placeholder="Optional executable path inside engine folder"
+                      className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">Examples: `ALEPsych`, `bin/Funkin.sh`</p>
+                  </div>
+
+                  <div className="mt-5 flex justify-between gap-2">
+                    <button
+                      onClick={() => setConfirmUninstall({ id: engine.id, name: engine.name, version: engine.version, path: engine.installPath })}
+                      className="px-3 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm"
+                    >
+                      Uninstall
+                    </button>
+                    <div className="flex gap-2">
+                      <button onClick={() => setManageEngineId(null)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Close</button>
+                      <button onClick={saveManageOverrides} className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm">Save</button>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       {confirmUninstall && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center">
@@ -460,6 +591,7 @@ export function Engines() {
                 onClick={async () => {
                   const target = confirmUninstall;
                   setConfirmUninstall(null);
+                  setManageEngineId(null);
                   await handleUninstall(target.id);
                 }}
                 className="px-3 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm"

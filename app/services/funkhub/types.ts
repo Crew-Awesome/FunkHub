@@ -165,6 +165,11 @@ export interface FunkHubSettings {
   autoUpdateMods: boolean;
   sendAnalytics: boolean;
   showAnimations: boolean;
+  engineLaunchOverrides: Record<string, {
+    launcher: "native" | "wine" | "wine64" | "proton";
+    launcherPath?: string;
+    executablePath?: string;
+  }>;
 }
 
 export interface DesktopBridge {
@@ -176,6 +181,7 @@ export interface DesktopBridge {
     installPath: string;
     launcher?: "native" | "wine" | "wine64" | "proton";
     launcherPath?: string;
+    executablePath?: string;
   }) => Promise<{ ok: boolean; launchedPath?: string }>;
   openPath: (payload: { targetPath: string }) => Promise<{ ok: boolean; openedPath?: string; error?: string }>;
   deletePath: (payload: { targetPath: string }) => Promise<{ ok: boolean; deletedPath?: string; error?: string }>;
@@ -186,7 +192,20 @@ export interface DesktopBridge {
     scopes?: string[];
     redirectPort?: number;
   }) => Promise<{ ok: boolean }>;
-  resolveItchBaseGameDownload: (payload: { platform: "windows" | "linux" | "macos" | "unknown" }) => Promise<{
+  listItchBaseGameReleases: () => Promise<{
+    ok: boolean;
+    requiresAuth?: boolean;
+    message?: string;
+    releases: Array<{
+      platform: "windows" | "linux" | "macos" | "any";
+      version: string;
+      fileName: string;
+      uploadId: number;
+      downloadUrl: string;
+      sourceUrl: string;
+    }>;
+  }>;
+  resolveItchBaseGameDownload: (payload: { platform: "windows" | "linux" | "macos" | "unknown"; uploadId?: number }) => Promise<{
     ok: boolean;
     requiresAuth?: boolean;
     message?: string;

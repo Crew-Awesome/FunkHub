@@ -10,6 +10,7 @@ const {
   handleGetItchAuthStatus,
   handleClearItchAuth,
   handleStartItchOAuth,
+  handleListItchBaseGameReleases,
   handleResolveItchBaseGameDownload,
   handleInspectEngineInstall,
   handleImportEngineFolder,
@@ -74,6 +75,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:startItchOAuth", async (_event, payload) => {
     return handleStartItchOAuth(payload);
+  });
+
+  ipcMain.handle("funkhub:listItchBaseGameReleases", async () => {
+    return handleListItchBaseGameReleases();
   });
 
   ipcMain.handle("funkhub:resolveItchBaseGameDownload", async (_event, payload) => {

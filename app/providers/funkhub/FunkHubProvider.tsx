@@ -45,7 +45,11 @@ interface FunkHubContextValue {
   uninstallEngine: (engineId: string) => Promise<void>;
   launchEngine: (
     engineId: string,
-    options?: { launcher?: "native" | "wine" | "wine64" | "proton"; launcherPath?: string },
+    options?: {
+      launcher?: "native" | "wine" | "wine64" | "proton";
+      launcherPath?: string;
+      executablePath?: string;
+    },
   ) => Promise<void>;
   openEngineFolder: (engineId: string) => Promise<void>;
   openEngineModsFolder: (engineId: string) => Promise<void>;

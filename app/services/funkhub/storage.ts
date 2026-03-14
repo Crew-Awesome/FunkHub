@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS: FunkHubSettings = {
   autoUpdateMods: false,
   sendAnalytics: false,
   showAnimations: true,
+  engineLaunchOverrides: {},
 };
 
 function safeParse<T>(value: string | null, fallback: T): T {

@@ -691,6 +691,7 @@ async function handleLaunchEngine(payload) {
   const installPath = payload?.installPath;
   const launcher = payload?.launcher || "native";
   const launcherPath = payload?.launcherPath;
+  const executablePath = payload?.executablePath;
   if (!installPath) {
     throw new Error("installPath is required");
   }
@@ -700,13 +701,34 @@ async function handleLaunchEngine(payload) {
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
   const absolutePath = safeJoin(rootPath, installPath);
-  const launchable = await findLaunchableExecutable(absolutePath, [
-    path.basename(installPath || ""),
-    "funkin",
-    "alepsych",
-    "psych",
-    "engine",
-  ]);
+  let launchable;
+  if (typeof executablePath === "string" && executablePath.trim().length > 0) {
+    const rawExecutable = executablePath.trim();
+    launchable = path.isAbsolute(rawExecutable)
+      ? path.resolve(rawExecutable)
+      : path.resolve(absolutePath, rawExecutable);
+
+    if (!isPathInside(absolutePath, launchable)) {
+      throw new Error("Executable path must be inside selected engine folder");
+    }
+
+    try {
+      const stats = await fs.stat(launchable);
+      if (!stats.isFile()) {
+        throw new Error("Executable path is not a file");
+      }
+    } catch {
+      throw new Error(`Configured executable path was not found: ${launchable}`);
+    }
+  } else {
+    launchable = await findLaunchableExecutable(absolutePath, [
+      path.basename(installPath || ""),
+      "funkin",
+      "alepsych",
+      "psych",
+      "engine",
+    ]);
+  }
   if (!launchable) {
     const hint = await getLaunchFailureHint(absolutePath);
     throw new Error(`${hint} (${absolutePath})`);
@@ -734,11 +756,20 @@ async function handleLaunchEngine(payload) {
     args = [launchable];
   }
 
-  const child = spawn(command, args, {
-    detached: true,
-    stdio: "ignore",
-    windowsHide: true,
-  });
+  let child;
+  try {
+    child = spawn(command, args, {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "spawn failed";
+    if (message.includes("ENOENT")) {
+      throw new Error(`Launcher command not found: ${command}. Set a valid launcher path.`);
+    }
+    throw error;
+  }
   child.unref();
 
   return { ok: true, launchedPath: launchable };
@@ -1009,8 +1040,94 @@ function platformUploadMatch(platform, fileName) {
   return true;
 }
 
+function detectPlatformFromUploadName(fileName) {
+  const lower = fileName.toLowerCase();
+  if (lower.includes("windows") || lower.includes("win")) return "windows";
+  if (lower.includes("linux")) return "linux";
+  if (lower.includes("mac")) return "macos";
+  return "any";
+}
+
+function detectVersionFromUploadName(fileName) {
+  const match = fileName.match(/v?(\d+\.\d+(?:\.\d+)?(?:[-+._A-Za-z0-9]+)?)/i);
+  return match ? match[1] : "latest";
+}
+
+async function getItchFunkinUploads(token) {
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
+  };
+
+  const ownedResponse = await fetch("https://api.itch.io/profile/owned-keys?page=1", { headers });
+  if (!ownedResponse.ok) {
+    throw new Error("itch.io auth failed, reconnect your account");
+  }
+
+  const ownedPayload = await ownedResponse.json();
+  const ownedKeys = Array.isArray(ownedPayload?.owned_keys) ? ownedPayload.owned_keys : [];
+  const target = ownedKeys.find((entry) => entry?.game_id === 792778 || String(entry?.game?.url || "").includes("ninja-muffin24.itch.io/funkin"));
+  if (!target) {
+    throw new Error("Funkin base game is not found in your itch.io library");
+  }
+
+  const uploadsResponse = await fetch(`https://api.itch.io/games/${target.game_id}/uploads?download_key=${target.id}`, { headers });
+  if (!uploadsResponse.ok) {
+    throw new Error("Failed to query itch.io uploads");
+  }
+
+  const uploadsPayload = await uploadsResponse.json();
+  const uploads = Array.isArray(uploadsPayload?.uploads) ? uploadsPayload.uploads : [];
+
+  return {
+    headers,
+    target,
+    uploads,
+  };
+}
+
+async function handleListItchBaseGameReleases() {
+  const token = await getItchAccessToken();
+  if (!token) {
+    return {
+      ok: false,
+      requiresAuth: true,
+      message: "You have to log in with itch.io to load base game versions",
+      releases: [],
+    };
+  }
+
+  try {
+    const { uploads } = await getItchFunkinUploads(token);
+    const releases = uploads.map((upload) => {
+      const fileName = String(upload?.filename || "Funkin build");
+      const platform = detectPlatformFromUploadName(fileName);
+      return {
+        platform,
+        version: detectVersionFromUploadName(fileName),
+        fileName,
+        uploadId: Number(upload?.id || 0),
+        downloadUrl: `itch://upload/${upload?.id}`,
+        sourceUrl: "https://ninja-muffin24.itch.io/funkin",
+      };
+    }).filter((entry) => Number.isFinite(entry.uploadId) && entry.uploadId > 0);
+
+    return {
+      ok: true,
+      releases,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Failed to load itch releases",
+      releases: [],
+    };
+  }
+}
+
 async function handleResolveItchBaseGameDownload(payload) {
   const platform = payload?.platform || "linux";
+  const uploadId = Number(payload?.uploadId || 0) || undefined;
   const token = await getItchAccessToken();
   if (!token) {
     return {
@@ -1020,39 +1137,22 @@ async function handleResolveItchBaseGameDownload(payload) {
     };
   }
 
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    Accept: "application/json",
-  };
-
-  const ownedResponse = await fetch("https://api.itch.io/profile/owned-keys?page=1", { headers });
-  if (!ownedResponse.ok) {
+  let uploads;
+  let headers;
+  let target;
+  try {
+    ({ uploads, headers, target } = await getItchFunkinUploads(token));
+  } catch (error) {
     return {
       ok: false,
       requiresAuth: true,
-      message: "itch.io auth failed, reconnect your account",
+      message: error instanceof Error ? error.message : "Failed to query itch.io uploads",
     };
   }
 
-  const ownedPayload = await ownedResponse.json();
-  const ownedKeys = Array.isArray(ownedPayload?.owned_keys) ? ownedPayload.owned_keys : [];
-  const target = ownedKeys.find((entry) => entry?.game_id === 792778 || String(entry?.game?.url || "").includes("ninja-muffin24.itch.io/funkin"));
-  if (!target) {
-    return {
-      ok: false,
-      requiresAuth: true,
-      message: "Funkin base game is not found in your itch.io library",
-    };
-  }
-
-  const uploadsResponse = await fetch(`https://api.itch.io/games/${target.game_id}/uploads?download_key=${target.id}`, { headers });
-  if (!uploadsResponse.ok) {
-    return { ok: false, message: "Failed to query itch.io uploads" };
-  }
-
-  const uploadsPayload = await uploadsResponse.json();
-  const uploads = Array.isArray(uploadsPayload?.uploads) ? uploadsPayload.uploads : [];
-  const upload = uploads.find((entry) => platformUploadMatch(platform, String(entry?.filename || ""))) || uploads[0];
+  const upload = uploadId
+    ? uploads.find((entry) => Number(entry?.id) === uploadId)
+    : (uploads.find((entry) => platformUploadMatch(platform, String(entry?.filename || ""))) || uploads[0]);
 
   if (!upload?.id) {
     return { ok: false, message: "No compatible itch.io base game upload found" };
@@ -1071,7 +1171,7 @@ async function handleResolveItchBaseGameDownload(payload) {
     ok: true,
     downloadUrl: location,
     fileName: String(upload.filename || `funkin-${platform}.zip`),
-    version: "0.8.3",
+    version: detectVersionFromUploadName(String(upload.filename || "")),
   };
 }
 
@@ -1107,6 +1207,7 @@ module.exports = {
   handleGetItchAuthStatus,
   handleClearItchAuth,
   handleStartItchOAuth,
+  handleListItchBaseGameReleases,
   handleResolveItchBaseGameDownload,
   handleInspectEngineInstall,
   handleImportEngineFolder,

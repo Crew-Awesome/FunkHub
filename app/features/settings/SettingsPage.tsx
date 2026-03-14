@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Folder, Download, Palette, Sliders, Info } from "lucide-react";
 import { useFunkHub, useTheme } from "../../providers";
 
+const ITCH_OAUTH_CLIENT_ID = "4f345ebf07699f30d702a69fd6dca358";
+
 export function Settings() {
   const { theme, toggleTheme } = useTheme();
   const {
@@ -18,7 +20,6 @@ export function Settings() {
   const [gameDirectory, setGameDirectory] = useState(settings.gameDirectory);
   const [downloadsDirectory, setDownloadsDirectory] = useState(settings.downloadsDirectory);
   const [dataRootDirectory, setDataRootDirectory] = useState(settings.dataRootDirectory);
-  const [itchClientId, setItchClientId] = useState("4f345ebf07699f30d702a69fd6dca358");
   const [itchBusy, setItchBusy] = useState(false);
 
   useEffect(() => {
@@ -275,13 +276,6 @@ export function Settings() {
                 Required for automatic base game download resolution from itch.io.
               </p>
               <div className="mt-3 flex gap-2">
-                <input
-                  type="text"
-                  value={itchClientId}
-                  onChange={(event) => setItchClientId(event.target.value)}
-                  className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
-                  placeholder="itch OAuth client id"
-                />
                 {itchAuth.connected ? (
                   <button
                     disabled={itchBusy}
@@ -299,11 +293,11 @@ export function Settings() {
                   </button>
                 ) : (
                   <button
-                    disabled={itchBusy || !itchClientId.trim()}
+                    disabled={itchBusy}
                     onClick={async () => {
                       setItchBusy(true);
                       try {
-                        await connectItch(itchClientId.trim());
+                        await connectItch(ITCH_OAUTH_CLIENT_ID);
                       } finally {
                         setItchBusy(false);
                       }

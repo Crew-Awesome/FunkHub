@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("funkhubDesktop", {
   getItchAuthStatus: () => ipcRenderer.invoke("funkhub:getItchAuthStatus"),
   clearItchAuth: () => ipcRenderer.invoke("funkhub:clearItchAuth"),
   startItchOAuth: (payload) => ipcRenderer.invoke("funkhub:startItchOAuth", payload),
+  listItchBaseGameReleases: () => ipcRenderer.invoke("funkhub:listItchBaseGameReleases"),
   resolveItchBaseGameDownload: (payload) => ipcRenderer.invoke("funkhub:resolveItchBaseGameDownload", payload),
   inspectEngineInstall: (payload) => ipcRenderer.invoke("funkhub:inspectEngineInstall", payload),
   importEngineFolder: (payload) => ipcRenderer.invoke("funkhub:importEngineFolder", payload),

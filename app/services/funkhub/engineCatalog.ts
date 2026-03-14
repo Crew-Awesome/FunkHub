@@ -26,7 +26,7 @@ const githubEngineSources: GithubEngineSource[] = [
     name: "FPS Plus",
     description: "FPS Plus engine builds and releases.",
     repo: "ThatRozebudDude/FPS-Plus-Public",
-    fallbackVersion: "unknown",
+    fallbackVersion: "latest",
     fallbackReleases: [
       {
         platform: "any",
