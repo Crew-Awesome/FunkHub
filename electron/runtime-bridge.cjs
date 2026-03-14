@@ -9,15 +9,38 @@ const ARCHIVE_EXTENSIONS = [".zip", ".rar", ".7z"];
 const jobState = new Map();
 
 function resolve7zipBinaryPath() {
-  const candidates = [path7za];
+  const candidates = [];
 
-  if (path7za.includes(".asar")) {
-    candidates.push(path7za.replace(".asar", ".asar.unpacked"));
+  if (path7za.includes("app.asar")) {
+    candidates.push(path7za.replace("app.asar", "app.asar.unpacked"));
   }
 
-  const found = candidates.find((candidate) => fsSync.existsSync(candidate));
+  candidates.push(path7za);
+
+  if (process.resourcesPath) {
+    const packagedCandidate = path.join(
+      process.resourcesPath,
+      "app.asar.unpacked",
+      "node_modules",
+      "7zip-bin",
+      process.platform,
+      process.arch,
+      process.platform === "win32" ? "7za.exe" : "7za",
+    );
+    candidates.push(packagedCandidate);
+  }
+
+  const dedupedCandidates = [...new Set(candidates)];
+  const found = dedupedCandidates.find((candidate) => {
+    try {
+      return fsSync.existsSync(candidate) && fsSync.statSync(candidate).isFile();
+    } catch {
+      return false;
+    }
+  });
+
   if (!found) {
-    throw new Error(`7zip binary not found. Tried: ${candidates.join(", ")}`);
+    throw new Error(`7zip binary not found. Tried: ${dedupedCandidates.join(", ")}`);
   }
 
   try {

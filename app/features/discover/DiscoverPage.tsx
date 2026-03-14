@@ -148,7 +148,7 @@ export function Discover() {
                   id={mod.id}
                   title={mod.name}
                   author={mod.submitter?.name ?? "Unknown"}
-                  thumbnail={mod.thumbnailUrl ?? mod.imageUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
+                  thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
                   rating={mod.likeCount ? Math.max(3.8, Math.min(5, mod.likeCount / 100 + 3.5)) : 4.5}
                   downloads={mod.downloadCount ?? mod.viewCount}
                   onInstall={() => installMod(mod.id, 0)}

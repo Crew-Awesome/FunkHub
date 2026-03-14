@@ -135,7 +135,7 @@ export class ModInstallerService {
 
   async installViaDesktopBridge(input: {
     request: DesktopInstallRequest;
-    mod: Pick<GameBananaModProfile, "id" | "name" | "version" | "profileUrl" | "submitter" | "thumbnailUrl" | "dependencies">;
+    mod: Pick<GameBananaModProfile, "id" | "name" | "version" | "profileUrl" | "submitter" | "thumbnailUrl" | "imageUrl" | "dependencies">;
     sourceFileId: number;
     requiredEngine?: EngineSlug;
   }): Promise<InstalledMod> {
@@ -151,7 +151,7 @@ export class ModInstallerService {
       modName: input.mod.name,
       version: input.mod.version || result.versionDetected,
       author: input.mod.submitter?.name,
-      thumbnailUrl: input.mod.thumbnailUrl,
+      thumbnailUrl: input.mod.imageUrl ?? input.mod.thumbnailUrl,
       gamebananaUrl: input.mod.profileUrl,
       installedAt: Date.now(),
       installPath: result.installPath,
@@ -165,7 +165,7 @@ export class ModInstallerService {
   createFallbackInstalledRecord(input: {
     plan: InstallPlan;
     fileName: string;
-    mod: Pick<GameBananaModProfile, "id" | "name" | "version" | "profileUrl" | "submitter" | "thumbnailUrl" | "dependencies">;
+    mod: Pick<GameBananaModProfile, "id" | "name" | "version" | "profileUrl" | "submitter" | "thumbnailUrl" | "imageUrl" | "dependencies">;
     sourceFileId: number;
   }): InstalledMod {
     const fallbackPath = `${input.plan.targetPath}/${sanitizeFileStem(input.fileName)}`;
@@ -175,7 +175,7 @@ export class ModInstallerService {
       modName: input.mod.name,
       version: input.mod.version,
       author: input.mod.submitter?.name,
-      thumbnailUrl: input.mod.thumbnailUrl,
+      thumbnailUrl: input.mod.imageUrl ?? input.mod.thumbnailUrl,
       gamebananaUrl: input.mod.profileUrl,
       installedAt: Date.now(),
       installPath: fallbackPath,
