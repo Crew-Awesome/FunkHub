@@ -121,6 +121,7 @@ export function Discover() {
               rating={mod.likeCount ? Math.max(3.8, Math.min(5, mod.likeCount / 100 + 3.5)) : 4.5}
               downloads={mod.downloadCount ?? mod.viewCount}
               onInstall={() => installMod(mod.id, 0)}
+              onView={() => window.open(mod.profileUrl, "_blank", "noopener,noreferrer")}
             />
           </motion.div>
         ))}

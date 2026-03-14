@@ -50,6 +50,9 @@
       "package.json"
     ],
     "asar": true,
+    "asarUnpack": [
+      "node_modules/7zip-bin/**"
+    ],
     "npmRebuild": false,
     "linux": {
       "target": [

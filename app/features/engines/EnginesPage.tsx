@@ -1,17 +1,36 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Cpu, FolderOpen } from "lucide-react";
+import { Plus, Cpu, FolderOpen, Loader2, AlertCircle } from "lucide-react";
 import { EngineCard } from "./EngineCard";
 import { useFunkHub } from "../../providers";
+import type { EngineSlug } from "../../services/funkhub";
 
 export function Engines() {
-  const { installedEngines, enginesCatalog, setDefaultEngine, installEngine } = useFunkHub();
-  const [showEngines, setShowEngines] = useState(installedEngines.length > 0);
+  const { installedEngines, enginesCatalog, downloads, setDefaultEngine, installEngine } = useFunkHub();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [installingSlug, setInstallingSlug] = useState<string | null>(null);
+  const [installError, setInstallError] = useState<string | null>(null);
 
   const availableEngines = enginesCatalog;
+  const hasEngines = installedEngines.length > 0;
+  const engineDownloads = downloads
+    .filter((task) => task.modId === -1)
+    .filter((task) => ["queued", "downloading", "installing", "failed"].includes(task.status));
 
-  if (!showEngines) {
+  const installSelectedEngine = async (engineSlug: EngineSlug, releaseUrl: string, releaseVersion: string) => {
+    setInstallError(null);
+    setInstallingSlug(engineSlug);
+    try {
+      await installEngine(engineSlug, releaseUrl, releaseVersion);
+      setShowAddDialog(false);
+    } catch (error) {
+      setInstallError(error instanceof Error ? error.message : "Engine install failed");
+    } finally {
+      setInstallingSlug(null);
+    }
+  };
+
+  if (!hasEngines) {
     return (
       <div className="p-8 flex items-center justify-center min-h-full">
         <motion.div
@@ -48,17 +67,18 @@ export function Engines() {
                 {availableEngines.map((engine) => (
                   <button
                     key={engine.slug}
+                    disabled={Boolean(installingSlug)}
                     onClick={async () => {
                       const primaryRelease = engine.releases[0];
                       if (primaryRelease) {
-                        await installEngine(engine.slug, primaryRelease.downloadUrl, primaryRelease.version);
+                        await installSelectedEngine(engine.slug, primaryRelease.downloadUrl, primaryRelease.version);
                       }
-                      setShowEngines(true);
-                      setShowAddDialog(false);
                     }}
-                    className="w-full px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
+                    className="w-full px-4 py-3 bg-secondary hover:bg-secondary/80 disabled:opacity-60 disabled:cursor-not-allowed text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
                   >
-                    <Cpu className="w-5 h-5 text-primary" />
+                    {installingSlug === engine.slug
+                      ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                      : <Cpu className="w-5 h-5 text-primary" />}
                     {engine.name}
                   </button>
                 ))}
@@ -67,6 +87,30 @@ export function Engines() {
                   Import From Folder
                 </button>
               </div>
+
+              {engineDownloads.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {engineDownloads.map((task) => (
+                    <div key={task.id} className="rounded-lg border border-border p-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-foreground">{task.fileName}</span>
+                        <span className="text-muted-foreground">{Math.round(task.progress * 100)}%</span>
+                      </div>
+                      <div className="mt-2 h-2 w-full rounded-full bg-secondary overflow-hidden">
+                        <div className="h-full bg-primary transition-all" style={{ width: `${Math.round(task.progress * 100)}%` }} />
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">{task.message ?? task.status}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {installError && (
+                <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 p-3 text-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  {installError}
+                </div>
+              )}
             </motion.div>
           )}
         </motion.div>
@@ -99,16 +143,18 @@ export function Engines() {
             {availableEngines.map((engine) => (
               <button
                 key={engine.slug}
+                disabled={Boolean(installingSlug)}
                 onClick={async () => {
                   const primaryRelease = engine.releases[0];
                   if (primaryRelease) {
-                    await installEngine(engine.slug, primaryRelease.downloadUrl, primaryRelease.version);
-                    setShowAddDialog(false);
+                    await installSelectedEngine(engine.slug, primaryRelease.downloadUrl, primaryRelease.version);
                   }
                 }}
-                className="px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
+                className="px-4 py-3 bg-secondary hover:bg-secondary/80 disabled:opacity-60 disabled:cursor-not-allowed text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
               >
-                <Cpu className="w-5 h-5 text-primary" />
+                {installingSlug === engine.slug
+                  ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                  : <Cpu className="w-5 h-5 text-primary" />}
                 <span className="flex-1">{engine.name}</span>
                 <span className="text-xs text-muted-foreground">{engine.releases[0]?.version ?? "latest"}</span>
               </button>
@@ -118,6 +164,30 @@ export function Engines() {
               Import From Folder
             </button>
           </div>
+
+          {engineDownloads.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {engineDownloads.map((task) => (
+                <div key={task.id} className="rounded-lg border border-border p-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-foreground">{task.fileName}</span>
+                    <span className="text-muted-foreground">{Math.round(task.progress * 100)}%</span>
+                  </div>
+                  <div className="mt-2 h-2 w-full rounded-full bg-secondary overflow-hidden">
+                    <div className="h-full bg-primary transition-all" style={{ width: `${Math.round(task.progress * 100)}%` }} />
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">{task.message ?? task.status}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {installError && (
+            <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 p-3 text-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              {installError}
+            </div>
+          )}
         </motion.div>
       )}
 

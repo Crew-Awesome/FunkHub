@@ -1,6 +1,6 @@
 import { createBrowserRouter, createHashRouter } from "react-router";
 import { Layout } from "./app-shell";
-import { Discover, Downloads, Engines, Home, Library, Profile, Settings, Updates } from "./features";
+import { Discover, Downloads, Engines, Library, Profile, Settings, Updates } from "./features";
 
 const routerFactory = typeof window !== "undefined" && window.location.protocol === "file:"
   ? createHashRouter
@@ -11,7 +11,7 @@ export const router = routerFactory([
     path: "/",
     Component: Layout,
     children: [
-      { index: true, Component: Home },
+      { index: true, Component: Discover },
       { path: "discover", Component: Discover },
       { path: "library", Component: Library },
       { path: "downloads", Component: Downloads },

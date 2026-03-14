@@ -1,10 +1,9 @@
 import { Link, useLocation } from "react-router";
-import { Home, Search, Library, Download, RefreshCw, Settings as SettingsIcon, User, Cpu, Bell } from "lucide-react";
+import { Search, Library, Download, RefreshCw, Settings as SettingsIcon, Cpu, Bell } from "lucide-react";
 import { motion } from "motion/react";
 
 const navItems = [
-  { icon: Home, label: "Home", path: "/" },
-  { icon: Search, label: "Discover Mods", path: "/discover" },
+  { icon: Search, label: "Discover Mods", path: "/" },
   { icon: Library, label: "Library", path: "/library" },
   { icon: Download, label: "Downloads", path: "/downloads" },
   { icon: RefreshCw, label: "Updates", path: "/updates" },

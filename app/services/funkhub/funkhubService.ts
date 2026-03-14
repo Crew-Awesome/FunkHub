@@ -82,23 +82,17 @@ export class FunkHubService {
   constructor() {
     this.settings = funkHubStorageService.getSettings();
     this.installedMods = funkHubStorageService.getInstalledMods();
-    this.installedEngines = funkHubStorageService.getInstalledEngines();
+    const storedEngines = funkHubStorageService.getInstalledEngines();
+    this.installedEngines = storedEngines.filter((engine) => !(
+      engine.slug === "psych"
+      && engine.version === "latest"
+      && engine.installPath === "engines/psych"
+      && engine.modsPath === "engines/psych/mods"
+    ));
     this.downloadHistory = funkHubStorageService.getDownloadHistory();
     downloadManager.setMaxConcurrent(this.settings.maxConcurrentDownloads);
 
-    if (this.installedEngines.length === 0) {
-      this.installedEngines = [
-        {
-          id: crypto.randomUUID(),
-          slug: "psych",
-          name: "Psych Engine",
-          version: "latest",
-          installPath: "engines/psych",
-          modsPath: "engines/psych/mods",
-          isDefault: true,
-          installedAt: Date.now(),
-        },
-      ];
+    if (storedEngines.length !== this.installedEngines.length) {
       funkHubStorageService.saveInstalledEngines(this.installedEngines);
     }
 
@@ -240,30 +234,64 @@ export class FunkHubService {
   }): Promise<InstalledEngine> {
     const jobId = `engine-${input.slug}-${Date.now()}`;
     const installPath = `engines/${input.slug}`;
+    const taskName = `${input.slug}-${input.releaseVersion}.zip`;
 
-    if (!window.funkhubDesktop) {
-      const fallback = this.addEngineInstallation({
-        slug: input.slug,
-        version: input.releaseVersion,
-        installPath,
-        modsPath: `${installPath}/mods`,
+    return new Promise<InstalledEngine>((resolve, reject) => {
+      downloadManager.enqueue({
+        task: {
+          id: jobId,
+          modId: -1,
+          fileId: 0,
+          fileName: taskName,
+          priority: 10,
+        },
+        cancel: () => {
+          if (window.funkhubDesktop) {
+            window.funkhubDesktop.cancelInstall({ jobId }).catch(() => undefined);
+          }
+        },
+        run: async (task, update) => {
+          try {
+            update({
+              ...task,
+              status: "downloading",
+              phase: "download",
+              message: `Preparing ${input.slug} engine install`,
+            });
+
+            if (window.funkhubDesktop) {
+              await window.funkhubDesktop.installEngine({
+                jobId,
+                mode: "engine",
+                fileName: taskName,
+                downloadUrl: input.releaseUrl,
+                installPath,
+              });
+            }
+
+            const installed = this.addEngineInstallation({
+              slug: input.slug,
+              version: input.releaseVersion,
+              installPath,
+              modsPath: `${installPath}/mods`,
+            });
+
+            update({
+              ...task,
+              fileName: taskName,
+              progress: 1,
+              status: "completed",
+              phase: "install",
+              message: `${installed.name} installed`,
+            });
+
+            resolve(installed);
+          } catch (error) {
+            reject(error);
+            throw error;
+          }
+        },
       });
-      return fallback;
-    }
-
-    await window.funkhubDesktop.installEngine({
-      jobId,
-      mode: "engine",
-      fileName: `${input.slug}-${input.releaseVersion}.zip`,
-      downloadUrl: input.releaseUrl,
-      installPath,
-    });
-
-    return this.addEngineInstallation({
-      slug: input.slug,
-      version: input.releaseVersion,
-      installPath,
-      modsPath: `${installPath}/mods`,
     });
   }
 

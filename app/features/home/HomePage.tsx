@@ -45,7 +45,14 @@ export function Home() {
               <Play className="w-5 h-5" fill="currentColor" />
               Install Now
             </button>
-            <button className="px-8 py-3.5 bg-white/15 hover:bg-white/25 backdrop-blur-md text-white rounded-xl font-semibold transition-all flex items-center gap-2.5">
+            <button
+              onClick={() => {
+                if (featuredMod?.profileUrl) {
+                  window.open(featuredMod.profileUrl, "_blank", "noopener,noreferrer");
+                }
+              }}
+              className="px-8 py-3.5 bg-white/15 hover:bg-white/25 backdrop-blur-md text-white rounded-xl font-semibold transition-all flex items-center gap-2.5"
+            >
               <Eye className="w-5 h-5" />
               View Details
             </button>
@@ -122,6 +129,7 @@ export function Home() {
                 downloads={mod.downloadCount ?? mod.viewCount}
                 rating={mod.likeCount ? Math.max(3.8, Math.min(5, mod.likeCount / 100 + 3.5)) : 4.5}
                 onInstall={() => installMod(mod.id, 0)}
+                onView={() => window.open(mod.profileUrl, "_blank", "noopener,noreferrer")}
               />
             </motion.div>
           ))}

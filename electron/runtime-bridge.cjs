@@ -8,6 +8,27 @@ const { path7za } = require("7zip-bin");
 const ARCHIVE_EXTENSIONS = [".zip", ".rar", ".7z"];
 const jobState = new Map();
 
+function resolve7zipBinaryPath() {
+  const candidates = [path7za];
+
+  if (path7za.includes(".asar")) {
+    candidates.push(path7za.replace(".asar", ".asar.unpacked"));
+  }
+
+  const found = candidates.find((candidate) => fsSync.existsSync(candidate));
+  if (!found) {
+    throw new Error(`7zip binary not found. Tried: ${candidates.join(", ")}`);
+  }
+
+  try {
+    fsSync.chmodSync(found, 0o755);
+  } catch {
+    // Ignore chmod failures and try spawning anyway.
+  }
+
+  return found;
+}
+
 function getDefaultDataRoot() {
   return path.join(app.getPath("userData"), "funkhub");
 }
@@ -181,9 +202,10 @@ function parsePercent(line) {
 
 async function extractArchive(archivePath, outputDir, cancelState, webContents, jobId) {
   await ensureDir(outputDir);
+  const sevenZipBinary = resolve7zipBinaryPath();
 
   await new Promise((resolve, reject) => {
-    const child = spawn(path7za, ["x", "-y", `-o${outputDir}`, archivePath], {
+    const child = spawn(sevenZipBinary, ["x", "-y", `-o${outputDir}`, archivePath], {
       windowsHide: true,
     });
 
