@@ -177,8 +177,19 @@ export function Engines() {
       return [];
     }
 
-    const byPlatform = definition.releases.filter((release) => release.platform === currentPlatform || release.platform === "any");
-    const list = byPlatform.length > 0 ? byPlatform : definition.releases;
+    const list = [...definition.releases].sort((a, b) => {
+      const aPlatformScore = a.platform === currentPlatform ? 0 : (a.platform === "any" ? 1 : 2);
+      const bPlatformScore = b.platform === currentPlatform ? 0 : (b.platform === "any" ? 1 : 2);
+      if (aPlatformScore !== bPlatformScore) {
+        return aPlatformScore - bPlatformScore;
+      }
+
+      if (a.isPrerelease !== b.isPrerelease) {
+        return Number(a.isPrerelease) - Number(b.isPrerelease);
+      }
+
+      return String(b.version).localeCompare(String(a.version), undefined, { numeric: true, sensitivity: "base" });
+    });
     const deduped = new Map<string, (typeof list)[number]>();
     for (const release of list) {
       const key = `${release.version}|${release.downloadUrl}`;
@@ -258,7 +269,7 @@ export function Engines() {
                       >
                         {getInstallableReleases(engine.slug).map((release) => (
                           <option key={`${release.version}-${release.downloadUrl}`} value={release.downloadUrl}>
-                            {release.version} ({release.platform})
+                            {release.version}{release.isPrerelease ? " (pre)" : ""} [{release.platform}] {release.fileName ? `- ${release.fileName}` : ""}
                           </option>
                         ))}
                       </select>
@@ -366,7 +377,7 @@ export function Engines() {
                   >
                     {getInstallableReleases(engine.slug).map((release) => (
                       <option key={`${release.version}-${release.downloadUrl}`} value={release.downloadUrl}>
-                        {release.version} ({release.platform})
+                        {release.version}{release.isPrerelease ? " (pre)" : ""} [{release.platform}] {release.fileName ? `- ${release.fileName}` : ""}
                       </option>
                     ))}
                   </select>

@@ -8,6 +8,9 @@ interface GithubReleaseAsset {
 interface GithubReleaseResponse {
   tag_name: string;
   html_url: string;
+  prerelease: boolean;
+  draft: boolean;
+  published_at?: string;
   assets: GithubReleaseAsset[];
 }
 
@@ -195,9 +198,14 @@ function detectPlatformFromAsset(name: string): EngineRelease["platform"] {
   return "any";
 }
 
-async function fetchGithubLatest(source: GithubEngineSource): Promise<EngineDefinition> {
+function normalizeVersionTag(tag: string, prerelease: boolean): string {
+  const cleaned = tag.replace(/^v/i, "") || "latest";
+  return prerelease ? `${cleaned}-pre` : cleaned;
+}
+
+async function fetchGithubReleases(source: GithubEngineSource): Promise<EngineDefinition> {
   try {
-    const response = await fetch(`https://api.github.com/repos/${source.repo}/releases/latest`, {
+    const response = await fetch(`https://api.github.com/repos/${source.repo}/releases?per_page=25`, {
       headers: {
         Accept: "application/vnd.github+json",
       },
@@ -207,21 +215,43 @@ async function fetchGithubLatest(source: GithubEngineSource): Promise<EngineDefi
       throw new Error(`GitHub release fetch failed for ${source.repo}`);
     }
 
-    const payload = (await response.json()) as GithubReleaseResponse;
-    const releases: EngineRelease[] = payload.assets.length
-      ? payload.assets.map((asset) => ({
+    const payload = (await response.json()) as GithubReleaseResponse[];
+    const publishedReleases = payload
+      .filter((release) => !release.draft)
+      .sort((a, b) => {
+        const at = a.published_at ? Date.parse(a.published_at) : 0;
+        const bt = b.published_at ? Date.parse(b.published_at) : 0;
+        return bt - at;
+      });
+
+    const releases: EngineRelease[] = [];
+    for (const release of publishedReleases) {
+      for (const asset of release.assets) {
+        releases.push({
           platform: detectPlatformFromAsset(asset.name),
-          version: payload.tag_name || source.fallbackVersion,
+          version: normalizeVersionTag(release.tag_name || source.fallbackVersion, release.prerelease),
           downloadUrl: asset.browser_download_url,
-          sourceUrl: payload.html_url,
-        }))
-      : source.fallbackReleases;
+          sourceUrl: release.html_url,
+          fileName: asset.name,
+          isPrerelease: release.prerelease,
+        });
+      }
+    }
+
+    const normalized = releases.length > 0 ? releases : source.fallbackReleases;
+    const deduped = new Map<string, EngineRelease>();
+    for (const release of normalized) {
+      const key = `${release.platform}|${release.version}|${release.downloadUrl}`;
+      if (!deduped.has(key)) {
+        deduped.set(key, release);
+      }
+    }
 
     return {
       slug: source.slug,
       name: source.name,
       description: source.description,
-      releases,
+      releases: Array.from(deduped.values()),
     };
   } catch {
     return {
@@ -235,7 +265,7 @@ async function fetchGithubLatest(source: GithubEngineSource): Promise<EngineDefi
 
 export class EngineCatalogService {
   async getEngineCatalog(): Promise<EngineDefinition[]> {
-    const githubEngines = await Promise.all(githubEngineSources.map((source) => fetchGithubLatest(source)));
+    const githubEngines = await Promise.all(githubEngineSources.map((source) => fetchGithubReleases(source)));
     return [...githubEngines, ...staticOnlyEngines];
   }
 }

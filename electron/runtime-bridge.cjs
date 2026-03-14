@@ -748,6 +748,10 @@ async function handleLaunchEngine(payload) {
   let command = launchable;
   let args = [];
 
+  if (process.platform === "linux" && launcher === "native" && launchable.toLowerCase().endsWith(".exe")) {
+    throw new Error("Selected executable is a Windows .exe. Choose Wine/Wine64/Proton in Manage before launching.");
+  }
+
   if (launcher !== "native") {
     if (process.platform !== "linux") {
       throw new Error("Custom launchers are only supported on Linux");

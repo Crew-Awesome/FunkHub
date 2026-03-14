@@ -299,6 +299,8 @@ export class FunkHubService {
             version: release.version,
             sourceUrl: release.sourceUrl,
             downloadUrl: release.downloadUrl,
+            fileName: release.fileName,
+            isPrerelease: false,
           }));
 
           const merged = [...dynamic, ...basegame.releases];

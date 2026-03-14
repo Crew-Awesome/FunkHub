@@ -121,6 +121,8 @@ export interface EngineRelease {
   version: string;
   downloadUrl: string;
   sourceUrl: string;
+  fileName?: string;
+  isPrerelease?: boolean;
 }
 
 export interface EngineDefinition {
