@@ -57,7 +57,7 @@ export interface GameBananaModSummary {
 
 export interface GameBananaCredit {
   groupName: string;
-  authors: Array<{ id: number; name: string; role?: string; profileUrl: string }>;
+  authors: Array<{ id: number; name: string; role?: string; profileUrl: string; avatarUrl?: string }>;
 }
 
 export interface GameBananaModProfile extends GameBananaModSummary {

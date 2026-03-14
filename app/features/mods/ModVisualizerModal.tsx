@@ -53,6 +53,7 @@ function plainText(value?: string): string {
 export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalProps) {
   const { getModProfile, installMod } = useFunkHub();
   const [loading, setLoading] = useState(false);
+  const [showLoadingState, setShowLoadingState] = useState(false);
   const [profile, setProfile] = useState<GameBananaModProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,6 +90,22 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
   }, [open, modId, getModProfile]);
 
   const heroImage = useMemo(() => profile?.imageUrl ?? profile?.thumbnailUrl, [profile]);
+  const categoryLabel = profile?.rootCategory?.name ?? profile?.category?.name ?? profile?.superCategory?.name;
+
+  useEffect(() => {
+    if (!loading) {
+      setShowLoadingState(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowLoadingState(true);
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [loading]);
 
   if (!open) {
     return null;
@@ -108,7 +125,7 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
           </button>
         </div>
 
-        {loading && (
+        {loading && showLoadingState && (
           <div className="p-8 text-sm text-muted-foreground">Loading mod details...</div>
         )}
 
@@ -132,9 +149,7 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
               <div className="space-y-4">
                 <div>
                   <h3 className="text-2xl font-bold text-foreground">{profile.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {profile.rootCategory?.name ?? "Unknown category"}
-                  </p>
+                  {categoryLabel && <p className="text-sm text-muted-foreground mt-1">{categoryLabel}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -221,10 +236,18 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
                       <p className="text-sm font-medium text-foreground mb-1">{group.groupName}</p>
                       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                         {group.authors.map((author) => (
-                          <span key={`${group.groupName}-${author.id}`} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary/70">
-                            <User className="w-3 h-3" />
-                            {author.name}
-                          </span>
+                          <a
+                            key={`${group.groupName}-${author.id}`}
+                            href={author.profileUrl || undefined}
+                            target={author.profileUrl ? "_blank" : undefined}
+                            rel={author.profileUrl ? "noopener noreferrer" : undefined}
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-secondary/70 hover:bg-secondary text-muted-foreground"
+                          >
+                            {author.avatarUrl
+                              ? <img src={author.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover" loading="lazy" />
+                              : <User className="w-3 h-3" />}
+                            <span>{author.name}</span>
+                          </a>
                         ))}
                       </div>
                     </div>

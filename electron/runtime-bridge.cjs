@@ -504,8 +504,11 @@ async function handleCancelInstall(payload) {
   return { ok: true };
 }
 
-async function findLaunchableExecutable(dirPath) {
+async function findLaunchableExecutable(dirPath, hints = []) {
   const queue = [dirPath];
+  const normalizedHints = hints.map((hint) => hint.toLowerCase());
+  let hintedCandidate = null;
+
   while (queue.length > 0) {
     const current = queue.shift();
     const entries = await readDirEntries(current);
@@ -526,7 +529,15 @@ async function findLaunchableExecutable(dirPath) {
       if (process.platform === "linux" && (lower.endsWith(".appimage") || lower.endsWith(".x86_64") || lower.endsWith(".sh"))) {
         return fullPath;
       }
+
       if (process.platform === "linux") {
+        const isHintMatch = normalizedHints.some((hint) => hint.length > 0 && lower.includes(hint));
+        const hasNoExtension = !entry.name.includes(".");
+
+        if (isHintMatch && (hasNoExtension || lower.endsWith(".bin"))) {
+          hintedCandidate = hintedCandidate ?? fullPath;
+        }
+
         try {
           const stats = await fs.stat(fullPath);
           if ((stats.mode & 0o111) !== 0) {
@@ -538,7 +549,8 @@ async function findLaunchableExecutable(dirPath) {
       }
     }
   }
-  return null;
+
+  return hintedCandidate;
 }
 
 async function handleLaunchEngine(payload) {
@@ -552,9 +564,15 @@ async function handleLaunchEngine(payload) {
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
   const absolutePath = safeJoin(rootPath, installPath);
-  const launchable = await findLaunchableExecutable(absolutePath);
+  const launchable = await findLaunchableExecutable(absolutePath, [
+    path.basename(installPath || ""),
+    "funkin",
+    "alepsych",
+    "psych",
+    "engine",
+  ]);
   if (!launchable) {
-    throw new Error("No launchable engine executable found");
+    throw new Error(`No launchable engine executable found '${absolutePath}'`);
   }
 
   if (process.platform === "linux") {

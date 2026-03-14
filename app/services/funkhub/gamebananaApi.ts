@@ -401,6 +401,9 @@ export class GameBananaApiService {
               name: String(authorRecord._sName ?? "Unknown"),
               role: typeof authorRecord._sRole === "string" ? authorRecord._sRole : undefined,
               profileUrl: String(authorRecord._sProfileUrl ?? ""),
+              avatarUrl: typeof authorRecord._sAvatarUrl === "string"
+                ? authorRecord._sAvatarUrl
+                : (typeof authorRecord._sIconUrl === "string" ? authorRecord._sIconUrl : undefined),
             };
           }),
         };
