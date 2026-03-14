@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Cpu, FolderOpen, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
+import { Plus, Cpu, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
 import { EngineCard } from "./EngineCard";
 import { useFunkHub } from "../../providers";
 import { detectClientPlatform, pickBestReleaseForPlatform, type EngineSlug } from "../../services/funkhub";
@@ -51,7 +51,7 @@ export function Engines() {
     try {
       await installEngine(engineSlug, releaseUrl, releaseVersion);
       await refreshEngineHealth();
-      setShowAddDialog(false);
+      setNotice(`${engineSlug} install queued.`);
     } catch (error) {
       setInstallError(error instanceof Error ? error.message : "Engine install failed");
     } finally {
@@ -263,29 +263,27 @@ export function Engines() {
                         ))}
                       </select>
                       <button
-                        disabled={Boolean(installingSlug)}
                         onClick={async () => {
                           const release = getSelectedRelease(engine.slug);
                           if (release) {
                             await installSelectedEngine(engine.slug, release.downloadUrl, release.version);
                           }
                         }}
-                        className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:opacity-60 text-white rounded text-xs"
+                        className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded text-xs"
                       >
                         Install
+                      </button>
+                      <button
+                        onClick={() => handleImport(engine.slug)}
+                        className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded text-xs"
+                      >
+                        Import Folder
                       </button>
                     </div>
                   </div>
                     );
                   })()
                 ))}
-                <button
-                  onClick={() => handleImport("ale-psych")}
-                  className="w-full px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
-                >
-                  <FolderOpen className="w-5 h-5 text-primary" />
-                  Import ALE Psych Folder
-                </button>
               </div>
 
               {engineDownloads.length > 0 && (
@@ -373,29 +371,27 @@ export function Engines() {
                     ))}
                   </select>
                   <button
-                    disabled={Boolean(installingSlug)}
                     onClick={async () => {
                       const release = getSelectedRelease(engine.slug);
                       if (release) {
                         await installSelectedEngine(engine.slug, release.downloadUrl, release.version);
                       }
                     }}
-                    className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:opacity-60 text-white rounded text-xs"
+                    className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded text-xs"
                   >
                     Install
+                  </button>
+                  <button
+                    onClick={() => handleImport(engine.slug)}
+                    className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded text-xs"
+                  >
+                    Import Folder
                   </button>
                 </div>
               </div>
                 );
               })()
             ))}
-            <button
-              onClick={() => handleImport("ale-psych")}
-              className="px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
-            >
-              <FolderOpen className="w-5 h-5 text-primary" />
-              Import ALE Psych Folder
-            </button>
           </div>
 
           {engineDownloads.length > 0 && (

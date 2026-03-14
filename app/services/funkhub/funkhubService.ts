@@ -294,12 +294,22 @@ export class FunkHubService {
       try {
         const itch = await window.funkhubDesktop.listItchBaseGameReleases();
         if (itch.ok && itch.releases.length > 0) {
-          basegame.releases = itch.releases.map((release) => ({
+          const dynamic = itch.releases.map((release) => ({
             platform: release.platform,
             version: release.version,
             sourceUrl: release.sourceUrl,
             downloadUrl: release.downloadUrl,
           }));
+
+          const merged = [...dynamic, ...basegame.releases];
+          const deduped = new Map<string, (typeof merged)[number]>();
+          for (const release of merged) {
+            const key = `${release.platform}|${release.version}|${release.downloadUrl}`;
+            if (!deduped.has(key)) {
+              deduped.set(key, release);
+            }
+          }
+          basegame.releases = Array.from(deduped.values());
         }
       } catch {
         // Keep static fallback catalog when itch API isn't connected.
