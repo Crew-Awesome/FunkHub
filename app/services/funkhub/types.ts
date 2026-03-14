@@ -179,6 +179,21 @@ export interface DesktopBridge {
   }) => Promise<{ ok: boolean; launchedPath?: string }>;
   openPath: (payload: { targetPath: string }) => Promise<{ ok: boolean; openedPath?: string; error?: string }>;
   deletePath: (payload: { targetPath: string }) => Promise<{ ok: boolean; deletedPath?: string; error?: string }>;
+  getItchAuthStatus: () => Promise<{ connected: boolean; connectedAt?: number; scopes?: string[] }>;
+  clearItchAuth: () => Promise<{ ok: boolean }>;
+  startItchOAuth: (payload: {
+    clientId: string;
+    scopes?: string[];
+    redirectPort?: number;
+  }) => Promise<{ ok: boolean }>;
+  resolveItchBaseGameDownload: (payload: { platform: "windows" | "linux" | "macos" | "unknown" }) => Promise<{
+    ok: boolean;
+    requiresAuth?: boolean;
+    message?: string;
+    downloadUrl?: string;
+    fileName?: string;
+    version?: string;
+  }>;
   inspectEngineInstall: (payload: { installPath: string }) => Promise<{
     ok: boolean;
     health: "ready" | "missing_binary" | "broken_install";

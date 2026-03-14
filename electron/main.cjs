@@ -7,6 +7,10 @@ const {
   handleLaunchEngine,
   handleOpenPath,
   handleDeletePath,
+  handleGetItchAuthStatus,
+  handleClearItchAuth,
+  handleStartItchOAuth,
+  handleResolveItchBaseGameDownload,
   handleInspectEngineInstall,
   handleImportEngineFolder,
   handleGetSettings,
@@ -58,6 +62,22 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:deletePath", async (_event, payload) => {
     return handleDeletePath(payload);
+  });
+
+  ipcMain.handle("funkhub:getItchAuthStatus", async () => {
+    return handleGetItchAuthStatus();
+  });
+
+  ipcMain.handle("funkhub:clearItchAuth", async () => {
+    return handleClearItchAuth();
+  });
+
+  ipcMain.handle("funkhub:startItchOAuth", async (_event, payload) => {
+    return handleStartItchOAuth(payload);
+  });
+
+  ipcMain.handle("funkhub:resolveItchBaseGameDownload", async (_event, payload) => {
+    return handleResolveItchBaseGameDownload(payload);
   });
 
   ipcMain.handle("funkhub:inspectEngineInstall", async (_event, payload) => {

@@ -176,6 +176,31 @@ export class FunkHubService {
     return result.path;
   }
 
+  async getItchAuthStatus(): Promise<{ connected: boolean; connectedAt?: number; scopes?: string[] }> {
+    if (!window.funkhubDesktop?.getItchAuthStatus) {
+      return { connected: false };
+    }
+    return window.funkhubDesktop.getItchAuthStatus();
+  }
+
+  async connectItchOAuth(clientId: string): Promise<void> {
+    if (!window.funkhubDesktop?.startItchOAuth) {
+      throw new Error("Desktop bridge unavailable for itch OAuth");
+    }
+    await window.funkhubDesktop.startItchOAuth({
+      clientId,
+      scopes: ["profile:me", "profile:owned"],
+      redirectPort: 34567,
+    });
+  }
+
+  async disconnectItchOAuth(): Promise<void> {
+    if (!window.funkhubDesktop?.clearItchAuth) {
+      return;
+    }
+    await window.funkhubDesktop.clearItchAuth();
+  }
+
   private setupDesktopProgressBridge(): void {
     if (!window.funkhubDesktop?.onInstallProgress) {
       return;
@@ -270,10 +295,35 @@ export class FunkHubService {
     releaseUrl: string;
     releaseVersion: string;
   }): Promise<InstalledEngine> {
+    let resolvedDownloadUrl = input.releaseUrl;
+    let resolvedVersion = input.releaseVersion;
+    let resolvedFileName = `${input.slug}-${input.releaseVersion}.zip`;
+
+    if (input.slug === "basegame" && input.releaseUrl.startsWith("itch://")) {
+      if (!window.funkhubDesktop?.resolveItchBaseGameDownload) {
+        throw new Error("Desktop bridge unavailable for itch.io base game resolution");
+      }
+
+      const clientPlatform = detectClientPlatform();
+      const itchPlatform = clientPlatform === "any" ? "linux" : clientPlatform;
+
+      const itch = await window.funkhubDesktop.resolveItchBaseGameDownload({
+        platform: itchPlatform,
+      });
+
+      if (!itch.ok || !itch.downloadUrl) {
+        throw new Error(itch.message || "Failed to resolve itch.io base game download");
+      }
+
+      resolvedDownloadUrl = itch.downloadUrl;
+      resolvedVersion = itch.version || resolvedVersion;
+      resolvedFileName = itch.fileName || resolvedFileName;
+    }
+
     const jobId = `engine-${input.slug}-${Date.now()}`;
-    const versionTag = sanitizePathSegment(input.releaseVersion);
+    const versionTag = sanitizePathSegment(resolvedVersion);
     const installPath = `engines/${input.slug}/${versionTag}-${Date.now()}`;
-    const taskName = `${input.slug}-${input.releaseVersion}.zip`;
+    const taskName = resolvedFileName;
 
     return new Promise<InstalledEngine>((resolve, reject) => {
       downloadManager.enqueue({
@@ -303,14 +353,14 @@ export class FunkHubService {
                 jobId,
                 mode: "engine",
                 fileName: taskName,
-                downloadUrl: input.releaseUrl,
+                downloadUrl: resolvedDownloadUrl,
                 installPath,
               });
             }
 
             const installed = this.addEngineInstallation({
               slug: input.slug,
-              version: input.releaseVersion,
+              version: resolvedVersion,
               installPath,
               modsPath: `${installPath}/mods`,
             });

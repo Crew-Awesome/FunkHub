@@ -24,6 +24,7 @@ interface FunkHubContextValue {
   enginesCatalog: EngineDefinition[];
   installedEngines: InstalledEngine[];
   settings: FunkHubSettings;
+  itchAuth: { connected: boolean; connectedAt?: number; scopes?: string[] };
   selectedCategoryId?: number;
   setSelectedCategoryId: (categoryId?: number) => void;
   discoverSort: string;
@@ -57,6 +58,9 @@ interface FunkHubContextValue {
   removeInstalledMod: (installedId: string, options?: { deleteFiles?: boolean }) => Promise<void>;
   updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
+  connectItch: (clientId: string) => Promise<void>;
+  disconnectItch: () => Promise<void>;
+  refreshItchAuth: () => Promise<void>;
 }
 
 const FunkHubContext = createContext<FunkHubContextValue | undefined>(undefined);
@@ -73,6 +77,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [modUpdates, setModUpdates] = useState<ModUpdateInfo[]>(funkHubService.getModUpdates());
   const [installedEngines, setInstalledEngines] = useState<InstalledEngine[]>(funkHubService.getInstalledEngines());
   const [settings, setSettings] = useState<FunkHubSettings>(funkHubService.getSettings());
+  const [itchAuth, setItchAuth] = useState<{ connected: boolean; connectedAt?: number; scopes?: string[] }>({ connected: false });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
   const [discoverSort, setDiscoverSort] = useState("Generic_Newest");
   const [discoverPage, setDiscoverPage] = useState(1);
@@ -139,6 +144,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setInstalledMods(funkHubService.getInstalledMods());
       setInstalledEngines(funkHubService.getInstalledEngines());
       setSettings(funkHubService.getSettings());
+      setItchAuth(await funkHubService.getItchAuthStatus());
       await funkHubService.refreshEngineHealth();
       await refreshModUpdates();
       await refreshDiscover();
@@ -182,6 +188,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       enginesCatalog,
       installedEngines,
       settings,
+      itchAuth,
       selectedCategoryId,
       setSelectedCategoryId,
       discoverSort,
@@ -250,6 +257,17 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         setSettings(next);
       },
       browseFolder: async (options) => funkHubService.pickFolder(options),
+      connectItch: async (clientId) => {
+        await funkHubService.connectItchOAuth(clientId);
+        setItchAuth(await funkHubService.getItchAuthStatus());
+      },
+      disconnectItch: async () => {
+        await funkHubService.disconnectItchOAuth();
+        setItchAuth(await funkHubService.getItchAuthStatus());
+      },
+      refreshItchAuth: async () => {
+        setItchAuth(await funkHubService.getItchAuthStatus());
+      },
     }),
     [
       loading,
@@ -263,6 +281,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       enginesCatalog,
       installedEngines,
       settings,
+      itchAuth,
       selectedCategoryId,
       discoverSort,
       discoverPage,

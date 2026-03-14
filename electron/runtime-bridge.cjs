@@ -1,6 +1,8 @@
 const fs = require("node:fs/promises");
 const fsSync = require("node:fs");
+const http = require("node:http");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
 const { app } = require("electron");
 const { path7za } = require("7zip-bin");
@@ -60,6 +62,10 @@ function getSettingsFilePath() {
   return path.join(getDefaultDataRoot(), "settings.json");
 }
 
+function getItchAuthFilePath() {
+  return path.join(getDefaultDataRoot(), "itch-auth.json");
+}
+
 function now() {
   return Date.now();
 }
@@ -113,6 +119,58 @@ async function writeRuntimeSettings(settings) {
   const settingsPath = getSettingsFilePath();
   await ensureDir(path.dirname(settingsPath));
   await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
+}
+
+function encryptString(value) {
+  const { safeStorage } = require("electron");
+  if (safeStorage.isEncryptionAvailable()) {
+    return {
+      encrypted: true,
+      value: safeStorage.encryptString(value).toString("base64"),
+    };
+  }
+  return {
+    encrypted: false,
+    value,
+  };
+}
+
+function decryptString(payload) {
+  const { safeStorage } = require("electron");
+  if (!payload || typeof payload !== "object") {
+    return "";
+  }
+  if (payload.encrypted && safeStorage.isEncryptionAvailable()) {
+    try {
+      return safeStorage.decryptString(Buffer.from(payload.value, "base64"));
+    } catch {
+      return "";
+    }
+  }
+  return typeof payload.value === "string" ? payload.value : "";
+}
+
+async function readItchAuth() {
+  try {
+    const content = await fs.readFile(getItchAuthFilePath(), "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+async function writeItchAuth(payload) {
+  await ensureDir(path.dirname(getItchAuthFilePath()));
+  await fs.writeFile(getItchAuthFilePath(), JSON.stringify(payload, null, 2), "utf-8");
+}
+
+async function clearItchAuth() {
+  await removePath(getItchAuthFilePath());
+}
+
+async function getItchAccessToken() {
+  const auth = await readItchAuth();
+  return auth ? decryptString(auth.accessToken) : "";
 }
 
 async function getEffectiveSettings() {
@@ -817,6 +875,206 @@ async function handleImportEngineFolder(payload) {
   };
 }
 
+async function handleGetItchAuthStatus() {
+  const auth = await readItchAuth();
+  if (!auth) {
+    return { connected: false };
+  }
+  const token = decryptString(auth.accessToken);
+  return {
+    connected: Boolean(token),
+    connectedAt: auth.connectedAt,
+    scopes: Array.isArray(auth.scopes) ? auth.scopes : [],
+  };
+}
+
+async function handleClearItchAuth() {
+  await clearItchAuth();
+  return { ok: true };
+}
+
+async function handleStartItchOAuth(payload) {
+  const clientId = payload?.clientId;
+  const redirectPort = Number(payload?.redirectPort || 34567);
+  const scopes = Array.isArray(payload?.scopes) && payload.scopes.length > 0
+    ? payload.scopes
+    : ["profile:me", "profile:owned"];
+
+  if (!clientId) {
+    throw new Error("itch clientId is required");
+  }
+
+  const state = crypto.randomUUID();
+  const redirectUri = `http://127.0.0.1:${redirectPort}/callback`;
+  const authUrl = new URL("https://itch.io/user/oauth");
+  authUrl.searchParams.set("client_id", clientId);
+  authUrl.searchParams.set("scope", scopes.join(" "));
+  authUrl.searchParams.set("response_type", "token");
+  authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("state", state);
+
+  await new Promise((resolve, reject) => {
+    let done = false;
+
+    const finish = (value, asError = false) => {
+      if (done) {
+        return;
+      }
+      done = true;
+      clearTimeout(timeout);
+      try {
+        server.close();
+      } catch {
+        // ignore close errors
+      }
+      if (asError) {
+        reject(value);
+      } else {
+        resolve(value);
+      }
+    };
+
+    const server = http.createServer(async (req, res) => {
+      const url = new URL(req.url || "/", `http://127.0.0.1:${redirectPort}`);
+      if (url.pathname === "/callback") {
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(`<!doctype html><html><body><script>(function(){
+          var hash = window.location.hash.slice(1);
+          fetch('/token', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: hash})
+            .then(function(){ document.body.textContent='itch.io connection complete. You can close this tab.'; })
+            .catch(function(){ document.body.textContent='itch.io connection failed. Please retry.'; });
+        })();</script></body></html>`);
+        return;
+      }
+
+      if (url.pathname === "/token" && req.method === "POST") {
+        let body = "";
+        req.on("data", (chunk) => {
+          body += chunk;
+        });
+        req.on("end", async () => {
+          const params = new URLSearchParams(body);
+          const accessToken = params.get("access_token") || "";
+          const returnedState = params.get("state") || "";
+          if (!accessToken) {
+            res.writeHead(400);
+            res.end("Missing access token");
+            finish(new Error("Missing access token from itch OAuth callback"), true);
+            return;
+          }
+          if (returnedState !== state) {
+            res.writeHead(400);
+            res.end("State mismatch");
+            finish(new Error("itch OAuth state mismatch"), true);
+            return;
+          }
+
+          await writeItchAuth({
+            accessToken: encryptString(accessToken),
+            scopes,
+            connectedAt: Date.now(),
+          });
+
+          res.writeHead(200);
+          res.end("ok");
+          finish({ ok: true });
+        });
+        return;
+      }
+
+      res.writeHead(404);
+      res.end("Not found");
+    });
+
+    server.on("error", (error) => finish(error, true));
+
+    server.listen(redirectPort, "127.0.0.1", () => {
+      const { shell } = require("electron");
+      shell.openExternal(authUrl.toString()).catch((error) => finish(error, true));
+    });
+
+    const timeout = setTimeout(() => {
+      finish(new Error("itch OAuth timed out"), true);
+    }, 180000);
+  });
+
+  return { ok: true };
+}
+
+function platformUploadMatch(platform, fileName) {
+  const lower = fileName.toLowerCase();
+  if (platform === "windows") return lower.includes("windows") || lower.includes("win");
+  if (platform === "linux") return lower.includes("linux");
+  if (platform === "macos") return lower.includes("mac");
+  return true;
+}
+
+async function handleResolveItchBaseGameDownload(payload) {
+  const platform = payload?.platform || "linux";
+  const token = await getItchAccessToken();
+  if (!token) {
+    return {
+      ok: false,
+      requiresAuth: true,
+      message: "You have to log in with itch.io to install base game",
+    };
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
+  };
+
+  const ownedResponse = await fetch("https://api.itch.io/profile/owned-keys?page=1", { headers });
+  if (!ownedResponse.ok) {
+    return {
+      ok: false,
+      requiresAuth: true,
+      message: "itch.io auth failed, reconnect your account",
+    };
+  }
+
+  const ownedPayload = await ownedResponse.json();
+  const ownedKeys = Array.isArray(ownedPayload?.owned_keys) ? ownedPayload.owned_keys : [];
+  const target = ownedKeys.find((entry) => entry?.game_id === 792778 || String(entry?.game?.url || "").includes("ninja-muffin24.itch.io/funkin"));
+  if (!target) {
+    return {
+      ok: false,
+      requiresAuth: true,
+      message: "Funkin base game is not found in your itch.io library",
+    };
+  }
+
+  const uploadsResponse = await fetch(`https://api.itch.io/games/${target.game_id}/uploads?download_key=${target.id}`, { headers });
+  if (!uploadsResponse.ok) {
+    return { ok: false, message: "Failed to query itch.io uploads" };
+  }
+
+  const uploadsPayload = await uploadsResponse.json();
+  const uploads = Array.isArray(uploadsPayload?.uploads) ? uploadsPayload.uploads : [];
+  const upload = uploads.find((entry) => platformUploadMatch(platform, String(entry?.filename || ""))) || uploads[0];
+
+  if (!upload?.id) {
+    return { ok: false, message: "No compatible itch.io base game upload found" };
+  }
+
+  const downloadResponse = await fetch(
+    `https://api.itch.io/uploads/${upload.id}/download?download_key_id=${target.id}&uuid=${crypto.randomUUID()}`,
+    { headers, redirect: "manual" },
+  );
+  const location = downloadResponse.headers.get("location");
+  if (!location) {
+    return { ok: false, message: "Failed to resolve itch.io download URL" };
+  }
+
+  return {
+    ok: true,
+    downloadUrl: location,
+    fileName: String(upload.filename || `funkin-${platform}.zip`),
+    version: "0.8.3",
+  };
+}
+
 async function handleGetSettings() {
   return getEffectiveSettings();
 }
@@ -846,6 +1104,10 @@ module.exports = {
   handleLaunchEngine,
   handleOpenPath,
   handleDeletePath,
+  handleGetItchAuthStatus,
+  handleClearItchAuth,
+  handleStartItchOAuth,
+  handleResolveItchBaseGameDownload,
   handleInspectEngineInstall,
   handleImportEngineFolder,
   handleGetSettings,

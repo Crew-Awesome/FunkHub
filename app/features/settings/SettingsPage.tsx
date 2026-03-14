@@ -7,14 +7,19 @@ export function Settings() {
   const { theme, toggleTheme } = useTheme();
   const {
     settings,
+    itchAuth,
     installedEngines,
     setDefaultEngine,
     updateSettings,
     browseFolder,
+    connectItch,
+    disconnectItch,
   } = useFunkHub();
   const [gameDirectory, setGameDirectory] = useState(settings.gameDirectory);
   const [downloadsDirectory, setDownloadsDirectory] = useState(settings.downloadsDirectory);
   const [dataRootDirectory, setDataRootDirectory] = useState(settings.dataRootDirectory);
+  const [itchClientId, setItchClientId] = useState("4f345ebf07699f30d702a69fd6dca358");
+  const [itchBusy, setItchBusy] = useState(false);
 
   useEffect(() => {
     setGameDirectory(settings.gameDirectory);
@@ -263,6 +268,56 @@ export function Settings() {
                          checked:after:translate-x-5"
               />
             </label>
+
+            <div className="rounded-lg border border-border p-4">
+              <p className="font-medium text-foreground">itch.io Connection</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Required for automatic base game download resolution from itch.io.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  value={itchClientId}
+                  onChange={(event) => setItchClientId(event.target.value)}
+                  className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                  placeholder="itch OAuth client id"
+                />
+                {itchAuth.connected ? (
+                  <button
+                    disabled={itchBusy}
+                    onClick={async () => {
+                      setItchBusy(true);
+                      try {
+                        await disconnectItch();
+                      } finally {
+                        setItchBusy(false);
+                      }
+                    }}
+                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg text-sm"
+                  >
+                    Disconnect
+                  </button>
+                ) : (
+                  <button
+                    disabled={itchBusy || !itchClientId.trim()}
+                    onClick={async () => {
+                      setItchBusy(true);
+                      try {
+                        await connectItch(itchClientId.trim());
+                      } finally {
+                        setItchBusy(false);
+                      }
+                    }}
+                    className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-60 text-white rounded-lg text-sm"
+                  >
+                    Connect itch.io
+                  </button>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Status: {itchAuth.connected ? "Connected" : "Not connected"}
+              </p>
+            </div>
           </div>
         </motion.section>
 

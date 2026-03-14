@@ -74,10 +74,22 @@ const githubEngineSources: GithubEngineSource[] = [
     fallbackVersion: "unknown",
     fallbackReleases: [
       {
-        platform: "any",
-        version: "latest",
-        sourceUrl: "https://github.com/FunkinCrew/Funkin/releases",
-        downloadUrl: "https://github.com/FunkinCrew/Funkin/releases",
+        platform: "windows",
+        version: "0.8.3",
+        sourceUrl: "https://ninja-muffin24.itch.io/funkin",
+        downloadUrl: "itch://funkin/basegame/windows",
+      },
+      {
+        platform: "linux",
+        version: "0.8.3",
+        sourceUrl: "https://ninja-muffin24.itch.io/funkin",
+        downloadUrl: "itch://funkin/basegame/linux",
+      },
+      {
+        platform: "macos",
+        version: "0.8.3",
+        sourceUrl: "https://ninja-muffin24.itch.io/funkin",
+        downloadUrl: "itch://funkin/basegame/macos",
       },
     ],
   },
