@@ -1,6 +1,8 @@
 {
   "name": "funkhub",
   "version": "0.1.0",
+  "description": "Desktop mod manager and launcher for Friday Night Funkin'.",
+  "author": "FunkHub Contributors",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -12,12 +14,11 @@
     "electron:start": "electron ./electron/main.cjs",
     "typecheck": "tsc --noEmit -p tsconfig.ci.json",
     "build:renderer": "vite build",
-    "build:desktop:linux": "bun run build:renderer && electron-builder --linux AppImage --x64 --publish never",
-    "build:desktop:win": "bun run build:renderer && electron-builder --win nsis portable --x64 --publish never"
+    "build:desktop:linux": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never",
+    "build:desktop:win": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never"
   },
   "dependencies": {
     "7zip-bin": "^5.2.0",
-    "electron": "^37.3.1",
     "lucide-react": "^0.555.0",
     "motion": "^12.23.24",
     "node-7z": "^3.0.0",
@@ -31,6 +32,7 @@
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.0.4",
+    "electron": "^37.3.1",
     "electron-builder": "^24.13.3",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
