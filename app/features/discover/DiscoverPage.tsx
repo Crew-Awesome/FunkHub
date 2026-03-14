@@ -1,19 +1,22 @@
-import { useMemo, useState } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { useMemo } from "react";
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 import { ModCard } from "../mods";
 import { useFunkHub } from "../../providers";
 
-const sortOptions = ["Most Downloaded", "Newest", "Trending", "Top Rated"];
-
 export function Discover() {
-  const [selectedSort, setSelectedSort] = useState("Trending");
   const {
     loading,
     discoverMods,
+    modSortOptions,
     categories,
     selectedCategoryId,
     setSelectedCategoryId,
+    discoverSort,
+    setDiscoverSort,
+    discoverPage,
+    setDiscoverPage,
+    hasMoreDiscover,
     searchQuery,
     setSearchQuery,
     installMod,
@@ -79,20 +82,20 @@ export function Discover() {
 
         {/* Sort Options */}
         <div className="flex gap-2 overflow-x-auto pb-2">
-          {sortOptions.map((option) => (
+          {modSortOptions.map((option) => (
             <button
-              key={option}
-              onClick={() => setSelectedSort(option)}
+              key={option.alias}
+              onClick={() => setDiscoverSort(option.alias)}
               className={`
                 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all
                 ${
-                  selectedSort === option
+                  discoverSort === option.alias
                     ? "bg-primary/10 text-primary border border-primary/20"
                     : "bg-card hover:bg-secondary text-muted-foreground border border-border"
                 }
               `}
             >
-              {option}
+              {option.title}
             </button>
           ))}
         </div>
@@ -121,6 +124,26 @@ export function Discover() {
             />
           </motion.div>
         ))}
+      </div>
+
+      <div className="mt-6 flex items-center justify-between">
+        <button
+          onClick={() => setDiscoverPage(Math.max(1, discoverPage - 1))}
+          disabled={discoverPage <= 1}
+          className="px-4 py-2 rounded-lg border border-border bg-card hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Previous
+        </button>
+        <span className="text-sm text-muted-foreground">Page {discoverPage}</span>
+        <button
+          onClick={() => setDiscoverPage(discoverPage + 1)}
+          disabled={!hasMoreDiscover}
+          className="px-4 py-2 rounded-lg border border-border bg-card hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2"
+        >
+          Next
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

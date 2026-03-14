@@ -5,7 +5,7 @@ import { EngineCard } from "./EngineCard";
 import { useFunkHub } from "../../providers";
 
 export function Engines() {
-  const { installedEngines, enginesCatalog, setDefaultEngine } = useFunkHub();
+  const { installedEngines, enginesCatalog, setDefaultEngine, installEngine } = useFunkHub();
   const [showEngines, setShowEngines] = useState(installedEngines.length > 0);
   const [showAddDialog, setShowAddDialog] = useState(false);
 
@@ -48,7 +48,11 @@ export function Engines() {
                 {availableEngines.map((engine) => (
                   <button
                     key={engine.slug}
-                    onClick={() => {
+                    onClick={async () => {
+                      const primaryRelease = engine.releases[0];
+                      if (primaryRelease) {
+                        await installEngine(engine.slug, primaryRelease.downloadUrl, primaryRelease.version);
+                      }
                       setShowEngines(true);
                       setShowAddDialog(false);
                     }}
@@ -95,10 +99,18 @@ export function Engines() {
             {availableEngines.map((engine) => (
               <button
                 key={engine.slug}
+                onClick={async () => {
+                  const primaryRelease = engine.releases[0];
+                  if (primaryRelease) {
+                    await installEngine(engine.slug, primaryRelease.downloadUrl, primaryRelease.version);
+                    setShowAddDialog(false);
+                  }
+                }}
                 className="px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3"
               >
                 <Cpu className="w-5 h-5 text-primary" />
-                {engine.name}
+                <span className="flex-1">{engine.name}</span>
+                <span className="text-xs text-muted-foreground">{engine.releases[0]?.version ?? "latest"}</span>
               </button>
             ))}
             <button className="px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3">

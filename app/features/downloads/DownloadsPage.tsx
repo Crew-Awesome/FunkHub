@@ -48,7 +48,14 @@ export function Downloads() {
                     <span>{download.speedBytesPerSecond ? `${formatBytes(download.speedBytesPerSecond)}/s` : "Waiting..."}</span>
                     <span>•</span>
                     <span>{formatBytes(download.totalBytes)}</span>
+                    {download.phase && (
+                      <>
+                        <span>•</span>
+                        <span className="capitalize">{download.phase}</span>
+                      </>
+                    )}
                   </div>
+                  {download.message && <p className="text-xs text-muted-foreground mt-1">{download.message}</p>}
                 </div>
                 <div className="flex gap-2">
                   <button className="p-2 hover:bg-secondary rounded-lg transition-colors">

@@ -12,8 +12,13 @@ import {
 
 const APIV11_BASE = "https://gamebanana.com/apiv11";
 const APIV7_BASE = "https://gamebanana.com/apiv7";
+const LIST_CACHE_TTL_MS = 5 * 60 * 1000;
+const METADATA_CACHE_TTL_MS = 10 * 60 * 1000;
 
-type Json = Record<string, unknown>;
+type CacheEntry<T> = {
+  expiresAt: number;
+  value: T;
+};
 
 function toNumber(value: unknown): number {
   if (typeof value === "number") {
@@ -169,6 +174,12 @@ function detectDependencies(text?: string): string[] {
 }
 
 export class GameBananaApiService {
+  private listCache = new Map<string, CacheEntry<unknown>>();
+
+  private metadataCache = new Map<string, CacheEntry<unknown>>();
+
+  private thumbnailPrefetchCache = new Set<string>();
+
   private async fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
     const response = await fetch(url, {
       ...init,
@@ -185,6 +196,83 @@ export class GameBananaApiService {
     return response.json() as Promise<T>;
   }
 
+  private getCached<T>(cache: Map<string, CacheEntry<unknown>>, key: string): T | undefined {
+    const hit = cache.get(key);
+    if (!hit) {
+      return undefined;
+    }
+
+    if (Date.now() > hit.expiresAt) {
+      cache.delete(key);
+      return undefined;
+    }
+
+    return hit.value as T;
+  }
+
+  private setCached<T>(cache: Map<string, CacheEntry<unknown>>, key: string, value: T, ttlMs: number): void {
+    cache.set(key, {
+      value,
+      expiresAt: Date.now() + ttlMs,
+    });
+  }
+
+  private async fetchJsonCached<T>(input: {
+    key: string;
+    cache: Map<string, CacheEntry<unknown>>;
+    ttlMs: number;
+    url: string;
+  }): Promise<T> {
+    const cached = this.getCached<T>(input.cache, input.key);
+    if (cached) {
+      return cached;
+    }
+
+    const value = await this.fetchJson<T>(input.url);
+    this.setCached(input.cache, input.key, value, input.ttlMs);
+    return value;
+  }
+
+  private prefetchThumbnails(mods: GameBananaModSummary[]): void {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    for (const mod of mods.slice(0, 24)) {
+      const thumbnail = mod.thumbnailUrl;
+      if (!thumbnail || this.thumbnailPrefetchCache.has(thumbnail)) {
+        continue;
+      }
+      this.thumbnailPrefetchCache.add(thumbnail);
+      const image = new Image();
+      image.loading = "eager";
+      image.src = thumbnail;
+    }
+  }
+
+  private withFallbackErrorContext(error: unknown, context: string): Error {
+    if (error instanceof Error) {
+      return new Error(`${context}: ${error.message}`);
+    }
+    return new Error(context);
+  }
+
+  async getModListFilterConfig(): Promise<{
+    sorts: Array<{ alias: string; title: string }>;
+  }> {
+    const key = "mod-list-filter-config";
+    const payload = await this.fetchJsonCached<{ _aSorts?: Array<{ _sAlias: string; _sTitle: string }> }>({
+      key,
+      cache: this.metadataCache,
+      ttlMs: METADATA_CACHE_TTL_MS,
+      url: `${APIV11_BASE}/Mod/ListFilterConfig?_idGameRow=${FNF_GAME_ID}`,
+    });
+
+    return {
+      sorts: (payload._aSorts ?? []).map((sort) => ({ alias: sort._sAlias, title: sort._sTitle })),
+    };
+  }
+
   async listMods({ page = 1, perPage = 20, categoryId, sort = "Generic_NewAndUpdated" }: ListModsParams = {}): Promise<GameBananaModSummary[]> {
     const url = new URL(`${APIV11_BASE}/Mod/Index`);
     url.searchParams.set("_nPage", String(page));
@@ -196,9 +284,17 @@ export class GameBananaApiService {
       url.searchParams.set("_aFilters[Generic_Category]", String(categoryId));
     }
 
-    const payload = await this.fetchJson<{ _aRecords?: Record<string, unknown>[] }>(url.toString());
+    const cacheKey = `listMods:${url.toString()}`;
+    const payload = await this.fetchJsonCached<{ _aRecords?: Record<string, unknown>[] }>({
+      key: cacheKey,
+      cache: this.listCache,
+      ttlMs: LIST_CACHE_TTL_MS,
+      url: url.toString(),
+    });
     const records = payload._aRecords ?? [];
-    return records.map(normalizeSummary).filter((mod) => mod.modelName === "Mod" && mod.game?.id === FNF_GAME_ID);
+    const normalized = records.map(normalizeSummary).filter((mod) => mod.modelName === "Mod" && mod.game?.id === FNF_GAME_ID);
+    this.prefetchThumbnails(normalized);
+    return normalized;
   }
 
   async searchMods({ query, page = 1, perPage = 15 }: SearchModsParams): Promise<GameBananaModSummary[]> {
@@ -211,30 +307,80 @@ export class GameBananaApiService {
     url.searchParams.set("_nPage", String(page));
     url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
 
-    const payload = await this.fetchJson<{ _aRecords?: Record<string, unknown>[] }>(url.toString());
+    const cacheKey = `searchMods:${url.toString()}`;
+    const payload = await this.fetchJsonCached<{ _aRecords?: Record<string, unknown>[] }>({
+      key: cacheKey,
+      cache: this.listCache,
+      ttlMs: LIST_CACHE_TTL_MS,
+      url: url.toString(),
+    });
     const records = payload._aRecords ?? [];
 
-    return records
+    const normalized = records
       .map(normalizeSummary)
       .filter((mod) => mod.modelName === "Mod" && mod.game?.id === FNF_GAME_ID);
+    this.prefetchThumbnails(normalized);
+    return normalized;
   }
 
   async getTrendingMods(): Promise<GameBananaModSummary[]> {
     const url = `${APIV11_BASE}/Game/${FNF_GAME_ID}/TopSubs`;
-    const payload = await this.fetchJson<Record<string, unknown>[]>(url);
+    const payload = await this.fetchJsonCached<Record<string, unknown>[]>({
+      key: "trendingMods",
+      cache: this.listCache,
+      ttlMs: LIST_CACHE_TTL_MS,
+      url,
+    });
 
-    return payload
+    const normalized = payload
       .map(normalizeSummary)
       .filter((mod) => mod.modelName === "Mod" && mod.game?.id === FNF_GAME_ID);
+    this.prefetchThumbnails(normalized);
+    return normalized;
   }
 
   async getModFiles(modId: number): Promise<GameBananaFile[]> {
-    const payload = await this.fetchJson<Record<string, unknown>[]>(`${APIV11_BASE}/Mod/${modId}/Files`);
+    const payload = await this.fetchJsonCached<Record<string, unknown>[]>({
+      key: `modFiles:${modId}`,
+      cache: this.metadataCache,
+      ttlMs: METADATA_CACHE_TTL_MS,
+      url: `${APIV11_BASE}/Mod/${modId}/Files`,
+    });
     return payload.map(normalizeFile);
   }
 
   async getModProfile(modId: number): Promise<GameBananaModProfile> {
-    const payload = await this.fetchJson<Record<string, unknown>>(`${APIV11_BASE}/Mod/${modId}/ProfilePage`);
+    const cacheKey = `modProfile:${modId}`;
+    const cached = this.getCached<GameBananaModProfile>(this.metadataCache, cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    let payload: Record<string, unknown>;
+    try {
+      payload = await this.fetchJson<Record<string, unknown>>(`${APIV11_BASE}/Mod/${modId}/ProfilePage`);
+    } catch (error) {
+      const fallback = await this.getModProfileFromApiv7(modId);
+      if (!fallback.id) {
+        throw this.withFallbackErrorContext(error, "Mod metadata unavailable");
+      }
+      const fallbackProfile: GameBananaModProfile = {
+        id: fallback.id,
+        modelName: "Mod",
+        name: fallback.name ?? `Mod ${modId}`,
+        profileUrl: `https://gamebanana.com/mods/${modId}`,
+        description: fallback.description,
+        text: fallback.text,
+        dateAdded: 0,
+        files: fallback.files ?? [],
+        credits: [],
+        dependencies: detectDependencies(fallback.text),
+        requiredEngine: detectRequiredEngine({ name: fallback.name ?? "", text: fallback.text, rootCategory: undefined }),
+      };
+      this.setCached(this.metadataCache, cacheKey, fallbackProfile, METADATA_CACHE_TTL_MS);
+      return fallbackProfile;
+    }
+
     const summary = normalizeSummary(payload);
 
     const categoryRaw = (payload._aCategory ?? {}) as Record<string, unknown>;
@@ -284,6 +430,7 @@ export class GameBananaApiService {
 
     profile.requiredEngine = detectRequiredEngine(profile);
     profile.dependencies = detectDependencies(profile.text);
+    this.setCached(this.metadataCache, cacheKey, profile, METADATA_CACHE_TTL_MS);
 
     return profile;
   }
@@ -291,7 +438,12 @@ export class GameBananaApiService {
   async getModProfileFromApiv7(modId: number): Promise<Partial<GameBananaModProfile>> {
     const properties = ["_idRow", "_sName", "_nDownloadCount", "_aSubmitter", "_aFiles", "_sDescription", "_sText"];
     const url = `${APIV7_BASE}/Mod/${modId}?_csvProperties=${encodeURIComponent(properties.join(","))}`;
-    const payload = await this.fetchJson<Record<string, unknown>>(url);
+    const payload = await this.fetchJsonCached<Record<string, unknown>>({
+      key: `modProfileV7:${modId}`,
+      cache: this.metadataCache,
+      ttlMs: METADATA_CACHE_TTL_MS,
+      url,
+    });
 
     return {
       id: toNumber(payload._idRow),
@@ -308,7 +460,12 @@ export class GameBananaApiService {
   async getCategoryById(categoryId: number): Promise<GameBananaCategory> {
     const fields = "_idRow,_sName,_sProfileUrl,_sIconUrl,_idParentCategoryRow,_aGame,_tsDateAdded,_tsDateModified";
     const url = `${APIV11_BASE}/ModCategory/${categoryId}?_csvProperties=${encodeURIComponent(fields)}`;
-    const payload = await this.fetchJson<Record<string, unknown>>(url);
+    const payload = await this.fetchJsonCached<Record<string, unknown>>({
+      key: `category:${categoryId}`,
+      cache: this.metadataCache,
+      ttlMs: METADATA_CACHE_TTL_MS,
+      url,
+    });
     const game = (payload._aGame ?? {}) as Record<string, unknown>;
 
     return {
@@ -323,7 +480,12 @@ export class GameBananaApiService {
   }
 
   async getSubCategories(categoryId: number): Promise<GameBananaCategory[]> {
-    const payload = await this.fetchJson<Array<Record<string, unknown>>>(`${APIV11_BASE}/ModCategory/${categoryId}/SubCategories`);
+    const payload = await this.fetchJsonCached<Array<Record<string, unknown>>>({
+      key: `subCategories:${categoryId}`,
+      cache: this.metadataCache,
+      ttlMs: METADATA_CACHE_TTL_MS,
+      url: `${APIV11_BASE}/ModCategory/${categoryId}/SubCategories`,
+    });
 
     return payload.map((entry) => {
       const profileUrl = String(entry._sUrl ?? "");
@@ -343,7 +505,12 @@ export class GameBananaApiService {
 
   async getRootCategories(): Promise<GameBananaCategory[]> {
     const url = `${APIV11_BASE}/Mod/Categories?_sSort=a_to_z&_idGameRow=${FNF_GAME_ID}`;
-    const payload = await this.fetchJson<Array<Record<string, unknown>>>(url);
+    const payload = await this.fetchJsonCached<Array<Record<string, unknown>>>({
+      key: "rootCategories",
+      cache: this.metadataCache,
+      ttlMs: METADATA_CACHE_TTL_MS,
+      url,
+    });
 
     return payload.map((entry) => {
       const profileUrl = String(entry._sUrl ?? "");

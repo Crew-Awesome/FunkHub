@@ -13,6 +13,7 @@ import {
   InstalledEngine,
   InstalledMod,
   ListModsParams,
+  ModUpdateInfo,
   SearchModsParams,
 } from "./types";
 
@@ -37,12 +38,43 @@ function formatEngineName(slug: EngineSlug): string {
   }
 }
 
+function parseVersion(version?: string): number[] {
+  if (!version) {
+    return [0, 0, 0];
+  }
+
+  const cleaned = version.trim().replace(/^v/i, "");
+  const parts = cleaned.split(/[^0-9]+/).filter(Boolean).slice(0, 3).map((part) => Number(part));
+  while (parts.length < 3) {
+    parts.push(0);
+  }
+  return parts.map((part) => (Number.isFinite(part) ? part : 0));
+}
+
+function compareVersions(a?: string, b?: string): number {
+  const va = parseVersion(a);
+  const vb = parseVersion(b);
+  for (let index = 0; index < 3; index += 1) {
+    if (va[index] > vb[index]) {
+      return 1;
+    }
+    if (va[index] < vb[index]) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
 export class FunkHubService {
   private installedMods: InstalledMod[] = [];
 
   private installedEngines: InstalledEngine[] = [];
 
   private downloadHistory: DownloadTask[] = [];
+
+  private updateCache: ModUpdateInfo[] = [];
+
+  private desktopProgressUnsubscribe: (() => void) | undefined;
 
   constructor() {
     this.installedMods = funkHubStorageService.getInstalledMods();
@@ -64,6 +96,39 @@ export class FunkHubService {
       ];
       funkHubStorageService.saveInstalledEngines(this.installedEngines);
     }
+
+    this.setupDesktopProgressBridge();
+  }
+
+  private setupDesktopProgressBridge(): void {
+    if (!window.funkhubDesktop?.onInstallProgress) {
+      return;
+    }
+
+    this.desktopProgressUnsubscribe = window.funkhubDesktop.onInstallProgress((payload) => {
+      const existing = this.downloadHistory.find((task) => task.id === payload.jobId);
+      if (!existing) {
+        return;
+      }
+
+      const status = payload.phase === "error"
+        ? "failed"
+        : payload.phase === "install"
+          ? "installing"
+          : "downloading";
+
+      downloadManager.update(payload.jobId, {
+        ...existing,
+        phase: payload.phase,
+        status,
+        progress: payload.progress,
+        downloadedBytes: payload.downloadedBytes ?? existing.downloadedBytes,
+        totalBytes: payload.totalBytes ?? existing.totalBytes,
+        speedBytesPerSecond: payload.speedBytesPerSecond ?? existing.speedBytesPerSecond,
+        message: payload.message,
+        error: payload.phase === "error" ? payload.message : existing.error,
+      });
+    });
   }
 
   subscribeDownloads(listener: (tasks: DownloadTask[]) => void): () => void {
@@ -86,8 +151,46 @@ export class FunkHubService {
     return [...this.downloadHistory].sort((a, b) => b.createdAt - a.createdAt);
   }
 
+  getModUpdates(): ModUpdateInfo[] {
+    return [...this.updateCache];
+  }
+
   async getEngineCatalog(): Promise<EngineDefinition[]> {
     return engineCatalogService.getEngineCatalog();
+  }
+
+  async installEngineFromRelease(input: {
+    slug: EngineSlug;
+    releaseUrl: string;
+    releaseVersion: string;
+  }): Promise<InstalledEngine> {
+    const jobId = `engine-${input.slug}-${Date.now()}`;
+    const installPath = `engines/${input.slug}`;
+
+    if (!window.funkhubDesktop) {
+      const fallback = this.addEngineInstallation({
+        slug: input.slug,
+        version: input.releaseVersion,
+        installPath,
+        modsPath: `${installPath}/mods`,
+      });
+      return fallback;
+    }
+
+    await window.funkhubDesktop.installEngine({
+      jobId,
+      mode: "engine",
+      fileName: `${input.slug}-${input.releaseVersion}.zip`,
+      downloadUrl: input.releaseUrl,
+      installPath,
+    });
+
+    return this.addEngineInstallation({
+      slug: input.slug,
+      version: input.releaseVersion,
+      installPath,
+      modsPath: `${installPath}/mods`,
+    });
   }
 
   async getFunkHubCategories(): Promise<CategoryNode[]> {
@@ -102,12 +205,58 @@ export class FunkHubService {
     return gameBananaApiService.listMods(params);
   }
 
+  async getModSortOptions(): Promise<Array<{ alias: string; title: string }>> {
+    const config = await gameBananaApiService.getModListFilterConfig();
+    return config.sorts;
+  }
+
   async searchMods(params: SearchModsParams): Promise<GameBananaModSummary[]> {
     return gameBananaApiService.searchMods(params);
   }
 
   async getModProfile(modId: number): Promise<GameBananaModProfile> {
     return gameBananaApiService.getModProfile(modId);
+  }
+
+  async refreshModUpdates(): Promise<ModUpdateInfo[]> {
+    const updates: ModUpdateInfo[] = [];
+
+    await Promise.all(this.installedMods.map(async (installed) => {
+      try {
+        const profile = await this.getModProfile(installed.modId);
+        const latestVersion = profile.version || "unknown";
+        const currentVersion = installed.version || "unknown";
+
+        if (latestVersion !== "unknown" && compareVersions(latestVersion, currentVersion) > 0) {
+          updates.push({
+            installedId: installed.id,
+            modId: installed.modId,
+            modName: installed.modName,
+            currentVersion,
+            latestVersion,
+            engine: installed.engine,
+            sourceFileId: installed.sourceFileId,
+          });
+        }
+      } catch {
+        // Missing or removed mod entries are ignored in update scan.
+      }
+    }));
+
+    this.updateCache = updates.sort((a, b) => a.modName.localeCompare(b.modName));
+
+    const flagged = new Set(this.updateCache.map((item) => item.installedId));
+    this.installedMods = this.installedMods.map((mod) => {
+      const update = this.updateCache.find((entry) => entry.installedId === mod.id);
+      return {
+        ...mod,
+        updateAvailable: flagged.has(mod.id),
+        latestVersion: update?.latestVersion,
+      };
+    });
+    funkHubStorageService.saveInstalledMods(this.installedMods);
+
+    return this.updateCache;
   }
 
   addEngineInstallation(input: { slug: EngineSlug; version: string; installPath: string; modsPath: string }): InstalledEngine {
@@ -122,7 +271,7 @@ export class FunkHubService {
       installedAt: Date.now(),
     };
 
-    this.installedEngines = [engine, ...this.installedEngines.map((item) => ({ ...item, isDefault: item.isDefault }))];
+    this.installedEngines = [engine, ...this.installedEngines.map((item) => ({ ...item }))];
     funkHubStorageService.saveInstalledEngines(this.installedEngines);
     return engine;
   }
@@ -137,14 +286,40 @@ export class FunkHubService {
 
   removeInstalledMod(installedId: string): void {
     this.installedMods = this.installedMods.filter((mod) => mod.id !== installedId);
+    this.updateCache = this.updateCache.filter((update) => update.installedId !== installedId);
     funkHubStorageService.saveInstalledMods(this.installedMods);
   }
 
-  cancelDownload(taskId: string): void {
-    downloadManager.cancel(taskId);
+  async launchInstalledMod(installedId: string): Promise<void> {
+    const installed = this.installedMods.find((mod) => mod.id === installedId);
+    if (!installed) {
+      throw new Error("Installed mod not found");
+    }
+
+    const engine = this.installedEngines.find((entry) => entry.slug === installed.engine)
+      ?? this.installedEngines.find((entry) => entry.isDefault)
+      ?? this.installedEngines[0];
+
+    if (!engine) {
+      throw new Error("No engine installation found");
+    }
+
+    if (!window.funkhubDesktop?.launchEngine) {
+      throw new Error("Desktop bridge unavailable for launching");
+    }
+
+    await window.funkhubDesktop.launchEngine({ installPath: engine.installPath });
   }
 
-  queueInstall(modId: number, fileId: number, selectedEngineId?: string): DownloadTask {
+  cancelDownload(taskId: string): void {
+    const task = this.downloadHistory.find((entry) => entry.id === taskId);
+    downloadManager.cancel(taskId);
+    if (window.funkhubDesktop && task) {
+      window.funkhubDesktop.cancelInstall({ jobId: task.id }).catch(() => undefined);
+    }
+  }
+
+  queueInstall(modId: number, fileId: number, selectedEngineId?: string, priority = 0): DownloadTask {
     const abortController = new AbortController();
     const taskId = `${modId}-${fileId}-${Date.now()}`;
 
@@ -154,6 +329,7 @@ export class FunkHubService {
         modId,
         fileId,
         fileName: `file-${fileId}`,
+        priority,
       },
       cancel: () => abortController.abort(),
       run: async (task, update) => {
@@ -161,61 +337,8 @@ export class FunkHubService {
         const selectedFile = profile.files.find((file) => file.id === fileId) ?? profile.files[0];
 
         if (!selectedFile) {
-          throw new Error("No downloadable files available for this mod.");
+          throw new Error("Selected file is missing or has been removed.");
         }
-
-        update({
-          ...task,
-          fileName: selectedFile.fileName,
-          totalBytes: selectedFile.fileSize,
-          status: "downloading",
-        });
-
-        const response = await fetch(`https://gamebanana.com/dl/${selectedFile.id}`, {
-          signal: abortController.signal,
-        });
-
-        if (!response.ok || !response.body) {
-          throw new Error("Failed to download archive");
-        }
-
-        const totalBytes = Number((response.headers.get("content-length") ?? selectedFile.fileSize) || 0) || undefined;
-        const reader = response.body.getReader();
-        const chunks: ArrayBuffer[] = [];
-        const startedAt = performance.now();
-        let downloaded = 0;
-
-        while (true) {
-          const { value, done } = await reader.read();
-
-          if (done) {
-            break;
-          }
-
-          if (value) {
-            chunks.push(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength));
-            downloaded += value.byteLength;
-            const elapsedSeconds = Math.max((performance.now() - startedAt) / 1000, 0.001);
-            update({
-              ...task,
-              fileName: selectedFile.fileName,
-              totalBytes,
-              downloadedBytes: downloaded,
-              progress: totalBytes ? downloaded / totalBytes : 0,
-              speedBytesPerSecond: downloaded / elapsedSeconds,
-              status: "downloading",
-            });
-          }
-        }
-
-        update({
-          ...task,
-          fileName: selectedFile.fileName,
-          totalBytes,
-          downloadedBytes: downloaded,
-          progress: 1,
-          status: "installing",
-        });
 
         const selectedEngine = this.installedEngines.find((engine) => engine.id === selectedEngineId)
           ?? this.installedEngines.find((engine) => engine.isDefault)
@@ -227,15 +350,94 @@ export class FunkHubService {
           selectedEngine,
         });
 
-        const blob = new Blob(chunks);
-        const installedMod = await modInstallerService.installDownloadedArchive({
+        const compatibility = modInstallerService.validateEngineCompatibility({
+          requiredEngine: plan.requiredEngine,
+          selectedEngine,
           plan,
-          blob,
+        });
+
+        if (!compatibility.compatible) {
+          throw new Error(compatibility.warning ?? "Selected engine is incompatible with this mod.");
+        }
+
+        update({
+          ...task,
+          fileName: selectedFile.fileName,
+          totalBytes: selectedFile.fileSize,
+          status: "downloading",
+          message: "Starting download",
+        });
+
+        if (window.funkhubDesktop) {
+          const request = modInstallerService.createDesktopInstallRequest({
+            jobId: task.id,
+            plan,
+            file: selectedFile,
+            modName: profile.name,
+          });
+
+          const installedMod = await modInstallerService.installViaDesktopBridge({
+            request,
+            mod: profile,
+            sourceFileId: selectedFile.id,
+            requiredEngine: plan.requiredEngine,
+          });
+
+          this.installedMods = [installedMod, ...this.installedMods];
+          funkHubStorageService.saveInstalledMods(this.installedMods);
+
+          update({
+            ...task,
+            fileName: selectedFile.fileName,
+            totalBytes: selectedFile.fileSize,
+            downloadedBytes: selectedFile.fileSize,
+            progress: 1,
+            status: "completed",
+            message: "Install complete",
+          });
+          return;
+        }
+
+        const response = await fetch(`https://gamebanana.com/dl/${selectedFile.id}`, {
+          signal: abortController.signal,
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error("Download interrupted or unavailable.");
+        }
+
+        const totalBytes = Number((response.headers.get("content-length") ?? selectedFile.fileSize) || 0) || undefined;
+        const reader = response.body.getReader();
+        const startedAt = performance.now();
+        let downloaded = 0;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            break;
+          }
+          if (value) {
+            downloaded += value.byteLength;
+            const elapsedSeconds = Math.max((performance.now() - startedAt) / 1000, 0.001);
+            update({
+              ...task,
+              fileName: selectedFile.fileName,
+              totalBytes,
+              downloadedBytes: downloaded,
+              progress: totalBytes ? downloaded / totalBytes : 0,
+              speedBytesPerSecond: downloaded / elapsedSeconds,
+              status: "downloading",
+              message: "Downloading archive",
+            });
+          }
+        }
+
+        const installedMod = modInstallerService.createFallbackInstalledRecord({
+          plan,
           fileName: selectedFile.fileName,
           mod: profile,
           sourceFileId: selectedFile.id,
         });
-
         this.installedMods = [installedMod, ...this.installedMods];
         funkHubStorageService.saveInstalledMods(this.installedMods);
 
@@ -246,6 +448,7 @@ export class FunkHubService {
           downloadedBytes: downloaded,
           progress: 1,
           status: "completed",
+          message: "Downloaded (desktop bridge unavailable)",
         });
       },
     });

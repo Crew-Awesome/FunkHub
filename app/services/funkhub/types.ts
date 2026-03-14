@@ -75,10 +75,13 @@ export interface DownloadTask {
   modId: number;
   fileId: number;
   fileName: string;
+  priority?: number;
   totalBytes?: number;
   downloadedBytes: number;
   progress: number;
   speedBytesPerSecond?: number;
+  phase?: "download" | "extract" | "install" | "error";
+  message?: string;
   status: "queued" | "downloading" | "installing" | "completed" | "cancelled" | "failed";
   error?: string;
   createdAt: number;
@@ -96,7 +99,11 @@ export interface InstalledMod {
   installedAt: number;
   installPath: string;
   engine: EngineSlug;
+  requiredEngine?: EngineSlug;
+  dependencies?: string[];
   sourceFileId: number;
+  updateAvailable?: boolean;
+  latestVersion?: string;
 }
 
 export type EngineSlug =
@@ -120,6 +127,51 @@ export interface EngineDefinition {
   name: string;
   description: string;
   releases: EngineRelease[];
+}
+
+export interface DesktopInstallRequest {
+  jobId: string;
+  fileName: string;
+  mode: "engine" | "mod";
+  installPath: string;
+  installSubdir?: string;
+  downloadUrl?: string;
+  archiveBase64?: string;
+}
+
+export interface DesktopInstallProgress {
+  jobId: string;
+  phase: "download" | "extract" | "install" | "error";
+  progress: number;
+  message?: string;
+  downloadedBytes?: number;
+  totalBytes?: number;
+  speedBytesPerSecond?: number;
+  timestamp: number;
+}
+
+export interface DesktopInstallResult {
+  installPath: string;
+  versionDetected?: string;
+  normalized?: boolean;
+}
+
+export interface DesktopBridge {
+  installArchive: (payload: DesktopInstallRequest) => Promise<DesktopInstallResult>;
+  installEngine: (payload: DesktopInstallRequest) => Promise<DesktopInstallResult>;
+  cancelInstall: (payload: { jobId: string }) => Promise<{ ok: boolean }>;
+  onInstallProgress: (listener: (payload: DesktopInstallProgress) => void) => () => void;
+  launchEngine: (payload: { installPath: string }) => Promise<{ ok: boolean; launchedPath?: string }>;
+}
+
+export interface ModUpdateInfo {
+  installedId: string;
+  modId: number;
+  modName: string;
+  currentVersion: string;
+  latestVersion: string;
+  engine: EngineSlug;
+  sourceFileId: number;
 }
 
 export interface InstalledEngine {

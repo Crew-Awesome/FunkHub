@@ -8,6 +8,15 @@ interface DownloadJob {
   cancel: () => void;
 }
 
+function byPriorityAndTime(a: DownloadJob, b: DownloadJob): number {
+  const priorityA = a.task.priority ?? 0;
+  const priorityB = b.task.priority ?? 0;
+  if (priorityA !== priorityB) {
+    return priorityB - priorityA;
+  }
+  return a.task.createdAt - b.task.createdAt;
+}
+
 export class DownloadManager {
   private maxConcurrent: number;
 
@@ -61,6 +70,7 @@ export class DownloadManager {
     this.tasks.set(task.id, task);
     this.jobs.set(task.id, normalizedJob);
     this.queue.push(normalizedJob);
+    this.queue.sort(byPriorityAndTime);
     this.emit();
     this.pumpQueue();
     return task;
@@ -84,6 +94,13 @@ export class DownloadManager {
       });
       this.emit();
     }
+  }
+
+  update(taskId: string, nextTask: DownloadTask): void {
+    if (!this.tasks.has(taskId)) {
+      return;
+    }
+    this.updateTask({ ...nextTask, id: taskId });
   }
 
   private emit(): void {

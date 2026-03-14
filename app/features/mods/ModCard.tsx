@@ -39,6 +39,7 @@ export function ModCard({ title, author, thumbnail, rating = 0, downloads, onIns
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-secondary">
         <img
+          loading="lazy"
           src={thumbnail}
           alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
