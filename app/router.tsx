@@ -1,8 +1,12 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, createHashRouter } from "react-router";
 import { Layout } from "./app-shell";
 import { Discover, Downloads, Engines, Home, Library, Profile, Settings, Updates } from "./features";
 
-export const router = createBrowserRouter([
+const routerFactory = typeof window !== "undefined" && window.location.protocol === "file:"
+  ? createHashRouter
+  : createBrowserRouter;
+
+export const router = routerFactory([
   {
     path: "/",
     Component: Layout,
