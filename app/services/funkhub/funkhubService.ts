@@ -607,6 +607,11 @@ export class FunkHubService {
       throw new Error("Desktop bridge unavailable for launching");
     }
 
+    if (installed.installPath.startsWith("executables/")) {
+      await window.funkhubDesktop.launchEngine({ installPath: installed.installPath });
+      return;
+    }
+
     await window.funkhubDesktop.launchEngine({ installPath: engine.installPath });
   }
 
@@ -737,10 +742,6 @@ export class FunkHubService {
           throw new Error("Selected file is missing or has been removed.");
         }
 
-        if (this.installedEngines.length === 0) {
-          throw new Error("No engine installed. Install an engine first.");
-        }
-
         const preferredEngine = selectedEngineId
           ? this.installedEngines.find((engine) => engine.id === selectedEngineId)
           : undefined;
@@ -760,6 +761,10 @@ export class FunkHubService {
           file: selectedFile,
           selectedEngine,
         });
+
+        if (plan.type === "standard_mod" && this.installedEngines.length === 0) {
+          throw new Error("No engine installed. Install an engine first.");
+        }
 
         const compatibility = modInstallerService.validateEngineCompatibility({
           requiredEngine: plan.requiredEngine,

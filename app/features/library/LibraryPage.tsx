@@ -188,9 +188,11 @@ export function Library() {
           <div className="bg-card border border-border rounded-lg p-4 mb-6">
             <p className="text-sm text-muted-foreground mb-1">Installed In Engine</p>
             <p className="text-sm text-foreground font-medium">
-              {selectedEngineInstall
-                ? `${selectedEngineInstall.name} v${selectedEngineInstall.version}`
-                : "Unknown engine installation"}
+              {selectedMod.installPath.startsWith("executables/")
+                ? "Standalone executable package"
+                : (selectedEngineInstall
+                  ? `${selectedEngineInstall.name} v${selectedEngineInstall.version}`
+                  : "Unknown engine installation")}
             </p>
             <p className="text-xs text-muted-foreground mt-1 break-all">{selectedMod.installPath}</p>
           </div>

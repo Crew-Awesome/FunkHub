@@ -80,8 +80,8 @@ export class ModInstallerService {
       return {
         type: "executable",
         requiredEngine,
-        targetPath: input.selectedEngine?.installPath ?? `engines/${requiredEngine ?? "unknown"}`,
-        reason: "Category or extension indicates executable/engine package.",
+        targetPath: "executables",
+        reason: "Category or extension indicates standalone executable package.",
       };
     }
 
@@ -126,7 +126,7 @@ export class ModInstallerService {
     return {
       jobId: input.jobId,
       fileName: input.file.fileName,
-      mode: input.plan.type === "executable" ? "engine" : "mod",
+      mode: "mod",
       installPath: input.plan.targetPath,
       installSubdir: sanitizeFileStem(input.modName),
       downloadUrl: input.file.downloadUrl,
