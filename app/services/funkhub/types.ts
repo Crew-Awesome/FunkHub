@@ -174,6 +174,7 @@ export interface DesktopBridge {
   onInstallProgress: (listener: (payload: DesktopInstallProgress) => void) => () => void;
   launchEngine: (payload: { installPath: string }) => Promise<{ ok: boolean; launchedPath?: string }>;
   openPath: (payload: { targetPath: string }) => Promise<{ ok: boolean; openedPath?: string; error?: string }>;
+  deletePath: (payload: { targetPath: string }) => Promise<{ ok: boolean; deletedPath?: string; error?: string }>;
   pickFolder: (payload?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>;
   getSettings: () => Promise<Partial<FunkHubSettings>>;
   updateSettings: (payload: Partial<FunkHubSettings>) => Promise<Partial<FunkHubSettings>>;

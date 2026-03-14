@@ -6,6 +6,7 @@ const {
   handleCancelInstall,
   handleLaunchEngine,
   handleOpenPath,
+  handleDeletePath,
   handleGetSettings,
   handleUpdateSettings,
 } = require("./runtime-bridge.cjs");
@@ -51,6 +52,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:openPath", async (_event, payload) => {
     return handleOpenPath(payload);
+  });
+
+  ipcMain.handle("funkhub:deletePath", async (_event, payload) => {
+    return handleDeletePath(payload);
   });
 
   ipcMain.handle("funkhub:pickFolder", async (_event, payload) => {

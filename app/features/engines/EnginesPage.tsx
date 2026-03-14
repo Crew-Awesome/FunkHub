@@ -12,6 +12,8 @@ export function Engines() {
     downloads,
     setDefaultEngine,
     installEngine,
+    updateEngine,
+    uninstallEngine,
     launchEngine,
     openEngineFolder,
   } = useFunkHub();
@@ -19,6 +21,7 @@ export function Engines() {
   const [installingSlug, setInstallingSlug] = useState<string | null>(null);
   const [installError, setInstallError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [busyEngineId, setBusyEngineId] = useState<string | null>(null);
 
   const availableEngines = enginesCatalog;
   const hasEngines = installedEngines.length > 0;
@@ -58,6 +61,30 @@ export function Engines() {
     }
   };
 
+  const handleUpdate = async (engineId: string) => {
+    setActionError(null);
+    setBusyEngineId(engineId);
+    try {
+      await updateEngine(engineId);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to update engine");
+    } finally {
+      setBusyEngineId(null);
+    }
+  };
+
+  const handleUninstall = async (engineId: string) => {
+    setActionError(null);
+    setBusyEngineId(engineId);
+    try {
+      await uninstallEngine(engineId);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to uninstall engine");
+    } finally {
+      setBusyEngineId(null);
+    }
+  };
+
   if (!hasEngines) {
     return (
       <div className="p-8 flex items-center justify-center min-h-full">
@@ -93,6 +120,9 @@ export function Engines() {
                 <h3 className="font-semibold text-foreground mb-4">Select an engine to install</h3>
                 <div className="space-y-2">
                 {availableEngines.map((engine) => (
+                  (() => {
+                    const installedCount = installedEngines.filter((entry) => entry.slug === engine.slug).length;
+                    return (
                   <button
                     key={engine.slug}
                     disabled={Boolean(installingSlug)}
@@ -107,8 +137,11 @@ export function Engines() {
                     {installingSlug === engine.slug
                       ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
                       : <Cpu className="w-5 h-5 text-primary" />}
-                    {engine.name}
+                    <span className="flex-1">{engine.name}</span>
+                    <span className="text-xs text-muted-foreground">{installedCount > 0 ? `${installedCount} installed` : "new"}</span>
                   </button>
+                    );
+                  })()
                 ))}
                 <button className="w-full px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3">
                   <FolderOpen className="w-5 h-5 text-primary" />
@@ -169,6 +202,9 @@ export function Engines() {
           <h3 className="font-semibold text-foreground mb-4">Select an engine to install</h3>
           <div className="grid grid-cols-2 gap-3">
             {availableEngines.map((engine) => (
+              (() => {
+                const installedCount = installedEngines.filter((entry) => entry.slug === engine.slug).length;
+                return (
               <button
                 key={engine.slug}
                 disabled={Boolean(installingSlug)}
@@ -186,8 +222,11 @@ export function Engines() {
                 <span className="flex-1">{engine.name}</span>
                 <span className="text-xs text-muted-foreground">
                   {(pickBestReleaseForPlatform(engine.releases, currentPlatform)?.version ?? "latest")}
+                  {installedCount > 0 ? ` • ${installedCount} installed` : ""}
                 </span>
               </button>
+                );
+              })()
             ))}
             <button className="px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-left font-medium transition-colors flex items-center gap-3">
               <FolderOpen className="w-5 h-5 text-primary" />
@@ -242,8 +281,26 @@ export function Engines() {
                 name={engine.name}
                 version={engine.version}
                 isDefault={engine.isDefault}
-                onLaunch={() => handleLaunch(engine.id)}
-                onManage={() => handleManage(engine.id)}
+                onLaunch={() => {
+                  if (!busyEngineId) {
+                    handleLaunch(engine.id);
+                  }
+                }}
+                onManage={() => {
+                  if (!busyEngineId) {
+                    handleManage(engine.id);
+                  }
+                }}
+                onUpdate={() => {
+                  if (!busyEngineId) {
+                    handleUpdate(engine.id);
+                  }
+                }}
+                onUninstall={() => {
+                  if (!busyEngineId) {
+                    handleUninstall(engine.id);
+                  }
+                }}
               />
             </div>
           </motion.div>

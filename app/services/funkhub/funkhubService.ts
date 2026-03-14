@@ -2,6 +2,7 @@ import { downloadManager } from "./downloadManager";
 import { engineCatalogService } from "./engineCatalog";
 import { gameBananaApiService } from "./gamebananaApi";
 import { modInstallerService } from "./installer";
+import { detectClientPlatform, pickBestReleaseForPlatform } from "./platform";
 import { DEFAULT_SETTINGS, funkHubStorageService } from "./storage";
 import {
   CategoryNode,
@@ -64,6 +65,10 @@ function compareVersions(a?: string, b?: string): number {
     }
   }
   return 0;
+}
+
+function sanitizePathSegment(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "latest";
 }
 
 export class FunkHubService {
@@ -233,7 +238,8 @@ export class FunkHubService {
     releaseVersion: string;
   }): Promise<InstalledEngine> {
     const jobId = `engine-${input.slug}-${Date.now()}`;
-    const installPath = `engines/${input.slug}`;
+    const versionTag = sanitizePathSegment(input.releaseVersion);
+    const installPath = `engines/${input.slug}/${versionTag}-${Date.now()}`;
     const taskName = `${input.slug}-${input.releaseVersion}.zip`;
 
     return new Promise<InstalledEngine>((resolve, reject) => {
@@ -376,6 +382,65 @@ export class FunkHubService {
     this.installedEngines = [engine, ...this.installedEngines.map((item) => ({ ...item }))];
     funkHubStorageService.saveInstalledEngines(this.installedEngines);
     return engine;
+  }
+
+  async updateEngine(engineId: string): Promise<InstalledEngine> {
+    const installed = this.installedEngines.find((engine) => engine.id === engineId);
+    if (!installed) {
+      throw new Error("Engine installation not found");
+    }
+
+    const catalog = await this.getEngineCatalog();
+    const definition = catalog.find((entry) => entry.slug === installed.slug);
+    if (!definition) {
+      throw new Error("No catalog entry found for this engine");
+    }
+
+    const release = pickBestReleaseForPlatform(definition.releases, detectClientPlatform());
+    if (!release) {
+      throw new Error("No compatible engine release found for this platform");
+    }
+
+    if (compareVersions(release.version, installed.version) <= 0) {
+      throw new Error(`No newer ${installed.name} release available`);
+    }
+
+    const updated = await this.installEngineFromRelease({
+      slug: installed.slug,
+      releaseUrl: release.downloadUrl,
+      releaseVersion: release.version,
+    });
+
+    if (installed.isDefault) {
+      this.setDefaultEngine(updated.id);
+    }
+
+    return updated;
+  }
+
+  async uninstallEngine(engineId: string): Promise<void> {
+    const installed = this.installedEngines.find((engine) => engine.id === engineId);
+    if (!installed) {
+      throw new Error("Engine installation not found");
+    }
+
+    if (window.funkhubDesktop?.deletePath) {
+      const result = await window.funkhubDesktop.deletePath({ targetPath: installed.installPath });
+      if (!result.ok) {
+        throw new Error(result.error || "Failed to remove engine files");
+      }
+    }
+
+    this.installedEngines = this.installedEngines.filter((engine) => engine.id !== engineId);
+
+    if (this.installedEngines.length > 0 && !this.installedEngines.some((engine) => engine.isDefault)) {
+      this.installedEngines = this.installedEngines.map((engine, index) => ({
+        ...engine,
+        isDefault: index === 0,
+      }));
+    }
+
+    funkHubStorageService.saveInstalledEngines(this.installedEngines);
   }
 
   setDefaultEngine(engineId: string): void {

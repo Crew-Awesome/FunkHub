@@ -616,6 +616,29 @@ async function handleOpenPath(payload) {
   return { ok: true, openedPath: absolutePath };
 }
 
+async function handleDeletePath(payload) {
+  const targetPath = payload?.targetPath;
+  if (!targetPath) {
+    throw new Error("targetPath is required");
+  }
+
+  const { dataRootDirectory } = await getEffectiveSettings();
+  const rootPath = dataRootDirectory
+    ? path.resolve(dataRootDirectory)
+    : getDefaultDataRoot();
+  const absolutePath = safeJoin(rootPath, targetPath);
+
+  try {
+    await fs.rm(absolutePath, { recursive: true, force: true });
+    return { ok: true, deletedPath: absolutePath };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Failed to delete path",
+    };
+  }
+}
+
 async function handleGetSettings() {
   return getEffectiveSettings();
 }
@@ -644,6 +667,7 @@ module.exports = {
   handleCancelInstall,
   handleLaunchEngine,
   handleOpenPath,
+  handleDeletePath,
   handleGetSettings,
   handleUpdateSettings,
 };

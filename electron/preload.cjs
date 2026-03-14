@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("funkhubDesktop", {
   cancelInstall: (payload) => ipcRenderer.invoke("funkhub:cancelInstall", payload),
   launchEngine: (payload) => ipcRenderer.invoke("funkhub:launchEngine", payload),
   openPath: (payload) => ipcRenderer.invoke("funkhub:openPath", payload),
+  deletePath: (payload) => ipcRenderer.invoke("funkhub:deletePath", payload),
   pickFolder: (payload) => ipcRenderer.invoke("funkhub:pickFolder", payload),
   getSettings: () => ipcRenderer.invoke("funkhub:getSettings"),
   updateSettings: (payload) => ipcRenderer.invoke("funkhub:updateSettings", payload),
