@@ -1,1 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@font-face {
+  font-family: 'Bigstage';
+  src: url('./assets/Bigstage.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+.font-bigstage {
+  font-family: 'Bigstage', Inter, sans-serif;
+  letter-spacing: 0.03em;
+}

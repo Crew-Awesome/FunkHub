@@ -725,7 +725,21 @@ export class FunkHubService {
           throw new Error("Selected file is missing or has been removed.");
         }
 
-        const selectedEngine = this.installedEngines.find((engine) => engine.id === selectedEngineId)
+        if (this.installedEngines.length === 0) {
+          throw new Error("No engine installed. Install an engine first.");
+        }
+
+        const preferredEngine = selectedEngineId
+          ? this.installedEngines.find((engine) => engine.id === selectedEngineId)
+          : undefined;
+
+        const requiredHint = modInstallerService.detectRequiredEngine(profile);
+        const compatibleEngine = requiredHint
+          ? this.installedEngines.find((engine) => engine.slug === requiredHint)
+          : undefined;
+
+        const selectedEngine = preferredEngine
+          ?? compatibleEngine
           ?? this.installedEngines.find((engine) => engine.isDefault)
           ?? this.installedEngines[0];
 

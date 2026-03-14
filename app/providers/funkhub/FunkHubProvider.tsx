@@ -207,7 +207,11 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       refreshModUpdates,
       getModProfile: (modId) => funkHubService.getModProfile(modId),
       installMod: (modId, fileId, selectedEngineId, priority = 0) => {
-        funkHubService.queueInstall(modId, fileId, selectedEngineId, priority);
+        try {
+          funkHubService.queueInstall(modId, fileId, selectedEngineId, priority);
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : "Unable to queue install");
+        }
       },
       installEngine: async (slug, downloadUrl, version) => {
         await funkHubService.installEngineFromRelease({ slug, releaseUrl: downloadUrl, releaseVersion: version });

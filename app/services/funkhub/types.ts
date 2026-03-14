@@ -42,6 +42,7 @@ export interface GameBananaModSummary {
   description?: string;
   imageUrl?: string;
   thumbnailUrl?: string;
+  screenshotUrls?: string[];
   dateAdded: number;
   dateModified?: number;
   dateUpdated?: number;

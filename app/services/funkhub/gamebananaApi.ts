@@ -53,6 +53,29 @@ function firstImageUrl(previewMedia: unknown, preferredKey: "_sFile220" | "_sFil
   return `${base}/${file}`;
 }
 
+function allImageUrls(previewMedia: unknown, preferredKey: "_sFile220" | "_sFile530" | "_sFile100" = "_sFile530"): string[] {
+  if (!previewMedia || typeof previewMedia !== "object") {
+    return [];
+  }
+
+  const images = (previewMedia as { _aImages?: unknown[] })._aImages;
+  if (!Array.isArray(images) || images.length === 0) {
+    return [];
+  }
+
+  return images
+    .map((entry) => {
+      const image = entry as { _sBaseUrl?: string; _sFile?: string; _sFile220?: string; _sFile530?: string; _sFile100?: string };
+      const base = image._sBaseUrl;
+      const file = image[preferredKey] ?? image._sFile;
+      if (!base || !file) {
+        return undefined;
+      }
+      return `${base}/${file}`;
+    })
+    .filter((value): value is string => Boolean(value));
+}
+
 function normalizeFile(file: Record<string, unknown>): GameBananaFile {
   return {
     id: toNumber(file._idRow),
@@ -84,6 +107,7 @@ function normalizeSummary(record: Record<string, unknown>): GameBananaModSummary
     description: typeof record._sDescription === "string" ? record._sDescription : undefined,
     imageUrl: firstImageUrl(record._aPreviewMedia, "_sFile530"),
     thumbnailUrl: firstImageUrl(record._aPreviewMedia, "_sFile220"),
+    screenshotUrls: allImageUrls(record._aPreviewMedia, "_sFile530"),
     dateAdded: toNumber(record._tsDateAdded),
     dateModified: toNumber(record._tsDateModified),
     dateUpdated: toNumber(record._tsDateUpdated),
@@ -426,6 +450,7 @@ export class GameBananaApiService {
         iconUrl: typeof superCategoryRaw._sIconUrl === "string" ? superCategoryRaw._sIconUrl : undefined,
       },
       files: filesRaw.map((entry) => normalizeFile(entry as Record<string, unknown>)),
+      screenshotUrls: allImageUrls(payload._aPreviewMedia, "_sFile530"),
       credits,
       requiredEngine: undefined,
       dependencies: [],

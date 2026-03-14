@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { Search, Library, Download, RefreshCw, Settings as SettingsIcon, Cpu, Bell } from "lucide-react";
 import { motion } from "motion/react";
+import { useFunkHub } from "../providers";
 
 const navItems = [
   { icon: Search, label: "Discover Mods", path: "/" },
@@ -12,11 +13,15 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
+  const { downloads, modUpdates } = useFunkHub();
+  const activeJobs = downloads.filter((task) => ["queued", "downloading", "installing"].includes(task.status)).length;
+  const failedJobs = downloads.filter((task) => task.status === "failed").length;
+  const notificationCount = activeJobs + failedJobs + modUpdates.length;
 
   return (
     <aside className="w-[220px] bg-sidebar border-r border-sidebar-border flex flex-col h-full">
       <div className="p-6">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
+        <h1 className="text-2xl font-bold font-bigstage bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
           FunkHub
         </h1>
       </div>
@@ -62,10 +67,16 @@ export function Sidebar() {
               <SettingsIcon className="w-5 h-5 text-sidebar-foreground/70" />
             </button>
           </Link>
-          <button className="p-2 hover:bg-sidebar-accent rounded-lg transition-colors relative">
-            <Bell className="w-5 h-5 text-sidebar-foreground/70" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
-          </button>
+          <Link to="/downloads">
+            <button className="p-2 hover:bg-sidebar-accent rounded-lg transition-colors relative">
+              <Bell className="w-5 h-5 text-sidebar-foreground/70" />
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-primary text-[10px] text-white flex items-center justify-center">
+                  {notificationCount > 99 ? "99+" : notificationCount}
+                </span>
+              )}
+            </button>
+          </Link>
         </div>
         <Link to="/profile">
           <div className="flex items-center gap-3 p-2 hover:bg-sidebar-accent rounded-lg transition-colors cursor-pointer">

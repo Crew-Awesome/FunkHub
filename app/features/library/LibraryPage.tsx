@@ -1,14 +1,54 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Play, RefreshCw, Trash2, Star } from "lucide-react";
 import { useFunkHub } from "../../providers";
 
 export function Library() {
-  const { installedMods, removeInstalledMod, refreshModUpdates, installMod, launchInstalledMod } = useFunkHub();
+  const {
+    installedMods,
+    installedEngines,
+    getModProfile,
+    removeInstalledMod,
+    refreshModUpdates,
+    installMod,
+    launchInstalledMod,
+  } = useFunkHub();
   const [selectedModId, setSelectedModId] = useState(installedMods[0]?.id);
   const [deleteFilesOnRemove, setDeleteFilesOnRemove] = useState(true);
+  const [selectedProfileShots, setSelectedProfileShots] = useState<string[]>([]);
 
   const selectedMod = installedMods.find((mod) => mod.id === selectedModId) ?? installedMods[0];
+  const selectedEngineInstall = useMemo(
+    () => installedEngines.find((engine) => selectedMod && selectedMod.installPath.startsWith(engine.installPath)),
+    [installedEngines, selectedMod],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedMod) {
+      setSelectedProfileShots([]);
+      return;
+    }
+
+    getModProfile(selectedMod.modId)
+      .then((profile) => {
+        if (cancelled) {
+          return;
+        }
+        const shots = (profile.screenshotUrls ?? []).filter(Boolean);
+        const deduped = Array.from(new Set(shots));
+        setSelectedProfileShots(deduped);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSelectedProfileShots([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMod?.modId, getModProfile]);
 
   if (!selectedMod) {
     return (
@@ -145,6 +185,16 @@ export function Library() {
             </div>
           </div>
 
+          <div className="bg-card border border-border rounded-lg p-4 mb-6">
+            <p className="text-sm text-muted-foreground mb-1">Installed In Engine</p>
+            <p className="text-sm text-foreground font-medium">
+              {selectedEngineInstall
+                ? `${selectedEngineInstall.name} v${selectedEngineInstall.version}`
+                : "Unknown engine installation"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 break-all">{selectedMod.installPath}</p>
+          </div>
+
           {/* Description */}
           <div className="bg-card border border-border rounded-lg p-6 mb-6">
             <h3 className="font-semibold text-foreground mb-3">About this mod</h3>
@@ -155,20 +205,23 @@ export function Library() {
           </div>
 
           {/* Screenshots */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-4">Screenshots</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="aspect-video bg-secondary rounded-lg overflow-hidden">
-                  <img
-                    src={selectedMod.thumbnailUrl ?? "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=400"}
-                    alt={`Screenshot ${i}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
+          {selectedProfileShots.length > 1 && (
+            <div>
+              <h3 className="font-semibold text-foreground mb-4">Screenshots</h3>
+              <div className="grid grid-cols-3 gap-4">
+                {selectedProfileShots.map((shot, index) => (
+                  <div key={`${shot}-${index}`} className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                    <img
+                      src={shot}
+                      alt={`Screenshot ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </motion.div>
       </div>
 
