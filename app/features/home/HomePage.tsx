@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { motion } from "motion/react";
 import { Play, Eye, Gamepad2 } from "lucide-react";
-import { ModCard } from "../mods";
+import { ModCard, ModVisualizerModal } from "../mods";
 import { useFunkHub } from "../../providers";
 
 export function Home() {
   const { loading, trendingMods, installedMods, installMod } = useFunkHub();
+  const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
 
   const featuredMod = trendingMods[0];
   const recommendedMods = trendingMods.slice(1, 5);
@@ -47,8 +49,8 @@ export function Home() {
             </button>
             <button
               onClick={() => {
-                if (featuredMod?.profileUrl) {
-                  window.open(featuredMod.profileUrl, "_blank", "noopener,noreferrer");
+                if (featuredMod?.id) {
+                  setSelectedModId(featuredMod.id);
                 }
               }}
               className="px-8 py-3.5 bg-white/15 hover:bg-white/25 backdrop-blur-md text-white rounded-xl font-semibold transition-all flex items-center gap-2.5"
@@ -129,12 +131,18 @@ export function Home() {
                 downloads={mod.downloadCount ?? mod.viewCount}
                 rating={mod.likeCount ? Math.max(3.8, Math.min(5, mod.likeCount / 100 + 3.5)) : 4.5}
                 onInstall={() => installMod(mod.id, 0)}
-                onView={() => window.open(mod.profileUrl, "_blank", "noopener,noreferrer")}
+                onView={() => setSelectedModId(mod.id)}
               />
             </motion.div>
           ))}
         </div>
       </section>
+
+      <ModVisualizerModal
+        modId={selectedModId}
+        open={Boolean(selectedModId)}
+        onClose={() => setSelectedModId(undefined)}
+      />
     </div>
   );
 }

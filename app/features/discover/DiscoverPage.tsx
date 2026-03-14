@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall } from "lucide-react";
 import { motion } from "motion/react";
-import { ModCard } from "../mods";
+import { ModCard, ModVisualizerModal } from "../mods";
 import { useFunkHub } from "../../providers";
 import type { CategoryNode } from "../../services/funkhub";
 
@@ -24,6 +24,7 @@ export function Discover() {
   } = useFunkHub();
 
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<number[]>([]);
+  const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
 
   const toggleExpanded = (categoryId: number) => {
     setExpandedCategoryIds((current) => (
@@ -152,7 +153,7 @@ export function Discover() {
                   rating={mod.likeCount ? Math.max(3.8, Math.min(5, mod.likeCount / 100 + 3.5)) : 4.5}
                   downloads={mod.downloadCount ?? mod.viewCount}
                   onInstall={() => installMod(mod.id, 0)}
-                  onView={() => window.open(mod.profileUrl, "_blank", "noopener,noreferrer")}
+                  onView={() => setSelectedModId(mod.id)}
                 />
               </motion.div>
             ))}
@@ -199,6 +200,12 @@ export function Discover() {
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
+
+      <ModVisualizerModal
+        modId={selectedModId}
+        open={Boolean(selectedModId)}
+        onClose={() => setSelectedModId(undefined)}
+      />
     </div>
   );
 }
