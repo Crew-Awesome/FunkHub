@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { Pause, X, FolderOpen, Download } from "lucide-react";
-import { activeDownloads } from "../data/mockData";
+import { activeDownloads } from "../mods";
 
 export function Downloads() {
   return (

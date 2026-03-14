@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { Plus, Cpu, FolderOpen } from "lucide-react";
-import { EngineCard } from "../components/EngineCard";
-import { engines } from "../data/mockData";
+import { EngineCard } from "./EngineCard";
+import { engines } from "../mods";
 
 export function Engines() {
   const [showEngines, setShowEngines] = useState(engines.length > 0);

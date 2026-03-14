@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { Play, RefreshCw, Trash2, Star } from "lucide-react";
-import { installedMods } from "../data/mockData";
+import { installedMods } from "../mods";
 
 export function Library() {
   const [selectedMod, setSelectedMod] = useState(installedMods[0]);

@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { RefreshCw, Download } from "lucide-react";
-import { availableUpdates } from "../data/mockData";
+import { availableUpdates } from "../mods";
 
 export function Updates() {
   return (

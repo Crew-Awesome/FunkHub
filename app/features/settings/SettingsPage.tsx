@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { Folder, Download, Palette, Sliders, Info } from "lucide-react";
-import { useTheme } from "../contexts/ThemeContext";
+import { useTheme } from "../../providers";
 
 export function Settings() {
   const { theme, toggleTheme } = useTheme();

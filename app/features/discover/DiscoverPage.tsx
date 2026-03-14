@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { motion } from "motion/react";
-import { ModCard } from "../components/ModCard";
-import { trendingMods, recentlyUpdatedMods, recommendedMods } from "../data/mockData";
+import { ModCard, trendingMods, recentlyUpdatedMods, recommendedMods } from "../mods";
 
 const categories = ["All", "Characters", "Weeks", "Songs", "Skins", "UI Mods", "Full Conversions"];
 const sortOptions = ["Most Downloaded", "Newest", "Trending", "Top Rated"];

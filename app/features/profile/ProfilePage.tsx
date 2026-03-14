@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { Heart, Download, Package, Calendar } from "lucide-react";
-import { installedMods } from "../data/mockData";
+import { installedMods } from "../mods";
 
 export function Profile() {
   const userStats = {

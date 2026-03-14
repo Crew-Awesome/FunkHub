@@ -1,7 +1,6 @@
 import { motion } from "motion/react";
 import { Play, Eye, Gamepad2 } from "lucide-react";
-import { ModCard } from "../components/ModCard";
-import { featuredMod, installedMods, recommendedMods } from "../data/mockData";
+import { ModCard, featuredMod, installedMods, recommendedMods } from "../mods";
 
 export function Home() {
   return (

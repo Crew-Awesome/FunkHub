@@ -1,13 +1,6 @@
 import { createBrowserRouter } from "react-router";
-import { Layout } from "./components/Layout";
-import { Home } from "./pages/Home";
-import { Discover } from "./pages/Discover";
-import { Library } from "./pages/Library";
-import { Downloads } from "./pages/Downloads";
-import { Updates } from "./pages/Updates";
-import { Engines } from "./pages/Engines";
-import { Profile } from "./pages/Profile";
-import { Settings } from "./pages/Settings";
+import { Layout } from "./app-shell";
+import { Discover, Downloads, Engines, Home, Library, Profile, Settings, Updates } from "./features";
 
 export const router = createBrowserRouter([
   {
