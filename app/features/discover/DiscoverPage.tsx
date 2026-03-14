@@ -1,8 +1,9 @@
-import { useMemo } from "react";
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall } from "lucide-react";
 import { motion } from "motion/react";
 import { ModCard } from "../mods";
 import { useFunkHub } from "../../providers";
+import type { CategoryNode } from "../../services/funkhub";
 
 export function Discover() {
   const {
@@ -22,20 +23,73 @@ export function Discover() {
     installMod,
   } = useFunkHub();
 
-  const flatCategories = useMemo(() => {
-    const list: Array<{ id?: number; name: string }> = [{ id: undefined, name: "All" }];
-    const walk = (nodes: typeof categories) => {
-      for (const node of nodes) {
-        list.push({ id: node.id, name: node.name });
-        if (node.children.length > 0) {
-          walk(node.children);
-        }
-      }
-    };
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<number[]>([]);
 
-    walk(categories);
-    return list;
-  }, [categories]);
+  const toggleExpanded = (categoryId: number) => {
+    setExpandedCategoryIds((current) => (
+      current.includes(categoryId)
+        ? current.filter((id) => id !== categoryId)
+        : [...current, categoryId]
+    ));
+  };
+
+  const renderCategoryTree = (nodes: CategoryNode[], depth = 0) => {
+    return nodes.map((category) => {
+      const hasChildren = category.children.length > 0;
+      const expanded = expandedCategoryIds.includes(category.id);
+      const selected = selectedCategoryId === category.id;
+
+      return (
+        <div key={category.id} className="space-y-1">
+          <button
+            onClick={() => setSelectedCategoryId(category.id)}
+            className={[
+              "w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors text-left",
+              selected
+                ? "bg-primary/10 text-primary border border-primary/20"
+                : "hover:bg-secondary text-foreground border border-transparent",
+            ].join(" ")}
+            style={{ paddingLeft: `${12 + depth * 14}px` }}
+          >
+            {hasChildren ? (
+              <span
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleExpanded(category.id);
+                }}
+                className="inline-flex items-center justify-center w-4 h-4 text-muted-foreground hover:text-foreground"
+                aria-label={expanded ? "Collapse category" : "Expand category"}
+                role="button"
+              >
+                {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRightSmall className="w-3.5 h-3.5" />}
+              </span>
+            ) : (
+              <span className="w-4 h-4" />
+            )}
+
+            {category.iconUrl ? (
+              <img
+                src={category.iconUrl}
+                alt=""
+                className="w-4 h-4 rounded-sm object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <FolderTree className="w-4 h-4 text-muted-foreground" />
+            )}
+
+            <span className="line-clamp-1">{category.name}</span>
+          </button>
+
+          {hasChildren && expanded && (
+            <div className="space-y-1">
+              {renderCategoryTree(category.children, depth + 1)}
+            </div>
+          )}
+        </div>
+      );
+    });
+  };
 
   return (
     <div className="p-8">
@@ -54,30 +108,6 @@ export function Discover() {
               className="w-full bg-input-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             />
           </div>
-          <button className="px-4 py-2.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-            <SlidersHorizontal className="w-4 h-4" />
-            Filters
-          </button>
-        </div>
-
-        {/* Category Pills */}
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-          {flatCategories.map((category) => (
-            <button
-              key={category.id ?? -1}
-              onClick={() => setSelectedCategoryId(category.id)}
-              className={`
-                px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all
-                ${
-                  selectedCategoryId === category.id
-                    ? "bg-primary text-white"
-                    : "bg-secondary hover:bg-secondary/80 text-foreground"
-                }
-              `}
-            >
-              {category.name}
-            </button>
-          ))}
         </div>
 
         {/* Sort Options */}
@@ -101,30 +131,53 @@ export function Discover() {
         </div>
       </div>
 
-      {/* Results Grid */}
-      <div className="mb-4 text-sm text-muted-foreground">
-        {loading ? "Loading mods..." : `Showing ${discoverMods.length} mods`}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {discoverMods.map((mod, index) => (
-          <motion.div
-            key={mod.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-          >
-            <ModCard
-              id={mod.id}
-              title={mod.name}
-              author={mod.submitter?.name ?? "Unknown"}
-              thumbnail={mod.thumbnailUrl ?? mod.imageUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
-              rating={mod.likeCount ? Math.max(3.8, Math.min(5, mod.likeCount / 100 + 3.5)) : 4.5}
-              downloads={mod.downloadCount ?? mod.viewCount}
-              onInstall={() => installMod(mod.id, 0)}
-              onView={() => window.open(mod.profileUrl, "_blank", "noopener,noreferrer")}
-            />
-          </motion.div>
-        ))}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
+        <section>
+          <div className="mb-4 text-sm text-muted-foreground">
+            {loading ? "Loading mods..." : `Showing ${discoverMods.length} mods`}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {discoverMods.map((mod, index) => (
+              <motion.div
+                key={mod.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+              >
+                <ModCard
+                  id={mod.id}
+                  title={mod.name}
+                  author={mod.submitter?.name ?? "Unknown"}
+                  thumbnail={mod.thumbnailUrl ?? mod.imageUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
+                  rating={mod.likeCount ? Math.max(3.8, Math.min(5, mod.likeCount / 100 + 3.5)) : 4.5}
+                  downloads={mod.downloadCount ?? mod.viewCount}
+                  onInstall={() => installMod(mod.id, 0)}
+                  onView={() => window.open(mod.profileUrl, "_blank", "noopener,noreferrer")}
+                />
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        <aside className="bg-card border border-border rounded-xl p-4 xl:sticky xl:top-4">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-sm font-semibold text-foreground">Categories</h2>
+            <button
+              onClick={() => setSelectedCategoryId(undefined)}
+              className={[
+                "px-2 py-1 rounded text-xs border transition-colors",
+                selectedCategoryId === undefined
+                  ? "border-primary/30 text-primary bg-primary/10"
+                  : "border-border text-muted-foreground hover:bg-secondary",
+              ].join(" ")}
+            >
+              All
+            </button>
+          </div>
+          <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-1">
+            {renderCategoryTree(categories)}
+          </div>
+        </aside>
       </div>
 
       <div className="mt-6 flex items-center justify-between">
