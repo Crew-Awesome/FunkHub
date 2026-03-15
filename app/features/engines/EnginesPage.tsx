@@ -41,7 +41,7 @@ export function Engines() {
 
   useEffect(() => {
     refreshEngineHealth().catch(() => undefined);
-  }, [refreshEngineHealth]);
+  }, []);
 
   const availableEngines = enginesCatalog;
   const hasEngines = installedEngines.length > 0;

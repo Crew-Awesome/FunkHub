@@ -446,7 +446,6 @@ export function Settings() {
               <MessageCircle className="w-4.5 h-4.5" />
             </a>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Hover icons to see labels.</p>
         </div>
       </div>
     </div>

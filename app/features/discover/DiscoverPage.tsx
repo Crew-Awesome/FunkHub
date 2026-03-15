@@ -30,12 +30,6 @@ export function Discover() {
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
 
   useEffect(() => {
-    if (!selectedCategoryId && categories.length > 0) {
-      setSelectedCategoryId(categories[0].id);
-    }
-  }, [categories, selectedCategoryId, setSelectedCategoryId]);
-
-  useEffect(() => {
     const collectExpandableIds = (nodes: CategoryNode[], acc: number[] = []): number[] => {
       for (const node of nodes) {
         if (node.children.length > 0) {
