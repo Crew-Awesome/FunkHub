@@ -42,7 +42,7 @@ export function EngineCard({ name, version, iconSrc, isDefault, onLaunch, onMana
                 event.stopPropagation();
                 onLaunch?.();
               }}
-              className="flex-1 px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-3 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Play className="w-4 h-4" />
               Launch

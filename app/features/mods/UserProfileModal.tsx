@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Heart, Download, UserCircle2, X, FolderTree } from "lucide-react";
+import { Heart, Download, UserCircle2, FolderTree } from "lucide-react";
 import { useFunkHub } from "../../providers";
 import type { GameBananaMember, GameBananaModSummary } from "../../services/funkhub";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
 interface UserProfileModalProps {
   open: boolean;
@@ -77,9 +78,9 @@ export function UserProfileModal({ open, submitter, onClose, onOpenMod }: UserPr
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl max-h-[88vh] overflow-y-auto bg-card border border-border rounded-2xl shadow-2xl">
-        <div className="sticky top-0 z-10 bg-card/95 backdrop-blur border-b border-border px-5 py-4 flex items-center justify-between gap-4">
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent className="max-w-4xl max-h-[88vh] overflow-y-auto p-0">
+        <DialogHeader className="sticky top-0 z-10 bg-card border-b border-border px-5 py-4">
           <div className="flex items-center gap-3">
             {submitter.avatarUrl ? (
               <img src={submitter.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover" loading="lazy" />
@@ -89,18 +90,11 @@ export function UserProfileModal({ open, submitter, onClose, onOpenMod }: UserPr
               </div>
             )}
             <div>
-              <h2 className="text-lg font-semibold text-foreground">{submitter.name}</h2>
+              <DialogTitle className="text-lg">{submitter.name}</DialogTitle>
               <p className="text-xs text-muted-foreground">Submissions by category</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        </DialogHeader>
 
         <div className="p-5 space-y-4">
           {loading && <p className="text-sm text-muted-foreground">Loading submissions...</p>}
@@ -142,7 +136,7 @@ export function UserProfileModal({ open, submitter, onClose, onOpenMod }: UserPr
             </section>
           ))}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

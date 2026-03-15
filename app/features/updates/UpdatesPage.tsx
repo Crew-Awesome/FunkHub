@@ -25,7 +25,7 @@ export function Updates() {
             await refreshModUpdates();
             await checkAppUpdate();
           }}
-          className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <RefreshCw className={`w-4 h-4 ${appUpdateChecking ? "animate-spin" : ""}`} />
           Check for Updates
@@ -43,15 +43,9 @@ export function Updates() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => openAppUpdateDownload().catch((error) => window.alert(error instanceof Error ? error.message : "Unable to open update"))}
-                className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium"
+                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium"
               >
                 Download Update
-              </button>
-              <button
-                onClick={() => window.open(appUpdate.releaseUrl, "_blank", "noopener,noreferrer")}
-                className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium"
-              >
-                View Release Notes
               </button>
             </div>
           </div>
@@ -64,9 +58,6 @@ export function Updates() {
                   ? `You're on the latest version (v${appUpdate.currentVersion}).`
                   : "No app update check has been run yet."}
             </p>
-            {appUpdate?.notes && (
-              <p className="text-xs text-muted-foreground">{appUpdate.notes}</p>
-            )}
           </div>
         )}
         {appUpdateError && <p className="mt-2 text-xs text-destructive">{appUpdateError}</p>}
@@ -103,7 +94,7 @@ export function Updates() {
                 </div>
                 <button
                   onClick={() => installMod(update.modId, update.sourceFileId, undefined, 10)}
-                  className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                  className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" />
                   Update

@@ -23,6 +23,7 @@ export function Settings() {
   const [dataRootDirectory, setDataRootDirectory] = useState(settings.dataRootDirectory);
   const [itchBusy, setItchBusy] = useState(false);
   const [pollingIntervalSeconds, setPollingIntervalSeconds] = useState(String(settings.gameBananaIntegration.pollingIntervalSeconds || 300));
+  const [activeSection, setActiveSection] = useState<"setup" | "integrations" | "appearance" | "advanced" | "about">("setup");
   const appVersion = (__FUNKHUB_VERSION__ || "0.0.0").trim().replace(/^v/i, "");
   const buildChannel = (__FUNKHUB_CHANNEL__ || "release").toLowerCase();
   const isInDevBuild = buildChannel !== "release";
@@ -96,15 +97,39 @@ export function Settings() {
   };
 
   return (
-    <div className="p-8 max-w-4xl">
-      <h1 className="text-3xl font-bold text-foreground mb-8">Settings</h1>
+    <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8">
+      <h1 className="mb-6 text-3xl font-bold text-foreground">Settings</h1>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        {[
+          { id: "setup", label: "Setup" },
+          { id: "integrations", label: "Integrations" },
+          { id: "appearance", label: "Appearance" },
+          { id: "advanced", label: "Advanced" },
+          { id: "about", label: "About" },
+        ].map((section) => (
+          <button
+            key={section.id}
+            type="button"
+            onClick={() => setActiveSection(section.id as typeof activeSection)}
+            className={[
+              "rounded-lg border px-3 py-2 text-sm transition-colors",
+              activeSection === section.id
+                ? "border-primary/25 bg-primary/10 text-primary"
+                : "border-border bg-card text-foreground hover:bg-secondary",
+            ].join(" ")}
+          >
+            {section.label}
+          </button>
+        ))}
+      </div>
 
       <div className="space-y-6">
         {/* General Settings */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card border border-border rounded-xl p-6"
+          className={`${activeSection === "setup" ? "" : "hidden"} bg-card border border-border rounded-xl p-6`}
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -118,7 +143,7 @@ export function Settings() {
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Game Directory
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
                     value={gameDirectory}
@@ -128,7 +153,7 @@ export function Settings() {
                   />
                   <button
                     onClick={() => browseForSetting("gameDirectory", "Choose your FNF game folder", gameDirectory)}
-                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
                   >
                     <Folder className="w-4 h-4" />
                     Browse
@@ -166,7 +191,7 @@ export function Settings() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.16 }}
-          className="bg-card border border-border rounded-xl p-6"
+          className={`${activeSection === "setup" ? "" : "hidden"} bg-card border border-border rounded-xl p-6`}
         >
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-lg bg-sky-500/10 flex items-center justify-center">
@@ -194,7 +219,7 @@ export function Settings() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18 }}
-          className="bg-card border border-border rounded-xl p-6"
+          className={`${activeSection === "integrations" ? "" : "hidden"} bg-card border border-border rounded-xl p-6`}
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
@@ -276,7 +301,7 @@ export function Settings() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-card border border-border rounded-xl p-6"
+          className={`${activeSection === "setup" ? "" : "hidden"} bg-card border border-border rounded-xl p-6`}
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
@@ -290,7 +315,7 @@ export function Settings() {
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Download Location
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
                     value={downloadsDirectory}
@@ -300,7 +325,7 @@ export function Settings() {
                   />
                   <button
                     onClick={() => browseForSetting("downloadsDirectory", "Choose a download temp folder", downloadsDirectory)}
-                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
                   >
                     <Folder className="w-4 h-4" />
                     Browse
@@ -312,7 +337,7 @@ export function Settings() {
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Engine Data Root
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
                     value={dataRootDirectory}
@@ -323,7 +348,7 @@ export function Settings() {
                   />
                   <button
                     onClick={() => browseForSetting("dataRootDirectory", "Choose engine install root", dataRootDirectory)}
-                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
                   >
                     <Folder className="w-4 h-4" />
                     Browse
@@ -357,7 +382,7 @@ export function Settings() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-card border border-border rounded-xl p-6"
+          className={`${activeSection === "appearance" ? "" : "hidden"} bg-card border border-border rounded-xl p-6`}
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
@@ -413,7 +438,7 @@ export function Settings() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="bg-card border border-border rounded-xl p-6"
+          className={`${activeSection === "integrations" ? "" : "hidden"} bg-card border border-border rounded-xl p-6`}
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
@@ -463,7 +488,7 @@ export function Settings() {
                         setItchBusy(false);
                       }
                     }}
-                    className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-60 text-white rounded-lg text-sm"
+                    className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground rounded-lg text-sm"
                   >
                     Connect itch.io
                   </button>
@@ -481,7 +506,7 @@ export function Settings() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-card border border-border rounded-xl p-6"
+          className={`${activeSection === "advanced" ? "" : "hidden"} bg-card border border-border rounded-xl p-6`}
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
@@ -557,7 +582,7 @@ export function Settings() {
         </motion.section>
 
         {/* About */}
-        <div className="bg-card border border-border rounded-xl p-6 text-center">
+        <div className={`${activeSection === "about" ? "" : "hidden"} bg-card border border-border rounded-xl p-6 text-center`}>
           <h3 className="font-semibold text-foreground mb-2">FunkHub {displayVersion}</h3>
           <p className="text-sm text-muted-foreground">
             A Friday Night Funkin Mod Launcher

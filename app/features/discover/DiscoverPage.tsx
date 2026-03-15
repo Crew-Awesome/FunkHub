@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall, UserCircle2, Layers } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall, UserCircle2, Layers, SlidersHorizontal } from "lucide-react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { ModCard, ModVisualizerModal, UserProfileModal } from "../mods";
 import { useFunkHub } from "../../providers";
 import type { CategoryNode, GameBananaMember } from "../../services/funkhub";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../shared/ui/sheet";
 
 export function Discover() {
   const {
@@ -35,6 +36,7 @@ export function Discover() {
   const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
   const [onboardingOpen, setOnboardingOpen] = useState(!settings.firstRunCompleted);
+  const [showCategoryPanel, setShowCategoryPanel] = useState(false);
 
   const needsOnboarding = !settings.firstRunCompleted;
 
@@ -116,45 +118,46 @@ export function Discover() {
 
       return (
         <div key={category.id} className="space-y-1">
-          <button
-            onClick={() => setSelectedCategoryId(category.id)}
+          <div
             className={[
-              "w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors text-left",
+              "w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors text-left border",
               selected
-                ? "bg-primary/10 text-primary border border-primary/20"
-                : "hover:bg-secondary text-foreground border border-transparent",
+                ? "bg-primary/10 text-primary border-primary/20"
+                : "hover:bg-secondary text-foreground border-transparent",
             ].join(" ")}
             style={{ paddingLeft: `${12 + depth * 14}px` }}
           >
             {hasChildren ? (
-              <span
-                onClick={(event) => {
-                  event.stopPropagation();
-                  toggleExpanded(category.id);
-                }}
-                className="inline-flex items-center justify-center w-4 h-4 text-muted-foreground hover:text-foreground"
+              <button
+                type="button"
+                onClick={() => toggleExpanded(category.id)}
+                className="inline-flex items-center justify-center w-5 h-5 text-muted-foreground hover:text-foreground rounded"
                 aria-label={expanded ? "Collapse category" : "Expand category"}
-                role="button"
               >
                 {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRightSmall className="w-3.5 h-3.5" />}
-              </span>
+              </button>
             ) : (
-              <span className="w-4 h-4" />
+              <span className="w-5 h-5" />
             )}
 
-            {category.iconUrl ? (
-              <img
-                src={category.iconUrl}
-                alt=""
-                className="w-4 h-4 object-contain"
-                loading="lazy"
-              />
-            ) : (
-              <FolderTree className="w-4 h-4 text-muted-foreground" />
-            )}
-
-            <span className="line-clamp-1">{category.name}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategoryId(category.id)}
+              className="flex w-full min-w-0 flex-1 items-center justify-start gap-2 text-left"
+            >
+              {category.iconUrl ? (
+                <img
+                  src={category.iconUrl}
+                  alt=""
+                  className="w-4 h-4 object-contain"
+                  loading="lazy"
+                />
+              ) : (
+                <FolderTree className="w-4 h-4 text-muted-foreground" />
+              )}
+              <span className="line-clamp-1">{category.name}</span>
+            </button>
+          </div>
 
           {hasChildren && expanded && (
             <div className="space-y-1">
@@ -166,8 +169,39 @@ export function Discover() {
     });
   };
 
+  const categoryPanel = (
+    <>
+      <div className="mb-3">
+        <input
+          value={categorySearch}
+          onChange={(event) => setCategorySearch(event.target.value)}
+          placeholder="Search categories"
+          className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+      </div>
+      <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-1">
+        <button
+          onClick={() => {
+            setSelectedCategoryId(undefined);
+            setShowCategoryPanel(false);
+          }}
+          className={[
+            "w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors text-left border",
+            selectedCategoryId === undefined
+              ? "bg-primary/10 text-primary border-primary/20"
+              : "hover:bg-secondary text-foreground border-transparent",
+          ].join(" ")}
+        >
+          <Layers className="w-4 h-4" />
+          <span>All</span>
+        </button>
+        {renderCategoryTree(filteredCategoryTree)}
+      </div>
+    </>
+  );
+
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-6 lg:p-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-foreground mb-6">Discover Mods</h1>
 
@@ -183,7 +217,7 @@ export function Discover() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setOnboardingOpen(true)}
-                  className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90"
+                  className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
                   Open Wizard
                 </button>
@@ -199,7 +233,7 @@ export function Discover() {
         )}
 
         {/* Search and Filters */}
-        <div className="flex gap-4 mb-6">
+        <div className="mb-6 flex gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
@@ -210,6 +244,14 @@ export function Discover() {
               className="w-full bg-input-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => setShowCategoryPanel(true)}
+            className="inline-flex xl:hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm hover:bg-secondary"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filters
+          </button>
         </div>
 
         {/* Sort Options */}
@@ -233,7 +275,7 @@ export function Discover() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
         <section>
           <div className="mb-4 text-sm text-muted-foreground">
             {loading ? "Loading mods..." : `Showing ${visibleMods.length} mods`}
@@ -244,7 +286,7 @@ export function Discover() {
               Filtered by user: <span className="text-foreground">{usernameFilter}</span>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
             {visibleMods.map((mod, index) => (
               <motion.div
                 key={mod.id}
@@ -255,7 +297,7 @@ export function Discover() {
                 <ModCard
                   id={mod.id}
                   title={mod.name}
-                  author={mod.submitter?.name ?? "Unknown"}
+                  author={mod.submitter?.name ?? "Community uploader"}
                   thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
                   likes={mod.likeCount}
                   downloads={mod.downloadCount}
@@ -269,7 +311,7 @@ export function Discover() {
                       });
                     }
                   }}
-                  categoryLabel={selectedCategoryId === undefined ? (mod.rootCategory?.name ?? "Unknown") : undefined}
+                  categoryLabel={selectedCategoryId === undefined ? (mod.rootCategory?.name ?? "Uncategorized") : undefined}
                   statusLabel={(() => {
                     const installed = installedMods.find((entry) => entry.modId === mod.id);
                     if (!installed) {
@@ -285,33 +327,11 @@ export function Discover() {
           </div>
         </section>
 
-        <aside className="bg-card border border-border rounded-xl p-4 xl:sticky xl:top-4">
+        <aside className="hidden xl:block bg-card border border-border rounded-xl p-4 xl:sticky xl:top-4">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h2 className="text-sm font-semibold text-foreground">Categories</h2>
           </div>
-          <div className="mb-3">
-            <input
-              value={categorySearch}
-              onChange={(event) => setCategorySearch(event.target.value)}
-              placeholder="Search categories"
-              className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-          </div>
-          <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-1">
-            <button
-              onClick={() => setSelectedCategoryId(undefined)}
-              className={[
-                "w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors text-left border",
-                selectedCategoryId === undefined
-                  ? "bg-primary/10 text-primary border-primary/20"
-                  : "hover:bg-secondary text-foreground border-transparent",
-              ].join(" ")}
-            >
-              <Layers className="w-4 h-4" />
-              <span>All</span>
-            </button>
-            {renderCategoryTree(filteredCategoryTree)}
-          </div>
+          {categoryPanel}
         </aside>
       </div>
 
@@ -426,13 +446,32 @@ export function Discover() {
           <DialogFooter>
             <button
               onClick={completeOnboarding}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               Mark Setup Complete
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <button
+        type="button"
+        onClick={() => setShowCategoryPanel(true)}
+        className="fixed bottom-20 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-sm shadow-sm xl:hidden"
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+        Categories
+      </button>
+
+      <Sheet open={showCategoryPanel} onOpenChange={setShowCategoryPanel}>
+        <SheetContent side="right" className="w-[88vw] p-0 sm:max-w-md">
+          <SheetHeader className="border-b border-border">
+            <SheetTitle>Browse Categories</SheetTitle>
+            <SheetDescription>Filter discover results by category.</SheetDescription>
+          </SheetHeader>
+          <div className="p-4">{categoryPanel}</div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

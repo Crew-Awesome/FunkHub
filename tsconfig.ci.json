@@ -4,6 +4,10 @@
     "noEmit": true
   },
   "include": [
+    "app/App.tsx",
+    "app/router.tsx",
+    "app/app-shell/**/*.tsx",
+    "app/features/**/*.tsx",
     "app/services/**/*.ts",
     "app/providers/**/*.ts",
     "app/providers/**/*.tsx",

@@ -86,10 +86,10 @@ export function Downloads() {
                   <span className="font-medium text-primary">{Math.round(download.progress * 100)}%</span>
                 </div>
                 <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-primary to-chart-3"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.round(download.progress * 100)}%` }}
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-primary to-chart-3 origin-left"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: Math.max(0, Math.min(1, download.progress)) }}
                     transition={{ duration: 0.5 }}
                   />
                 </div>

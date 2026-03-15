@@ -5,6 +5,7 @@ import { EngineCard } from "./EngineCard";
 import { getEngineIcon } from "./engineIcons";
 import { useFunkHub } from "../../providers";
 import { detectClientPlatform, pickBestReleaseForPlatform, type EngineSlug } from "../../services/funkhub";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
 export function Engines() {
   const {
@@ -254,9 +255,118 @@ export function Engines() {
     return selected ?? pickBestReleaseForPlatform(releases, currentPlatform) ?? releases[0];
   };
 
+  const addEnginePanel = (
+    <>
+      <DialogHeader>
+        <DialogTitle>Add Engine</DialogTitle>
+        <DialogDescription>Install from official releases or import an existing folder.</DialogDescription>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-3">
+          {availableEngines.map((engine) => (
+            (() => {
+              const installedCount = installedEngines.filter((entry) => entry.slug === engine.slug).length;
+              const iconSrc = getEngineIcon(engine.slug);
+              return (
+                <div key={engine.slug} className="min-w-0 rounded-xl border border-border bg-secondary/45 px-4 py-3 text-left">
+                  <div className="grid grid-cols-1 items-center gap-3 lg:grid-cols-[64px_minmax(0,1fr)_auto]">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-card">
+                      {iconSrc
+                        ? <img src={iconSrc} alt="" className="h-11 w-11 object-contain" loading="lazy" />
+                        : <Cpu className="h-5 w-5 text-primary" />}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="text-base font-medium text-foreground">{engine.name}</span>
+                        {installingSlug === engine.slug && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                        <span className="text-xs text-muted-foreground">
+                          {(getSelectedRelease(engine.slug)?.version ?? "latest")}
+                          {installedCount > 0 ? ` • ${installedCount} installed` : ""}
+                        </span>
+                      </div>
+                      <select
+                        value={getSelectedRelease(engine.slug)?.downloadUrl ?? ""}
+                        onChange={(event) => {
+                          setSelectedReleaseBySlug((current) => ({
+                            ...current,
+                            [engine.slug]: event.target.value,
+                          }));
+                        }}
+                        className="min-w-0 w-full rounded border border-border bg-input-background px-2 py-2 text-xs"
+                      >
+                        {getInstallableReleases(engine.slug).map((release) => (
+                          <option key={`${release.version}-${release.downloadUrl}`} value={release.downloadUrl}>
+                            {release.version}{release.isPrerelease ? " (pre)" : ""} [{release.platform}] {release.fileName ? `- ${release.fileName}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-2 lg:w-40">
+                      <button
+                        onClick={async () => {
+                          const release = getSelectedRelease(engine.slug);
+                          if (release) {
+                            await installSelectedEngine(engine.slug, release.downloadUrl, release.version);
+                          }
+                        }}
+                        className="w-full rounded bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+                      >
+                        Install
+                      </button>
+                      <button
+                        onClick={() => handleImport(engine.slug)}
+                        className="w-full rounded bg-secondary px-3 py-2 text-sm text-foreground hover:bg-secondary/80"
+                      >
+                        Import Folder
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
+          ))}
+        </div>
+
+        {engineDownloads.length > 0 && (
+          <div className="space-y-2">
+            {engineDownloads.map((task) => (
+              <div key={task.id} className="rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-foreground">{task.fileName}</span>
+                  <span className="text-muted-foreground">{Math.round(task.progress * 100)}%</span>
+                </div>
+                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full origin-left bg-primary transition-transform"
+                    style={{ transform: `scaleX(${Math.max(0, Math.min(1, task.progress))})` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">{task.message ?? task.status}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {installError && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            {installError}
+          </div>
+        )}
+
+        {actionError && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            {actionError}
+          </div>
+        )}
+      </div>
+    </>
+  );
+
   if (!hasEngines) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-full">
+      <div className="flex min-h-full items-center justify-center p-4 md:p-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -272,218 +382,38 @@ export function Engines() {
             </p>
             <button
               onClick={() => setShowAddDialog(true)}
-              className="w-full px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              className="w-full px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Plus className="w-5 h-5" />
               Add Engine
             </button>
           </div>
-
-          {/* Add Engine Dialog */}
-          {showAddDialog && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 bg-card border border-border rounded-xl p-6"
-            >
-                <h3 className="font-semibold text-foreground mb-4">Select an engine to install</h3>
-                <div className="space-y-2">
-                {availableEngines.map((engine) => (
-                  (() => {
-                    const installedCount = installedEngines.filter((entry) => entry.slug === engine.slug).length;
-                    return (
-                  <div key={engine.slug} className="w-full min-w-0 px-4 py-3 bg-secondary rounded-lg text-left font-medium">
-                    <div className="flex items-center gap-3 mb-2">
-                      {installingSlug === engine.slug
-                        ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                        : <Cpu className="w-5 h-5 text-primary" />}
-                      <span className="flex-1 text-foreground">{engine.name}</span>
-                      <span className="text-xs text-muted-foreground">{installedCount > 0 ? `${installedCount} installed` : "new"}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2 min-w-0">
-                      <select
-                        value={getSelectedRelease(engine.slug)?.downloadUrl ?? ""}
-                        onChange={(event) => {
-                          setSelectedReleaseBySlug((current) => ({
-                            ...current,
-                            [engine.slug]: event.target.value,
-                          }));
-                        }}
-                        className="min-w-0 flex-1 px-2 py-1.5 bg-input-background border border-border rounded text-xs"
-                      >
-                        {getInstallableReleases(engine.slug).map((release) => (
-                          <option key={`${release.version}-${release.downloadUrl}`} value={release.downloadUrl}>
-                            {release.version}{release.isPrerelease ? " (pre)" : ""} [{release.platform}] {release.fileName ? `- ${release.fileName}` : ""}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={async () => {
-                          const release = getSelectedRelease(engine.slug);
-                          if (release) {
-                            await installSelectedEngine(engine.slug, release.downloadUrl, release.version);
-                          }
-                        }}
-                        className="w-full sm:w-auto px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded text-xs"
-                      >
-                        Install
-                      </button>
-                      <button
-                        onClick={() => handleImport(engine.slug)}
-                        className="w-full sm:w-auto px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded text-xs"
-                      >
-                        Import Folder
-                      </button>
-                    </div>
-                  </div>
-                    );
-                  })()
-                ))}
-              </div>
-
-              {engineDownloads.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {engineDownloads.map((task) => (
-                    <div key={task.id} className="rounded-lg border border-border p-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-foreground">{task.fileName}</span>
-                        <span className="text-muted-foreground">{Math.round(task.progress * 100)}%</span>
-                      </div>
-                      <div className="mt-2 h-2 w-full rounded-full bg-secondary overflow-hidden">
-                        <div className="h-full bg-primary transition-all" style={{ width: `${Math.round(task.progress * 100)}%` }} />
-                      </div>
-                      <p className="mt-2 text-xs text-muted-foreground">{task.message ?? task.status}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {installError && (
-                <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive p-3 text-sm flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  {installError}
-                </div>
-              )}
-            </motion.div>
-          )}
         </motion.div>
+
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogContent className="max-h-[88vh] w-[min(96vw,1200px)] max-w-none overflow-y-auto">
+            {addEnginePanel}
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6 lg:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold text-foreground">Instances</h1>
         <button
           onClick={() => setShowAddDialog(!showAddDialog)}
-          className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Add Engine
         </button>
       </div>
 
-      {/* Add Engine Dialog */}
-      {showAddDialog && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 bg-card border border-border rounded-xl p-6"
-        >
-          <h3 className="font-semibold text-foreground mb-4">Select an engine to install</h3>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-            {availableEngines.map((engine) => (
-              (() => {
-                const installedCount = installedEngines.filter((entry) => entry.slug === engine.slug).length;
-                return (
-              <div key={engine.slug} className="min-w-0 px-4 py-3 bg-secondary rounded-lg text-left font-medium">
-                <div className="flex items-center gap-3 mb-2">
-                  {installingSlug === engine.slug
-                    ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                    : <Cpu className="w-5 h-5 text-primary" />}
-                  <span className="flex-1 text-foreground">{engine.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {(getSelectedRelease(engine.slug)?.version ?? "latest")}
-                    {installedCount > 0 ? ` • ${installedCount} installed` : ""}
-                  </span>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 min-w-0">
-                  <select
-                    value={getSelectedRelease(engine.slug)?.downloadUrl ?? ""}
-                    onChange={(event) => {
-                      setSelectedReleaseBySlug((current) => ({
-                        ...current,
-                        [engine.slug]: event.target.value,
-                      }));
-                    }}
-                    className="min-w-0 flex-1 px-2 py-1.5 bg-input-background border border-border rounded text-xs"
-                  >
-                    {getInstallableReleases(engine.slug).map((release) => (
-                      <option key={`${release.version}-${release.downloadUrl}`} value={release.downloadUrl}>
-                        {release.version}{release.isPrerelease ? " (pre)" : ""} [{release.platform}] {release.fileName ? `- ${release.fileName}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={async () => {
-                      const release = getSelectedRelease(engine.slug);
-                      if (release) {
-                        await installSelectedEngine(engine.slug, release.downloadUrl, release.version);
-                      }
-                    }}
-                    className="w-full sm:w-auto px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded text-xs"
-                  >
-                    Install
-                  </button>
-                  <button
-                    onClick={() => handleImport(engine.slug)}
-                    className="w-full sm:w-auto px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded text-xs"
-                  >
-                    Import Folder
-                  </button>
-                </div>
-              </div>
-                );
-              })()
-            ))}
-          </div>
-
-          {engineDownloads.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {engineDownloads.map((task) => (
-                <div key={task.id} className="rounded-lg border border-border p-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-foreground">{task.fileName}</span>
-                    <span className="text-muted-foreground">{Math.round(task.progress * 100)}%</span>
-                  </div>
-                  <div className="mt-2 h-2 w-full rounded-full bg-secondary overflow-hidden">
-                    <div className="h-full bg-primary transition-all" style={{ width: `${Math.round(task.progress * 100)}%` }} />
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">{task.message ?? task.status}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {installError && (
-            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive p-3 text-sm flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              {installError}
-            </div>
-          )}
-
-          {actionError && (
-            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive p-3 text-sm flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              {actionError}
-            </div>
-          )}
-        </motion.div>
-      )}
-
       {/* Instances Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {installedEngines.map((engine, index) => (
           <motion.div
             key={engine.id}
@@ -491,8 +421,8 @@ export function Engines() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
-            <div onDoubleClick={() => setDefaultEngine(engine.id)}>
-              <div className="mb-2 flex items-center gap-2">
+            <div>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 {(() => {
                   const meta = healthMeta(engine.id);
                   const Icon = meta.icon;
@@ -507,6 +437,15 @@ export function Engines() {
                   <span className="inline-flex items-center px-2 py-1 text-xs rounded border border-primary/20 bg-primary/10 text-primary">
                     Update available
                   </span>
+                )}
+                {!engine.isDefault && (
+                  <button
+                    type="button"
+                    onClick={() => setDefaultEngine(engine.id)}
+                    className="inline-flex items-center rounded border border-border px-2 py-1 text-xs text-foreground hover:bg-secondary"
+                  >
+                    Set default
+                  </button>
                 )}
               </div>
               <EngineCard
@@ -557,126 +496,136 @@ export function Engines() {
         </div>
       )}
 
-      {manageEngineId && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center">
-          <div className="w-full max-w-xl rounded-xl border border-border bg-card p-5">
-            {(() => {
-              const engine = installedEngines.find((entry) => entry.id === manageEngineId);
-              if (!engine) {
-                return null;
-              }
-              return (
-                <>
-                  <h3 className="text-lg font-semibold text-foreground">Manage {engine.name}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{formatVersionLabel(engine.version)}</p>
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-h-[88vh] w-[min(96vw,1200px)] max-w-none overflow-y-auto">
+          {addEnginePanel}
+        </DialogContent>
+      </Dialog>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <button onClick={() => setDefaultEngine(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Set Default</button>
-                    <button onClick={() => openEngineFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : "Failed to open folder"))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Open Folder</button>
-                    <button onClick={() => openEngineModsFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : "Failed to open mods folder"))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Open Mods Folder</button>
-                    <button onClick={() => handleUpdate(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Update</button>
-                  </div>
+      <Dialog open={Boolean(manageEngineId)} onOpenChange={(next) => { if (!next) setManageEngineId(null); }}>
+        <DialogContent className="max-w-xl">
+          {(() => {
+            const engine = installedEngines.find((entry) => entry.id === manageEngineId);
+            if (!engine) {
+              return null;
+            }
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Manage {engine.name}</DialogTitle>
+                  <DialogDescription>{formatVersionLabel(engine.version)}</DialogDescription>
+                </DialogHeader>
 
-                  <div className="mt-4 space-y-2">
-                    <label className="text-xs text-muted-foreground">Executable launcher</label>
-                    <select
-                      value={manageLauncher}
-                      onChange={(event) => setManageLauncher(event.target.value as "native" | "wine" | "wine64" | "proton")}
-                      className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
-                    >
-                      <option value="native">Native</option>
-                      <option value="wine">Wine</option>
-                      <option value="wine64">Wine64</option>
-                      <option value="proton">Proton</option>
-                    </select>
-                    {manageLauncher !== "native" && (
-                      <div className="flex gap-2">
-                        <input
-                          value={manageLauncherPath}
-                          onChange={(event) => setManageLauncherPath(event.target.value)}
-                          placeholder="Optional launcher binary path (eg /usr/bin/wine)"
-                          className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
-                        />
-                        <button
-                          onClick={browseLauncherPath}
-                          className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
-                        >
-                          Browse
-                        </button>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button onClick={() => setDefaultEngine(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Set Default</button>
+                  <button onClick={() => openEngineFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : "Failed to open folder"))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Open Folder</button>
+                  <button onClick={() => openEngineModsFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : "Failed to open mods folder"))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Open Mods Folder</button>
+                  <button onClick={() => handleUpdate(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Update</button>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <label className="text-xs text-muted-foreground">Executable launcher</label>
+                  <select
+                    value={manageLauncher}
+                    onChange={(event) => setManageLauncher(event.target.value as "native" | "wine" | "wine64" | "proton")}
+                    className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                  >
+                    <option value="native">Native</option>
+                    <option value="wine">Wine</option>
+                    <option value="wine64">Wine64</option>
+                    <option value="proton">Proton</option>
+                  </select>
+                  {manageLauncher !== "native" && (
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <input
-                        value={manageExecutablePath}
-                        onChange={(event) => setManageExecutablePath(event.target.value)}
-                        placeholder="Optional executable path (absolute or inside engine folder)"
+                        value={manageLauncherPath}
+                        onChange={(event) => setManageLauncherPath(event.target.value)}
+                        placeholder="Optional launcher binary path (eg /usr/bin/wine)"
                         className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
                       />
                       <button
-                        onClick={browseExecutablePath}
+                        onClick={browseLauncherPath}
                         className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
                       >
-                        Browse File
-                      </button>
-                      <button
-                        onClick={browseExecutableFolder}
-                        className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
-                      >
-                        Browse Folder
+                        Browse
                       </button>
                     </div>
-                    <p className="text-xs text-muted-foreground">Examples: `ALEPsych`, `bin/Funkin.sh`</p>
-                  </div>
-
-                  <div className="mt-5 flex justify-between gap-2">
+                  )}
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      value={manageExecutablePath}
+                      onChange={(event) => setManageExecutablePath(event.target.value)}
+                      placeholder="Optional executable path (absolute or inside engine folder)"
+                      className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                    />
                     <button
-                      onClick={() => setConfirmUninstall({ id: engine.id, name: engine.name, version: engine.version, path: engine.installPath })}
-                      className="px-3 py-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive text-sm"
+                      onClick={browseExecutablePath}
+                      className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
                     >
-                      Uninstall
+                      Browse File
                     </button>
-                    <div className="flex gap-2">
-                      <button onClick={() => setManageEngineId(null)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Close</button>
-                      <button onClick={saveManageOverrides} className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm">Save</button>
-                    </div>
+                    <button
+                      onClick={browseExecutableFolder}
+                      className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                    >
+                      Browse Folder
+                    </button>
                   </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
+                  <p className="text-xs text-muted-foreground">Examples: `ALEPsych`, `bin/Funkin.sh`</p>
+                </div>
 
-      {confirmUninstall && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center">
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5">
-            <h3 className="text-lg font-semibold text-foreground">Confirm engine uninstall</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-               Remove <span className="text-foreground font-medium">{confirmUninstall.name}</span> {formatVersionLabel(confirmUninstall.version)}?
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground break-all">{confirmUninstall.path}</p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmUninstall(null)}
-                className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  const target = confirmUninstall;
-                  setConfirmUninstall(null);
-                  setManageEngineId(null);
-                  await handleUninstall(target.id);
-                }}
-                className="px-3 py-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive text-sm"
-              >
-                Uninstall
-              </button>
-            </div>
+                <div className="mt-5 flex justify-between gap-2">
+                  <button
+                    onClick={() => setConfirmUninstall({ id: engine.id, name: engine.name, version: engine.version, path: engine.installPath })}
+                    className="px-3 py-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive text-sm"
+                  >
+                    Uninstall
+                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={() => setManageEngineId(null)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Close</button>
+                    <button onClick={saveManageOverrides} className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Save</button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(confirmUninstall)} onOpenChange={(next) => { if (!next) setConfirmUninstall(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Confirm engine uninstall</DialogTitle>
+            <DialogDescription>
+              Remove <span className="text-foreground font-medium">{confirmUninstall?.name}</span>{" "}
+              {confirmUninstall ? formatVersionLabel(confirmUninstall.version) : ""}?
+            </DialogDescription>
+          </DialogHeader>
+          <p className="mt-2 text-xs text-muted-foreground break-all">{confirmUninstall?.path}</p>
+          <div className="mt-5 flex justify-end gap-2">
+            <button
+              onClick={() => setConfirmUninstall(null)}
+              className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirmUninstall) {
+                  return;
+                }
+                const target = confirmUninstall;
+                setConfirmUninstall(null);
+                setManageEngineId(null);
+                await handleUninstall(target.id);
+              }}
+              className="px-3 py-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive text-sm"
+            >
+              Uninstall
+            </button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

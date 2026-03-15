@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Play, RefreshCw, Trash2, FolderPlus } from "lucide-react";
+import { Play, RefreshCw, Trash2, FolderPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFunkHub } from "../../providers";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
 export function Library() {
   const {
@@ -31,6 +32,7 @@ export function Library() {
   const [launchMode, setLaunchMode] = useState<"native" | "wine" | "wine64" | "proton">("native");
   const [launchPath, setLaunchPath] = useState("");
   const [launchExecutablePath, setLaunchExecutablePath] = useState("");
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   const selectedMod = installedMods.find((mod) => mod.id === selectedModId) ?? installedMods[0];
   const selectedEngineInstall = useMemo(
@@ -100,9 +102,9 @@ export function Library() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full flex-col lg:flex-row">
       {/* Mod List */}
-      <div className="w-80 bg-card border-r border-border overflow-y-auto">
+      <div className="w-full lg:w-80 bg-card border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold text-foreground">Installed Mods ({installedMods.length})</h2>
@@ -142,8 +144,8 @@ export function Library() {
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary">Update</span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">v{mod.version ?? "unknown"}</p>
-                  <p className="text-xs text-muted-foreground">{mod.categoryName ?? mod.engine}</p>
+                  <p className="text-xs text-muted-foreground">{mod.version ? `v${mod.version}` : "Version unknown"}</p>
+                  <p className="text-xs text-muted-foreground">{mod.categoryName ?? mod.engine ?? "Uncategorized"}</p>
                 </div>
               </div>
             </button>
@@ -152,16 +154,16 @@ export function Library() {
       </div>
 
       {/* Mod Details */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <motion.div
           key={selectedMod.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
-          className="p-8"
+          className="p-4 md:p-6 lg:p-8"
         >
           {/* Banner */}
-          <div className="relative h-64 rounded-xl overflow-hidden mb-6">
+          <div className="relative h-56 md:h-64 rounded-xl overflow-hidden mb-6">
               <img
                 src={selectedMod.thumbnailUrl ?? "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=400"}
                 alt={selectedMod.modName}
@@ -169,16 +171,16 @@ export function Library() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
               <div className="absolute bottom-6 left-6 right-6">
-                <h1 className="text-3xl font-bold text-white mb-2">{selectedMod.modName}</h1>
-                <p className="text-gray-300">by {selectedMod.author ?? "Unknown"}</p>
+                <h1 className="text-3xl font-bold text-foreground mb-2">{selectedMod.modName}</h1>
+                <p className="text-muted-foreground">by {selectedMod.author ?? "Unknown"}</p>
               </div>
             </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 mb-8">
+          <div className="mb-8 flex flex-wrap gap-3">
             <button
               onClick={() => launchInstalledMod(selectedMod.id)}
-              className="flex-1 max-w-xs px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              className="flex-1 max-w-xs px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Play className="w-5 h-5" />
               Launch Mod
@@ -215,13 +217,13 @@ export function Library() {
           </label>
 
           {/* Info Cards */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             <div className="bg-card border border-border rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">Version</p>
-              <p className="text-lg font-semibold text-foreground">
-                v{selectedMod.version ?? "unknown"}
-                {selectedMod.latestVersion ? ` -> v${selectedMod.latestVersion}` : ""}
-              </p>
+                <p className="text-sm text-muted-foreground mb-1">Version</p>
+                <p className="text-lg font-semibold text-foreground">
+                 {selectedMod.version ? `v${selectedMod.version}` : "Version unknown"}
+                 {selectedMod.latestVersion ? ` -> v${selectedMod.latestVersion}` : ""}
+                </p>
             </div>
             <div className="bg-card border border-border rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-1">Required Engine</p>
@@ -315,7 +317,7 @@ export function Library() {
                       executablePath: launchExecutablePath,
                     });
                   }}
-                  className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm"
+                  className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
                 >
                   Save Launch Settings
                 </button>
@@ -343,16 +345,21 @@ export function Library() {
           {selectedProfileShots.length > 1 && (
             <div>
               <h3 className="font-semibold text-foreground mb-4">Screenshots</h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {selectedProfileShots.map((shot, index) => (
-                  <div key={`${shot}-${index}`} className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                  <button
+                    key={`${shot}-${index}`}
+                    type="button"
+                    onClick={() => setPreviewIndex(index)}
+                    className="aspect-video bg-secondary rounded-lg overflow-hidden border border-border/60 hover:border-primary/40 transition-colors"
+                  >
                     <img
                       src={shot}
                       alt={`Screenshot ${index + 1}`}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -362,34 +369,95 @@ export function Library() {
 
       <button
         onClick={() => refreshModUpdates()}
-        className="fixed bottom-6 right-6 px-4 py-2 rounded-lg bg-card border border-border hover:bg-secondary text-sm"
+        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 px-4 py-2 rounded-lg bg-card border border-border hover:bg-secondary text-sm"
       >
         Refresh Update Status
       </button>
 
-      {showManualModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5">
-            <h3 className="text-lg font-semibold text-foreground">Add Manual Mod</h3>
-            <p className="text-xs text-muted-foreground mt-1">Import a local mod folder into an installed engine or as standalone.</p>
-            <div className="mt-4 space-y-3">
-              <input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="Mod name" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
-              <input value={manualAuthor} onChange={(e) => setManualAuthor(e.target.value)} placeholder="Author (optional)" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
-              <input value={manualVersion} onChange={(e) => setManualVersion(e.target.value)} placeholder="Version (optional)" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
-              <textarea value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} placeholder="Description (optional)" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm min-h-20" />
-              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                <input type="checkbox" checked={manualStandalone} onChange={(event) => setManualStandalone(event.target.checked)} />
-                Import as standalone executable package
-              </label>
-              {!manualStandalone && (
-                <select value={manualEngineId} onChange={(e) => setManualEngineId(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm">
+      <Dialog open={previewIndex !== null} onOpenChange={(next) => { if (!next) setPreviewIndex(null); }}>
+        <DialogContent className="max-w-5xl p-0 overflow-hidden">
+          {previewIndex !== null && selectedProfileShots[previewIndex] && (
+            <div className="relative bg-black">
+              <img
+                src={selectedProfileShots[previewIndex]}
+                alt={`Screenshot ${previewIndex + 1}`}
+                className="w-full max-h-[80vh] object-contain"
+              />
+              {selectedProfileShots.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewIndex((current) => {
+                      if (current === null) {
+                        return 0;
+                      }
+                      return (current - 1 + selectedProfileShots.length) % selectedProfileShots.length;
+                    })}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewIndex((current) => {
+                      if (current === null) {
+                        return 0;
+                      }
+                      return (current + 1) % selectedProfileShots.length;
+                    })}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showManualModal} onOpenChange={setShowManualModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Manual Mod</DialogTitle>
+            <DialogDescription>Import a local mod folder into an installed engine or as standalone.</DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2 space-y-3">
+            <div>
+              <label htmlFor="manual-mod-name" className="mb-1 block text-xs text-muted-foreground">Mod name</label>
+              <input id="manual-mod-name" value={manualName} onChange={(e) => setManualName(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
+            </div>
+            <div>
+              <label htmlFor="manual-mod-author" className="mb-1 block text-xs text-muted-foreground">Author (optional)</label>
+              <input id="manual-mod-author" value={manualAuthor} onChange={(e) => setManualAuthor(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
+            </div>
+            <div>
+              <label htmlFor="manual-mod-version" className="mb-1 block text-xs text-muted-foreground">Version (optional)</label>
+              <input id="manual-mod-version" value={manualVersion} onChange={(e) => setManualVersion(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
+            </div>
+            <div>
+              <label htmlFor="manual-mod-description" className="mb-1 block text-xs text-muted-foreground">Description (optional)</label>
+              <textarea id="manual-mod-description" value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm min-h-20" />
+            </div>
+            <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+              <input type="checkbox" checked={manualStandalone} onChange={(event) => setManualStandalone(event.target.checked)} />
+              Import as standalone executable package
+            </label>
+            {!manualStandalone && (
+              <div>
+                <label htmlFor="manual-mod-engine" className="mb-1 block text-xs text-muted-foreground">Target engine</label>
+                <select id="manual-mod-engine" value={manualEngineId} onChange={(e) => setManualEngineId(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm">
                   {installedEngines.map((engine) => (
                     <option key={engine.id} value={engine.id}>{engine.name} ({engine.version})</option>
                   ))}
                 </select>
-              )}
+              </div>
+            )}
+            <div>
+              <label htmlFor="manual-mod-source" className="mb-1 block text-xs text-muted-foreground">Mod folder path</label>
               <div className="flex gap-2">
-                <input value={manualSourcePath} onChange={(e) => setManualSourcePath(e.target.value)} placeholder="Mod folder path" className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
+                <input id="manual-mod-source" value={manualSourcePath} onChange={(e) => setManualSourcePath(e.target.value)} className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
                 <button
                   onClick={async () => {
                     const selected = await browseFolder({ title: "Select mod folder" });
@@ -403,39 +471,40 @@ export function Library() {
                 </button>
               </div>
             </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setShowManualModal(false)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Cancel</button>
-              <button
-                onClick={async () => {
-                  try {
-                    await addManualMod({
-                      modName: manualName,
-                      engineId: manualStandalone ? undefined : manualEngineId,
-                      sourcePath: manualSourcePath || undefined,
-                      description: manualDescription,
-                      version: manualVersion,
-                      author: manualAuthor,
-                      standalone: manualStandalone,
-                    });
-                    setShowManualModal(false);
-                    setManualName("");
-                    setManualAuthor("");
-                    setManualVersion("");
-                    setManualDescription("");
-                    setManualSourcePath("");
-                    setManualStandalone(false);
-                  } catch (error) {
-                    window.alert(error instanceof Error ? error.message : "Failed to add manual mod");
-                  }
-                }}
-                className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm"
-              >
-                Import Mod
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+
+          <div className="mt-5 flex justify-end gap-2">
+            <button onClick={() => setShowManualModal(false)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Cancel</button>
+            <button
+              onClick={async () => {
+                try {
+                  await addManualMod({
+                    modName: manualName,
+                    engineId: manualStandalone ? undefined : manualEngineId,
+                    sourcePath: manualSourcePath || undefined,
+                    description: manualDescription,
+                    version: manualVersion,
+                    author: manualAuthor,
+                    standalone: manualStandalone,
+                  });
+                  setShowManualModal(false);
+                  setManualName("");
+                  setManualAuthor("");
+                  setManualVersion("");
+                  setManualDescription("");
+                  setManualSourcePath("");
+                  setManualStandalone(false);
+                } catch (error) {
+                  window.alert(error instanceof Error ? error.message : "Failed to add manual mod");
+                }
+              }}
+              className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
+            >
+              Import Mod
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
