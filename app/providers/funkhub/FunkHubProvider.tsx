@@ -13,6 +13,7 @@ import {
   ModUpdateInfo,
 } from "../../services/funkhub";
 import { parseFunkHubDeepLink } from "../../services/funkhub/deepLink";
+import { modInstallerService } from "../../services/funkhub/installer";
 
 interface FunkHubContextValue {
   loading: boolean;
@@ -222,6 +223,46 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         throw new Error("No downloadable files found for this mod");
       }
 
+      let selectedEngineId = selectedEngine?.id;
+      if (!parsedDeepLink.engine && installedEngines.length > 1) {
+        const inferredEngineSlug = modInstallerService.detectRequiredEngine(profile);
+        const inferredEngines = inferredEngineSlug
+          ? installedEngines.filter((engine) => engine.slug === inferredEngineSlug)
+          : [];
+
+        const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
+        const suggestedEngine = inferredEngines[0] ?? defaultEngine;
+        const warningLine = inferredEngineSlug
+          ? `Detected engine hint: ${inferredEngineSlug}. Confirm target before installing.`
+          : "No engine hint detected. Choose a target engine before installing.";
+        const engineChoices = installedEngines
+          .map((engine, index) => `${index + 1}. ${engine.name} (${engine.slug})${engine.isDefault ? " [default]" : ""}`)
+          .join("\n");
+        const promptMessage = [
+          warningLine,
+          `Suggested: ${suggestedEngine.name} (${suggestedEngine.slug})`,
+          "",
+          engineChoices,
+          "",
+          "Enter engine number, leave blank for suggested, or press Cancel.",
+        ].join("\n");
+
+        const choice = window.prompt(promptMessage, "");
+        if (choice === null) {
+          return;
+        }
+
+        if (choice.trim().length === 0) {
+          selectedEngineId = suggestedEngine.id;
+        } else {
+          const index = Number(choice.trim());
+          if (!Number.isInteger(index) || index < 1 || index > installedEngines.length) {
+            throw new Error("Invalid engine selection. Install cancelled.");
+          }
+          selectedEngineId = installedEngines[index - 1].id;
+        }
+      }
+
       const fileIdFromUrl = parsedDeepLink.archiveUrl?.match(/\/dl\/(\d+)/i);
       const selectedFileId = parsedDeepLink.fileId
         || (fileIdFromUrl ? Number(fileIdFromUrl[1]) : profile.files[0].id);
@@ -238,7 +279,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         modId: parsedDeepLink.modId,
         fileId: selectedFileId,
         downloadUrl: parsedDeepLink.archiveUrl || undefined,
-        selectedEngineId: selectedEngine?.id,
+        selectedEngineId,
         priority: 20,
       });
     } catch (error) {

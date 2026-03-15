@@ -329,6 +329,10 @@ async function extractArchive(archivePath, outputDir, cancelState, webContents, 
       }
 
       if (code !== 0) {
+        if (code === 2) {
+          reject(new Error("7z extraction failed with exit code 2 (unsupported or corrupted archive format)"));
+          return;
+        }
         reject(new Error(`7z extraction failed with exit code ${code}`));
         return;
       }
@@ -396,6 +400,40 @@ function base64ToBuffer(value) {
 function detectVersionFromName(name) {
   const match = name.match(/v?\d+\.\d+(?:\.\d+)?(?:[-+._A-Za-z0-9]+)?/i);
   return match ? match[0].replace(/^v/i, "") : "unknown";
+}
+
+async function detectArchiveSignature(filePath) {
+  try {
+    const handle = await fs.open(filePath, "r");
+    try {
+      const buffer = Buffer.alloc(8);
+      const { bytesRead } = await handle.read(buffer, 0, 8, 0);
+      if (bytesRead >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4b && buffer[2] === 0x03 && buffer[3] === 0x04) {
+        return "zip";
+      }
+      if (bytesRead >= 7 && buffer[0] === 0x52 && buffer[1] === 0x61 && buffer[2] === 0x72 && buffer[3] === 0x21 && buffer[4] === 0x1a && buffer[5] === 0x07 && (buffer[6] === 0x00 || buffer[6] === 0x01)) {
+        return "rar";
+      }
+      if (bytesRead >= 6 && buffer[0] === 0x37 && buffer[1] === 0x7a && buffer[2] === 0xbc && buffer[3] === 0xaf && buffer[4] === 0x27 && buffer[5] === 0x1c) {
+        return "7z";
+      }
+      return "unknown";
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    return "unknown";
+  }
+}
+
+async function installRawModPackage({ resolvedInstallPath, installSubdir, archiveName, tempArchivePath, jobId }) {
+  const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
+  const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
+  const destinationDir = path.join(resolvedInstallPath, safeFolderName);
+  await removePath(destinationDir);
+  await ensureDir(destinationDir);
+  await fs.copyFile(tempArchivePath, path.join(destinationDir, archiveName));
+  return destinationDir;
 }
 
 async function resolveInstallDirs(mode, installPath) {
@@ -486,39 +524,83 @@ async function installArchiveInternal(webContents, payload) {
       timestamp: now(),
     });
 
-    await extractArchive(tempArchivePath, extractTempPath, cancelState, webContents, jobId);
-    await flattenSingleTopFolder(extractTempPath);
-    await extractNestedArchiveIfPresent(extractTempPath, cancelState, webContents, jobId);
-    await flattenSingleTopFolder(extractTempPath);
+    const archiveSignature = await detectArchiveSignature(tempArchivePath);
+    const canExtract = archiveSignature !== "unknown";
 
     let finalInstallPath = resolvedInstallPath;
 
-    if (mode === "mod") {
-      const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
-      const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
-      const modRoot = await ensureModFolderStructure(extractTempPath, safeFolderName);
-      const destination = path.join(resolvedInstallPath, safeFolderName);
-      await removePath(destination);
-      await ensureDir(resolvedInstallPath);
-      await fs.rename(modRoot, destination);
-      finalInstallPath = destination;
-    } else {
-      await removePath(resolvedInstallPath);
-      await ensureDir(path.dirname(resolvedInstallPath));
-      await fs.rename(extractTempPath, resolvedInstallPath);
-      await ensureDir(path.join(resolvedInstallPath, "mods"));
-
+    if (!canExtract && mode === "mod") {
       emitProgress(webContents, {
         jobId,
-        phase: "validate",
-        progress: 0.85,
-        message: "Validating engine launch files",
+        phase: "install",
+        progress: 0.9,
+        message: "Package is not a supported archive; installing as raw file",
         timestamp: now(),
       });
+      finalInstallPath = await installRawModPackage({
+        resolvedInstallPath,
+        installSubdir,
+        archiveName,
+        tempArchivePath,
+        jobId,
+      });
+    } else {
+      try {
+        await extractArchive(tempArchivePath, extractTempPath, cancelState, webContents, jobId);
+        await flattenSingleTopFolder(extractTempPath);
+        await extractNestedArchiveIfPresent(extractTempPath, cancelState, webContents, jobId);
+        await flattenSingleTopFolder(extractTempPath);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Extraction failed";
+        if (mode === "mod" && /exit code 2/i.test(message)) {
+          emitProgress(webContents, {
+            jobId,
+            phase: "install",
+            progress: 0.9,
+            message: "Archive extraction failed; saving package as raw file",
+            timestamp: now(),
+          });
+          finalInstallPath = await installRawModPackage({
+            resolvedInstallPath,
+            installSubdir,
+            archiveName,
+            tempArchivePath,
+            jobId,
+          });
+        } else {
+          throw error;
+        }
+      }
 
-      const launchable = await findLaunchableExecutable(resolvedInstallPath, [path.basename(resolvedInstallPath), "funkin", "engine"]);
-      if (!launchable) {
-        throw new Error("Installed engine does not contain a launchable executable for this platform");
+      if (finalInstallPath === resolvedInstallPath) {
+        if (mode === "mod") {
+          const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
+          const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
+          const modRoot = await ensureModFolderStructure(extractTempPath, safeFolderName);
+          const destination = path.join(resolvedInstallPath, safeFolderName);
+          await removePath(destination);
+          await ensureDir(resolvedInstallPath);
+          await fs.rename(modRoot, destination);
+          finalInstallPath = destination;
+        } else {
+          await removePath(resolvedInstallPath);
+          await ensureDir(path.dirname(resolvedInstallPath));
+          await fs.rename(extractTempPath, resolvedInstallPath);
+          await ensureDir(path.join(resolvedInstallPath, "mods"));
+
+          emitProgress(webContents, {
+            jobId,
+            phase: "validate",
+            progress: 0.85,
+            message: "Validating engine launch files",
+            timestamp: now(),
+          });
+
+          const launchable = await findLaunchableExecutable(resolvedInstallPath, [path.basename(resolvedInstallPath), "funkin", "engine"]);
+          if (!launchable) {
+            throw new Error("Installed engine does not contain a launchable executable for this platform");
+          }
+        }
       }
     }
 

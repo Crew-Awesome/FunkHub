@@ -16,6 +16,10 @@ It is made to be easy to use, fast to navigate, and fun to mess around with.
 
 made using the Gamebanana API.
 
+## Community
+
+- Discord: https://discord.gg/cdP7JhDv4u
+
 ## What it does
 
 - Discover mods and browse categories from GameBanana
@@ -85,3 +89,8 @@ Nightly CI artifacts (temporary, 14-day retention):
 - https://nightly.link/Crew-Awesome/FunkHub/workflows/build.yml/main/FunkHub-linux-deb.zip
 - https://nightly.link/Crew-Awesome/FunkHub/workflows/build.yml/main/FunkHub-windows.zip
 - https://nightly.link/Crew-Awesome/FunkHub/workflows/build.yml/main/FunkHub-macos.zip
+
+## Contributing
+
+- Read `CONTRIBUTING.md` before opening a PR.
+- Please follow `CODE_OF_CONDUCT.md` in issues, PRs, and discussions.

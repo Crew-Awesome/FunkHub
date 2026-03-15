@@ -29,16 +29,43 @@ function extractDeepLinkFromArgv(argv) {
   if (!Array.isArray(argv)) {
     return undefined;
   }
-  return argv.find((value) => typeof value === "string" && value.startsWith("funkhub://"));
+
+  for (const value of argv) {
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    const trimmed = value.trim().replace(/^['"]|['"]$/g, "");
+    if (!trimmed) {
+      continue;
+    }
+
+    if (/^funkhub:/i.test(trimmed)) {
+      return trimmed;
+    }
+
+    const embedded = trimmed.match(/(funkhub:[^\s"']+)/i);
+    if (embedded && embedded[1]) {
+      return embedded[1];
+    }
+  }
+
+  return undefined;
 }
 
 function enqueueDeepLink(rawUrl) {
-  if (typeof rawUrl !== "string" || !rawUrl.startsWith("funkhub://")) {
+  if (typeof rawUrl !== "string") {
     return;
   }
-  pendingDeepLinks.push(rawUrl);
+
+  const normalized = rawUrl.trim().replace(/^['"]|['"]$/g, "");
+  if (!/^funkhub:/i.test(normalized)) {
+    return;
+  }
+
+  pendingDeepLinks.push(normalized);
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("funkhub:deep-link", { url: rawUrl });
+    mainWindow.webContents.send("funkhub:deep-link", { url: normalized });
   }
 }
 

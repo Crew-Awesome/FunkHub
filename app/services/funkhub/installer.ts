@@ -19,8 +19,15 @@ function sanitizeFileStem(fileName: string): string {
   return stem.replace(/[^A-Za-z0-9._ -]/g, "_") || "mod";
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function includesAny(text: string, tokens: string[]): boolean {
-  return tokens.some((token) => text.includes(token));
+  return tokens.some((token) => {
+    const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(token)}([^a-z0-9]|$)`, "i");
+    return pattern.test(text);
+  });
 }
 
 export class ModInstallerService {
@@ -36,6 +43,12 @@ export class ModInstallerService {
     }
 
     const haystack = `${mod.name} ${mod.text ?? ""} ${mod.rootCategory?.name ?? ""}`.toLowerCase();
+    if (includesAny(haystack, ["base game", "basegame", "v-slice", "vanilla"])) {
+      return "basegame";
+    }
+    if (includesAny(haystack, ["ale psych", "ale-psych"])) {
+      return "ale-psych";
+    }
     if (includesAny(haystack, ["psych", "psych engine", "psychengine"])) {
       return "psych";
     }
@@ -51,13 +64,6 @@ export class ModInstallerService {
     if (includesAny(haystack, ["p-slice", "pslice"])) {
       return "p-slice";
     }
-    if (includesAny(haystack, ["ale psych", "ale engine"])) {
-      return "ale-psych";
-    }
-    if (includesAny(haystack, ["base game", "basegame", "v-slice", "vanilla"])) {
-      return "basegame";
-    }
-
     return undefined;
   }
 
