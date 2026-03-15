@@ -750,9 +750,15 @@ async function handleLaunchEngine(payload) {
   let command = launchable;
   let args = [];
   const launchCwd = path.dirname(launchable);
+  const launchNeedsWrapper = process.platform === "darwin" && launcher === "native" && launchable.toLowerCase().endsWith(".app");
 
   if (process.platform === "linux" && launcher === "native" && launchable.toLowerCase().endsWith(".exe")) {
     throw new Error("Selected executable is a Windows .exe. Choose Wine/Wine64/Proton in Manage before launching.");
+  }
+
+  if (launchNeedsWrapper) {
+    command = "open";
+    args = [launchable];
   }
 
   if (launcher !== "native") {
@@ -762,6 +768,9 @@ async function handleLaunchEngine(payload) {
     command = launcherPath || launcher;
     args = [launchable];
   }
+
+  const startupGraceMs = 1200;
+  const allowImmediateExit = launcher !== "native" || launchNeedsWrapper;
 
   const child = await new Promise((resolve, reject) => {
     let resolved = false;
@@ -789,14 +798,29 @@ async function handleLaunchEngine(payload) {
         resolved = true;
         resolve(spawned);
       }
-    }, 250);
+    }, startupGraceMs);
 
     spawned.once("spawn", () => {
-      if (!resolved) {
+      // Keep waiting through startup grace period so we can catch immediate crashes.
+    });
+
+    spawned.once("exit", (code, signal) => {
+      if (resolved) {
+        return;
+      }
+      if (allowImmediateExit) {
         resolved = true;
         clearTimeout(timeout);
         resolve(spawned);
+        return;
       }
+      resolved = true;
+      clearTimeout(timeout);
+      if (signal) {
+        reject(new Error(`Engine process exited immediately (signal: ${signal}). Check executable path and launcher settings.`));
+        return;
+      }
+      reject(new Error(`Engine process exited immediately (code: ${code ?? "unknown"}). Check executable path and launcher settings.`));
     });
 
     spawned.once("error", (error) => {
