@@ -6,6 +6,11 @@
 
 **A Friday Night Funkin Mod Launcher**
 
+[![Build](https://github.com/Crew-Awesome/FunkHub/actions/workflows/build.yml/badge.svg)](https://github.com/Crew-Awesome/FunkHub/actions/workflows/build.yml)
+[![Release](https://github.com/Crew-Awesome/FunkHub/actions/workflows/release.yml/badge.svg)](https://github.com/Crew-Awesome/FunkHub/actions/workflows/release.yml)
+[![Latest Release](https://img.shields.io/github/v/release/Crew-Awesome/FunkHub?display_name=tag)](https://github.com/Crew-Awesome/FunkHub/releases/latest)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](https://spdx.org/licenses/GPL-3.0-only.html)
+
 FunkHub is a simple desktop app for finding, installing, and launching Friday Night Funkin' mods.
 It is made to be easy to use, fast to navigate, and fun to mess around with.
 
