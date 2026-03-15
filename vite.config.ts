@@ -2,10 +2,16 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-const appVersion = process.env.npm_package_version || "0.0.0";
+const sourceVersion = process.env.VITE_APP_VERSION
+  || process.env.BUILD_VERSION
+  || process.env.npm_package_version
+  || "0.0.0";
+const appVersion = sourceVersion.trim().replace(/^v/i, "") || "0.0.0";
+const isTagBuild = process.env.GITHUB_REF_TYPE === "tag"
+  || /^refs\/tags\//i.test(process.env.GITHUB_REF || "");
 const buildChannel = process.env.BUILD_CHANNEL
   || process.env.VITE_BUILD_CHANNEL
-  || (process.env.GITHUB_ACTIONS ? "nightly" : "release");
+  || (process.env.GITHUB_ACTIONS ? (isTagBuild ? "release" : "nightly") : "release");
 
 export default defineConfig({
   base: "./",

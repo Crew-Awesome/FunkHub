@@ -225,7 +225,20 @@ export class FunkHubService {
   }
 
   async checkAppUpdate(): Promise<AppUpdateInfo> {
-    const currentVersion = (__FUNKHUB_VERSION__ || "0.0.0").trim();
+    const currentVersion = (__FUNKHUB_VERSION__ || "0.0.0").trim().replace(/^v/i, "");
+    const buildChannel = (__FUNKHUB_CHANNEL__ || "release").toLowerCase();
+
+    if (buildChannel !== "release") {
+      return {
+        available: false,
+        currentVersion,
+        latestVersion: currentVersion,
+        releaseName: "InDev build",
+        releaseUrl: "https://github.com/Crew-Awesome/FunkHub/releases/latest",
+        notes: "Automatic app update checks are disabled for InDev builds.",
+      };
+    }
+
     return checkLatestAppUpdate({
       currentVersion,
       platform: detectClientPlatform(),

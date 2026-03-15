@@ -10,6 +10,8 @@ jobs:
   build-desktop:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    env:
+      BUILD_CHANNEL: nightly
     strategy:
       fail-fast: false
       matrix:

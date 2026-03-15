@@ -56,13 +56,18 @@ export function Updates() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            {appUpdateChecking
-              ? "Checking for app updates..."
-              : appUpdate
-                ? `You're on the latest version (v${appUpdate.currentVersion}).`
-                : "No app update check has been run yet."}
-          </p>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">
+              {appUpdateChecking
+                ? "Checking for app updates..."
+                : appUpdate
+                  ? `You're on the latest version (v${appUpdate.currentVersion}).`
+                  : "No app update check has been run yet."}
+            </p>
+            {appUpdate?.notes && (
+              <p className="text-xs text-muted-foreground">{appUpdate.notes}</p>
+            )}
+          </div>
         )}
         {appUpdateError && <p className="mt-2 text-xs text-destructive">{appUpdateError}</p>}
       </div>

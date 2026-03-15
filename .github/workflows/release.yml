@@ -12,6 +12,9 @@ jobs:
   build-release:
     name: Build Release (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    env:
+      BUILD_CHANNEL: release
+      VITE_APP_VERSION: ${{ github.ref_name }}
     strategy:
       fail-fast: false
       matrix:

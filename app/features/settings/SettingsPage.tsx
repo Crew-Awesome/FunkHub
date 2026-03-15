@@ -23,9 +23,9 @@ export function Settings() {
   const [dataRootDirectory, setDataRootDirectory] = useState(settings.dataRootDirectory);
   const [itchBusy, setItchBusy] = useState(false);
   const [pollingIntervalSeconds, setPollingIntervalSeconds] = useState(String(settings.gameBananaIntegration.pollingIntervalSeconds || 300));
-  const appVersion = (__FUNKHUB_VERSION__ || "0.0.0").trim();
+  const appVersion = (__FUNKHUB_VERSION__ || "0.0.0").trim().replace(/^v/i, "");
   const buildChannel = (__FUNKHUB_CHANNEL__ || "release").toLowerCase();
-  const isInDevBuild = buildChannel !== "release" || /nightly|github|ci|dev|alpha|beta|rc/i.test(appVersion);
+  const isInDevBuild = buildChannel !== "release";
   const displayVersion = isInDevBuild ? "InDev" : `v${appVersion}`;
 
   useEffect(() => {
