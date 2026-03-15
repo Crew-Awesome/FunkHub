@@ -127,7 +127,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="h-[88vh] w-[min(98vw,1720px)] max-w-none overflow-hidden p-0">
+      <DialogContent className="h-[90vh] w-[min(98vw,1780px)] max-w-none overflow-hidden p-0">
         <DialogHeader className="sticky top-0 z-10 bg-card border-b border-border px-5 py-4">
           <DialogTitle>Mod Visualizer</DialogTitle>
         </DialogHeader>
@@ -141,8 +141,8 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
         )}
 
         {!loading && !error && profile && (
-          <div className="h-[calc(88vh-70px)] p-4 md:p-6">
-            <div className="grid h-full grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.35fr)_minmax(420px,0.65fr)]">
+          <div className="h-[calc(90vh-70px)] p-4 md:p-6">
+            <div className="grid h-full grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(430px,0.7fr)]">
               <section className="min-h-0 space-y-5 overflow-y-auto pr-1">
                 <div className="overflow-hidden rounded-xl border border-border bg-secondary/30">
                   {mediaGallery.length > 0 ? (
@@ -151,7 +151,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                         <img
                           src={mediaGallery[Math.min(activeMediaIndex, mediaGallery.length - 1)]}
                           alt={profile.name}
-                          className="h-[320px] w-full object-cover lg:h-[460px]"
+                          className="h-[320px] w-full object-cover lg:h-[480px]"
                         />
                         {mediaGallery.length > 1 && (
                           <>
@@ -179,7 +179,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                               key={`${image}-${index}`}
                               onClick={() => setActiveMediaIndex(index)}
                               className={[
-                                "h-14 w-20 shrink-0 overflow-hidden rounded border",
+                                "h-16 w-24 shrink-0 overflow-hidden rounded border",
                                 index === activeMediaIndex ? "border-primary" : "border-border",
                               ].join(" ")}
                               aria-label={`Preview ${index + 1}`}
@@ -191,7 +191,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                       )}
                     </>
                   ) : (
-                    <div className="flex min-h-[240px] items-center justify-center text-sm text-muted-foreground">
+                    <div className="flex min-h-[280px] items-center justify-center text-sm text-muted-foreground">
                       No preview image
                     </div>
                   )}
@@ -202,38 +202,8 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                   <p className="text-sm leading-relaxed text-muted-foreground">{plainText(profile.description ?? profile.text)}</p>
                 </div>
 
-                <div className="rounded-xl border border-border bg-card p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-foreground">Files</h4>
-                  <div className="max-h-[30vh] space-y-3 overflow-y-auto pr-1">
-                    {profile.files.length === 0 && (
-                      <div className="text-sm text-muted-foreground">No downloadable files found.</div>
-                    )}
-                    {profile.files.map((file) => (
-                      <div key={file.id} className="rounded-xl border border-border p-3 md:p-4">
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                          <div className="min-w-0">
-                            <p className="line-clamp-1 text-sm font-medium text-foreground md:text-base">{file.fileName}</p>
-                            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                              <span className="inline-flex items-center gap-1"><Download className="h-3.5 w-3.5" />{formatDownloads(file.downloadCount)}</span>
-                              <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{formatDate(file.dateAdded)}</span>
-                              <span>{formatBytes(file.fileSize)}</span>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => installMod(profile.id, file.id, selectedEngineId || undefined)}
-                            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary md:w-auto"
-                          >
-                            <Download className="h-4 w-4" />
-                            Install
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {profile.credits.length > 0 && (
-                  <div>
+                  <div className="rounded-xl border border-border bg-card p-4">
                     <h4 className="mb-3 text-sm font-semibold text-foreground">Credits</h4>
                     <div className="space-y-2">
                       {profile.credits.map((group) => (
@@ -339,7 +309,31 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                   )}
                 </div>
 
-                
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-foreground">Files</h4>
+                  <div className="space-y-3">
+                    {profile.files.length === 0 && (
+                      <div className="text-sm text-muted-foreground">No downloadable files found.</div>
+                    )}
+                    {profile.files.map((file) => (
+                      <div key={file.id} className="rounded-xl border border-border p-3">
+                        <p className="line-clamp-1 text-sm font-medium text-foreground">{file.fileName}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1"><Download className="h-3.5 w-3.5" />{formatDownloads(file.downloadCount)}</span>
+                          <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{formatDate(file.dateAdded)}</span>
+                          <span>{formatBytes(file.fileSize)}</span>
+                        </div>
+                        <button
+                          onClick={() => installMod(profile.id, file.id, selectedEngineId || undefined)}
+                          className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary"
+                        >
+                          <Download className="h-4 w-4" />
+                          Install
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </aside>
             </div>
           </div>
