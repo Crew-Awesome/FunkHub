@@ -291,35 +291,21 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
             const warningLine = inferredEngineSlug
               ? `Detected engine hint: ${inferredEngineSlug}. Confirm target before installing.`
               : "Could not auto-detect required engine. Choose a target engine before installing.";
-            const engineChoices = installedEngines
-              .map((engine, index) => `${index + 1}. ${engine.name} (${engine.slug})${engine.isDefault ? " [default]" : ""}`)
-              .join("\n");
-            const promptMessage = [
-              warningLine,
-              suggestedEngine ? `Suggested: ${suggestedEngine.name} (${suggestedEngine.slug})` : "",
-              "",
-              engineChoices,
-              "",
-              "Enter engine number, leave blank for suggested, or press Cancel.",
-            ].join("\n");
+            if (!suggestedEngine) {
+              throw new Error("No target engine selected. Install cancelled.");
+            }
 
-            const choice = window.prompt(promptMessage, "");
-            if (choice === null) {
+            const continueWithSuggested = window.confirm([
+              warningLine,
+              "",
+              `Use suggested engine: ${suggestedEngine.name} (${suggestedEngine.slug})?`,
+              "Select Cancel to stop this install and choose an engine manually from the app.",
+            ].join("\n"));
+            if (!continueWithSuggested) {
               return;
             }
 
-            if (choice.trim().length === 0) {
-              if (!suggestedEngine) {
-                throw new Error("No target engine selected. Install cancelled.");
-              }
-              selectedEngineId = suggestedEngine.id;
-            } else {
-              const index = Number(choice.trim());
-              if (!Number.isInteger(index) || index < 1 || index > installedEngines.length) {
-                throw new Error("Invalid engine selection. Install cancelled.");
-              }
-              selectedEngineId = installedEngines[index - 1].id;
-            }
+            selectedEngineId = suggestedEngine.id;
           }
         }
       } else {
