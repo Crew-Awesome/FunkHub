@@ -182,7 +182,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     processingDeepLinksRef.current.add(rawUrl);
 
     try {
-      if (!rawUrl.startsWith("funkhub:")) {
+      if (!/^funkhub:/i.test(rawUrl)) {
         return;
       }
 

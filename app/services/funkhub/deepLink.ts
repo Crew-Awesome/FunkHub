@@ -41,7 +41,7 @@ function parseInstallPathSegments(segments: string[]): ParsedInstallDeepLink | u
   }
 
   const [root, action, modToken, fileToken] = segments;
-  if (root !== "mod" || action !== "install") {
+  if (root.toLowerCase() !== "mod" || action.toLowerCase() !== "install") {
     return undefined;
   }
 
@@ -54,9 +54,13 @@ function parseInstallPathSegments(segments: string[]): ParsedInstallDeepLink | u
 }
 
 export function parseFunkHubDeepLink(rawUrl: string): ParsedDeepLink {
-  const normalized = rawUrl.trim();
+  let normalized = rawUrl.trim();
   if (!normalized) {
     throw new Error("Empty deep link payload");
+  }
+
+  if (/^funkhub:\/(?!\/)/i.test(normalized)) {
+    normalized = normalized.replace(/^funkhub:\//i, "funkhub://");
   }
 
   if (/^funkhub:install\?/i.test(normalized)) {
@@ -66,8 +70,10 @@ export function parseFunkHubDeepLink(rawUrl: string): ParsedDeepLink {
 
   if (/^funkhub:\/\//i.test(normalized) || /^funkhub:/i.test(normalized)) {
     const parsedUrl = new URL(normalized);
-    const host = (parsedUrl.host || "").toLowerCase();
-    const pathTokens = parsedUrl.pathname.split("/").filter(Boolean).map((token) => token.toLowerCase());
+    const hostRaw = parsedUrl.host || "";
+    const host = hostRaw.toLowerCase();
+    const pathTokensRaw = parsedUrl.pathname.split("/").filter(Boolean);
+    const pathTokens = pathTokensRaw.map((token) => token.toLowerCase());
 
     if (host === "install") {
       const modId = parsePositiveNumber(parsedUrl.searchParams.get("mod") || parsedUrl.searchParams.get("mod_id") || "", "mod id");
@@ -86,7 +92,7 @@ export function parseFunkHubDeepLink(rawUrl: string): ParsedDeepLink {
     }
 
     const fullSegments = [host, ...pathTokens];
-    const install = parseInstallPathSegments(fullSegments);
+    const install = parseInstallPathSegments([hostRaw, ...pathTokensRaw]);
     if (install) {
       const engine = (parsedUrl.searchParams.get("engine") || "").trim().toLowerCase();
       const archiveUrl = (parsedUrl.searchParams.get("url") || parsedUrl.searchParams.get("archive") || "").trim();
@@ -98,8 +104,9 @@ export function parseFunkHubDeepLink(rawUrl: string): ParsedDeepLink {
     }
 
     if (fullSegments[0] === "gamebanana" && fullSegments[1] === "pair") {
-      const memberId = parsePositiveNumber(decodePathToken(fullSegments[2] || ""), "member id");
-      const secretKey = decodePathToken(fullSegments[3] || "").trim();
+      const rawSegments = [hostRaw, ...pathTokensRaw];
+      const memberId = parsePositiveNumber(decodePathToken(rawSegments[2] || ""), "member id");
+      const secretKey = decodePathToken(rawSegments[3] || "").trim();
       if (!secretKey) {
         throw new Error("Missing pair secret key in deep link");
       }
