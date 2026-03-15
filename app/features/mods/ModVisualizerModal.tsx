@@ -127,7 +127,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[94vh] w-[min(97vw,1600px)] max-w-none overflow-y-auto p-0">
+      <DialogContent className="h-[88vh] w-[min(98vw,1720px)] max-w-none overflow-hidden p-0">
         <DialogHeader className="sticky top-0 z-10 bg-card border-b border-border px-5 py-4">
           <DialogTitle>Mod Visualizer</DialogTitle>
         </DialogHeader>
@@ -141,9 +141,9 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
         )}
 
         {!loading && !error && profile && (
-          <div className="p-4 md:p-6">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_460px]">
-              <section className="space-y-5">
+          <div className="h-[calc(88vh-70px)] p-4 md:p-6">
+            <div className="grid h-full grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.35fr)_minmax(420px,0.65fr)]">
+              <section className="min-h-0 space-y-5 overflow-y-auto pr-1">
                 <div className="overflow-hidden rounded-xl border border-border bg-secondary/30">
                   {mediaGallery.length > 0 ? (
                     <>
@@ -151,7 +151,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                         <img
                           src={mediaGallery[Math.min(activeMediaIndex, mediaGallery.length - 1)]}
                           alt={profile.name}
-                          className="h-[260px] w-full object-cover md:h-[420px]"
+                          className="h-[320px] w-full object-cover lg:h-[460px]"
                         />
                         {mediaGallery.length > 1 && (
                           <>
@@ -204,7 +204,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
 
                 <div className="rounded-xl border border-border bg-card p-4">
                   <h4 className="mb-3 text-sm font-semibold text-foreground">Files</h4>
-                  <div className="space-y-3">
+                  <div className="max-h-[30vh] space-y-3 overflow-y-auto pr-1">
                     {profile.files.length === 0 && (
                       <div className="text-sm text-muted-foreground">No downloadable files found.</div>
                     )}
@@ -265,7 +265,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                 )}
               </section>
 
-              <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+              <aside className="min-h-0 space-y-4 overflow-y-auto pr-1">
                 <div className="rounded-xl border border-border bg-card p-4">
                   <h3 className="text-xl font-bold text-foreground">{profile.name}</h3>
                   {categoryLabel && <p className="mt-1 text-sm text-muted-foreground">{categoryLabel}</p>}
