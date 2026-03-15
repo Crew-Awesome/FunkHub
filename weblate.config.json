@@ -18,7 +18,6 @@
     "template": "app/i18n/locales/en.json",
     "newBase": "app/i18n/locales/en.json",
     "newLanguageMode": "add",
-    "languageCodeStyle": "bcp47",
     "allowedLanguages": [
       "en",
       "es-419",
@@ -31,6 +30,6 @@
     "suggestionVoting": "1",
     "suggestionAutoAccept": "0",
     "pushOnCommit": "1",
-    "languageRegex": "^(en|es-419|ru|pt-BR)$"
+    "languageRegex": "^(en|es[-_]419|ru|pt[-_](BR|br))$"
   }
 }
