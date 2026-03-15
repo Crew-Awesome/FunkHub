@@ -3,19 +3,68 @@ import { RefreshCw, Download } from "lucide-react";
 import { useFunkHub } from "../../providers";
 
 export function Updates() {
-  const { modUpdates, refreshModUpdates, installMod } = useFunkHub();
+  const {
+    modUpdates,
+    refreshModUpdates,
+    installMod,
+    settings,
+    updateSettings,
+    appUpdate,
+    appUpdateError,
+    appUpdateChecking,
+    checkAppUpdate,
+    openAppUpdateDownload,
+  } = useFunkHub();
 
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-foreground">Updates</h1>
         <button
-          onClick={() => refreshModUpdates()}
+          onClick={async () => {
+            await refreshModUpdates();
+            await checkAppUpdate();
+          }}
           className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className={`w-4 h-4 ${appUpdateChecking ? "animate-spin" : ""}`} />
           Check for Updates
         </button>
+      </div>
+
+      <div className="mb-6 bg-card border border-border rounded-xl p-6">
+        <h3 className="font-semibold text-foreground mb-2">FunkHub App Update</h3>
+        {appUpdate?.available ? (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              New version available: <span className="text-foreground font-medium">v{appUpdate.latestVersion}</span>
+              {" "}(current: v{appUpdate.currentVersion})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => openAppUpdateDownload().catch((error) => window.alert(error instanceof Error ? error.message : "Unable to open update"))}
+                className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium"
+              >
+                Download Update
+              </button>
+              <button
+                onClick={() => window.open(appUpdate.releaseUrl, "_blank", "noopener,noreferrer")}
+                className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium"
+              >
+                View Release Notes
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {appUpdateChecking
+              ? "Checking for app updates..."
+              : appUpdate
+                ? `You're on the latest version (v${appUpdate.currentVersion}).`
+                : "No app update check has been run yet."}
+          </p>
+        )}
+        {appUpdateError && <p className="mt-2 text-xs text-destructive">{appUpdateError}</p>}
       </div>
 
       {modUpdates.length > 0 ? (
@@ -85,41 +134,69 @@ export function Updates() {
       <div className="mt-8 bg-card border border-border rounded-xl p-6">
         <h3 className="font-semibold text-foreground mb-4">Update Settings</h3>
         <div className="space-y-3">
-          <label className="flex items-center justify-between cursor-pointer">
-            <div>
-              <p className="font-medium text-foreground">Auto-update mods</p>
-              <p className="text-sm text-muted-foreground">
-                Automatically download and install mod updates
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
+            <label className="flex items-center justify-between cursor-pointer">
+              <div>
+                <p className="font-medium text-foreground">Auto-update mods</p>
+                <p className="text-sm text-muted-foreground">
+                  Automatically download and install mod updates
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.autoUpdateMods}
+                onChange={(event) => {
+                  updateSettings({ autoUpdateMods: event.target.checked });
+                }}
+                className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
                        checked:bg-primary transition-colors
                        after:content-[''] after:absolute after:top-1 after:left-1 
                        after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform
                        checked:after:translate-x-5"
-            />
-          </label>
-          <label className="flex items-center justify-between cursor-pointer">
-            <div>
-              <p className="font-medium text-foreground">Check for updates on startup</p>
-              <p className="text-sm text-muted-foreground">
-                Scan for available updates when FunkHub launches
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              defaultChecked
-              className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
+              />
+            </label>
+            <label className="flex items-center justify-between cursor-pointer">
+              <div>
+                <p className="font-medium text-foreground">Check for updates on startup</p>
+                <p className="text-sm text-muted-foreground">
+                  Scan for available updates when FunkHub launches
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.checkAppUpdatesOnStartup}
+                onChange={(event) => {
+                  updateSettings({ checkAppUpdatesOnStartup: event.target.checked });
+                }}
+                className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
                        checked:bg-primary transition-colors
                        after:content-[''] after:absolute after:top-1 after:left-1 
                        after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform
                        checked:after:translate-x-5"
-            />
-          </label>
+              />
+            </label>
+
+            <label className="flex items-center justify-between cursor-pointer">
+              <div>
+                <p className="font-medium text-foreground">Auto-open app update when found</p>
+                <p className="text-sm text-muted-foreground">
+                  Opens your platform download link after startup update check
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.autoDownloadAppUpdates}
+                onChange={(event) => {
+                  updateSettings({ autoDownloadAppUpdates: event.target.checked });
+                }}
+                className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
+                       checked:bg-primary transition-colors
+                       after:content-[''] after:absolute after:top-1 after:left-1 
+                       after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform
+                       checked:after:translate-x-5"
+              />
+            </label>
+          </div>
         </div>
       </div>
-    </div>
   );
 }

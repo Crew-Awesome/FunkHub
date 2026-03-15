@@ -7,6 +7,7 @@ const {
   handleLaunchEngine,
   handleOpenPath,
   handleOpenAnyPath,
+  handleOpenExternalUrl,
   handleDeletePath,
   handleGetItchAuthStatus,
   handleClearItchAuth,
@@ -149,6 +150,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:openAnyPath", async (_event, payload) => {
     return handleOpenAnyPath(payload);
+  });
+
+  ipcMain.handle("funkhub:openExternalUrl", async (_event, payload) => {
+    return handleOpenExternalUrl(payload);
   });
 
   ipcMain.handle("funkhub:deletePath", async (_event, payload) => {

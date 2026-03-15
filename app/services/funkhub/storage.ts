@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS: FunkHubSettings = {
   firstRunCompleted: false,
   maxConcurrentDownloads: 3,
   compatibilityChecks: true,
+  checkAppUpdatesOnStartup: true,
+  autoDownloadAppUpdates: false,
   autoUpdateMods: false,
   sendAnalytics: false,
   showAnimations: true,

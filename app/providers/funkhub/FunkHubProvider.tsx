@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { funkHubService } from "../../services/funkhub";
 import {
+  AppUpdateInfo,
   CategoryNode,
   DownloadTask,
   EngineDefinition,
@@ -76,6 +77,11 @@ interface FunkHubContextValue {
   connectItch: (clientId: string) => Promise<void>;
   disconnectItch: () => Promise<void>;
   refreshItchAuth: () => Promise<void>;
+  appUpdate: AppUpdateInfo | undefined;
+  appUpdateError?: string;
+  appUpdateChecking: boolean;
+  checkAppUpdate: () => Promise<void>;
+  openAppUpdateDownload: () => Promise<void>;
 }
 
 const FunkHubContext = createContext<FunkHubContextValue | undefined>(undefined);
@@ -100,6 +106,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [hasMoreDiscover, setHasMoreDiscover] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const handledDeepLinksRef = useRef<Set<string>>(new Set());
+  const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | undefined>(undefined);
+  const [appUpdateChecking, setAppUpdateChecking] = useState(false);
+  const [appUpdateError, setAppUpdateError] = useState<string | undefined>(undefined);
+  const startupUpdateCheckedRef = useRef(false);
 
   const refreshDiscover = useCallback(async () => {
     try {
@@ -129,6 +139,28 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     setModUpdates(updates);
     setInstalledMods(funkHubService.getInstalledMods());
   }, []);
+
+  const checkAppUpdate = useCallback(async () => {
+    setAppUpdateChecking(true);
+    setAppUpdateError(undefined);
+    try {
+      const result = await funkHubService.checkAppUpdate();
+      setAppUpdate(result);
+    } catch (error) {
+      setAppUpdateError(error instanceof Error ? error.message : "Failed to check app updates");
+    } finally {
+      setAppUpdateChecking(false);
+    }
+  }, []);
+
+  const openAppUpdateDownload = useCallback(async () => {
+    if (!appUpdate?.available) {
+      throw new Error("No app update is currently available");
+    }
+
+    const targetUrl = appUpdate.downloadUrl || appUpdate.releaseUrl;
+    await funkHubService.openExternalUrl(targetUrl);
+  }, [appUpdate]);
 
   const getModProfile = useCallback((modId: number) => funkHubService.getModProfile(modId), []);
 
@@ -303,6 +335,33 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   }, [handleDeepLink]);
 
   useEffect(() => {
+    if (startupUpdateCheckedRef.current) {
+      return;
+    }
+    if (!settings.checkAppUpdatesOnStartup) {
+      startupUpdateCheckedRef.current = true;
+      return;
+    }
+
+    startupUpdateCheckedRef.current = true;
+    setAppUpdateChecking(true);
+    setAppUpdateError(undefined);
+    funkHubService.checkAppUpdate()
+      .then(async (latest) => {
+        setAppUpdate(latest);
+        if (latest.available && settings.autoDownloadAppUpdates) {
+          await funkHubService.openExternalUrl(latest.downloadUrl || latest.releaseUrl);
+        }
+      })
+      .catch((error) => {
+        setAppUpdateError(error instanceof Error ? error.message : "Failed to check app updates");
+      })
+      .finally(() => {
+        setAppUpdateChecking(false);
+      });
+  }, [settings.autoDownloadAppUpdates, settings.checkAppUpdatesOnStartup]);
+
+  useEffect(() => {
     setDiscoverPage(1);
   }, [selectedCategoryId, discoverSort, searchQuery]);
 
@@ -425,6 +484,11 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       refreshItchAuth: async () => {
         setItchAuth(await funkHubService.getItchAuthStatus());
       },
+      appUpdate,
+      appUpdateError,
+      appUpdateChecking,
+      checkAppUpdate,
+      openAppUpdateDownload,
     }),
     [
       loading,
@@ -439,6 +503,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       installedEngines,
       settings,
       itchAuth,
+      appUpdate,
+      appUpdateError,
+      appUpdateChecking,
       selectedCategoryId,
       discoverSort,
       discoverPage,
@@ -447,6 +514,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       searchQuery,
       refreshDiscover,
       refreshModUpdates,
+      checkAppUpdate,
+      openAppUpdateDownload,
       getModProfile,
       listModsBySubmitter,
     ],

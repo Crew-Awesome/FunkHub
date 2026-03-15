@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("funkhubDesktop", {
   launchEngine: (payload) => ipcRenderer.invoke("funkhub:launchEngine", payload),
   openPath: (payload) => ipcRenderer.invoke("funkhub:openPath", payload),
   openAnyPath: (payload) => ipcRenderer.invoke("funkhub:openAnyPath", payload),
+  openExternalUrl: (payload) => ipcRenderer.invoke("funkhub:openExternalUrl", payload),
   deletePath: (payload) => ipcRenderer.invoke("funkhub:deletePath", payload),
   getItchAuthStatus: () => ipcRenderer.invoke("funkhub:getItchAuthStatus"),
   clearItchAuth: () => ipcRenderer.invoke("funkhub:clearItchAuth"),

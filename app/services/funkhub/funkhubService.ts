@@ -3,8 +3,10 @@ import { engineCatalogService } from "./engineCatalog";
 import { gameBananaApiService } from "./gamebananaApi";
 import { modInstallerService } from "./installer";
 import { detectClientPlatform, pickBestReleaseForPlatform } from "./platform";
+import { checkLatestAppUpdate } from "./appUpdate";
 import { DEFAULT_SETTINGS, funkHubStorageService } from "./storage";
 import {
+  AppUpdateInfo,
   CategoryNode,
   DownloadTask,
   EngineDefinition,
@@ -200,6 +202,34 @@ export class FunkHubService {
     if (!result.ok) {
       throw new Error(result.error || "Failed to open folder");
     }
+  }
+
+  async openExternalUrl(url: string): Promise<void> {
+    const target = (url || "").trim();
+    if (!target) {
+      throw new Error("No URL provided");
+    }
+    if (!/^https?:\/\//i.test(target)) {
+      throw new Error("Only http/https URLs are supported");
+    }
+
+    if (window.funkhubDesktop?.openExternalUrl) {
+      const result = await window.funkhubDesktop.openExternalUrl({ url: target });
+      if (!result.ok) {
+        throw new Error(result.error || "Failed to open URL");
+      }
+      return;
+    }
+
+    window.open(target, "_blank", "noopener,noreferrer");
+  }
+
+  async checkAppUpdate(): Promise<AppUpdateInfo> {
+    const currentVersion = (__FUNKHUB_VERSION__ || "0.0.0").trim();
+    return checkLatestAppUpdate({
+      currentVersion,
+      platform: detectClientPlatform(),
+    });
   }
 
   async reconcileDiskState(): Promise<void> {

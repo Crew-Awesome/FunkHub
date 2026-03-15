@@ -175,6 +175,8 @@ export interface FunkHubSettings {
   firstRunCompleted: boolean;
   maxConcurrentDownloads: number;
   compatibilityChecks: boolean;
+  checkAppUpdatesOnStartup: boolean;
+  autoDownloadAppUpdates: boolean;
   autoUpdateMods: boolean;
   sendAnalytics: boolean;
   showAnimations: boolean;
@@ -269,6 +271,7 @@ export interface DesktopBridge {
   pickFolder: (payload?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>;
   pickFile: (payload?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => Promise<{ canceled: boolean; path?: string }>;
   openAnyPath: (payload: { targetPath: string }) => Promise<{ ok: boolean; openedPath?: string; error?: string }>;
+  openExternalUrl: (payload: { url: string }) => Promise<{ ok: boolean; error?: string }>;
   getSettings: () => Promise<Partial<FunkHubSettings>>;
   updateSettings: (payload: Partial<FunkHubSettings>) => Promise<Partial<FunkHubSettings>>;
   getPendingDeepLinks: () => Promise<{ links: string[] }>;
@@ -283,6 +286,17 @@ export interface ModUpdateInfo {
   latestVersion: string;
   engine: EngineSlug;
   sourceFileId: number;
+}
+
+export interface AppUpdateInfo {
+  available: boolean;
+  currentVersion: string;
+  latestVersion: string;
+  releaseName: string;
+  releaseUrl: string;
+  publishedAt?: string;
+  notes?: string;
+  downloadUrl?: string;
 }
 
 export interface InstalledEngine {

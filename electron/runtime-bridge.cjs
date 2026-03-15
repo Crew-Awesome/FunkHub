@@ -896,6 +896,29 @@ async function handleOpenAnyPath(payload) {
   return { ok: true, openedPath: absolutePath };
 }
 
+async function handleOpenExternalUrl(payload) {
+  const url = payload?.url;
+  if (!url || typeof url !== "string") {
+    throw new Error("url is required");
+  }
+
+  const normalized = url.trim();
+  if (!/^https?:\/\//i.test(normalized)) {
+    throw new Error("Only http/https URLs are supported");
+  }
+
+  const { shell } = require("electron");
+  try {
+    await shell.openExternal(normalized);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Failed to open URL",
+    };
+  }
+}
+
 async function handleDeletePath(payload) {
   const targetPath = payload?.targetPath;
   if (!targetPath) {
@@ -1371,6 +1394,7 @@ module.exports = {
   handleLaunchEngine,
   handleOpenPath,
   handleOpenAnyPath,
+  handleOpenExternalUrl,
   handleDeletePath,
   handleGetItchAuthStatus,
   handleClearItchAuth,
