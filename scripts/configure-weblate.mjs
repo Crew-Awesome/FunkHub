@@ -15,6 +15,10 @@ const strictSync = String(process.env.WEBLATE_STRICT_SYNC || "false").toLowerCas
 const apiRetries = Number(process.env.WEBLATE_API_RETRIES || 5);
 const retryDelayMs = Number(process.env.WEBLATE_API_RETRY_DELAY_MS || 1000);
 
+function normalizeLanguageCode(code) {
+  return String(code || "").trim().replace(/_/g, "-").toLowerCase();
+}
+
 function isGithubHostKeyError(message) {
   const normalized = message.toLowerCase();
   return normalized.includes("host key verification failed")
@@ -143,6 +147,7 @@ const buildComponentPayload = (repoUrl, pushUrl = repoUrl) => ({
   suggestion_autoaccept: config.component.suggestionAutoAccept,
   push_on_commit: config.component.pushOnCommit,
   language_regex: config.component.languageRegex,
+  language_code_style: config.component.languageCodeStyle,
 });
 
 const primaryRepoUrl = config.repository.url;
@@ -223,12 +228,13 @@ await tryPatchComponent(projectSlug, config.component.slug, {
   commit_author: config.component.commitAuthor,
 });
 
-const allowedLanguageCodes = new Set((config.component.allowedLanguages || []).map((code) => String(code)));
+const allowedLanguageCodes = new Set((config.component.allowedLanguages || []).map((code) => normalizeLanguageCode(code)));
 if (allowedLanguageCodes.size > 0) {
   const translations = await listAllResults(`/api/components/${projectSlug}/${config.component.slug}/translations/?page_size=1000`);
   for (const translation of translations) {
     const languageCode = String(translation.language_code || translation.language?.code || "");
-    if (!languageCode || allowedLanguageCodes.has(languageCode)) {
+    const normalizedLanguageCode = normalizeLanguageCode(languageCode);
+    if (!languageCode || allowedLanguageCodes.has(normalizedLanguageCode)) {
       continue;
     }
 

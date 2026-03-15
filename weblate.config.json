@@ -18,11 +18,12 @@
     "template": "app/i18n/locales/en.json",
     "newBase": "app/i18n/locales/en.json",
     "newLanguageMode": "add",
+    "languageCodeStyle": "bcp47",
     "allowedLanguages": [
       "en",
-      "es_419",
+      "es-419",
       "ru",
-      "pt_BR"
+      "pt-BR"
     ],
     "commitMessage": "Update translations via Weblate",
     "commitAuthor": "Weblate <noreply@funkhub-translations>",
@@ -30,6 +31,6 @@
     "suggestionVoting": "1",
     "suggestionAutoAccept": "0",
     "pushOnCommit": "1",
-    "languageRegex": "^(en|es_419|ru|pt_BR)$"
+    "languageRegex": "^(en|es-419|ru|pt-BR)$"
   }
 }
