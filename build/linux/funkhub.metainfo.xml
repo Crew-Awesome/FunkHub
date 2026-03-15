@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.funkhub.desktop</id>
+  <name>FunkHub</name>
+  <summary>A Friday Night Funkin' mod launcher and manager.</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0</project_license>
+  <developer_name>ImMalloy</developer_name>
+  <url type="homepage">https://github.com/Crew-Awesome/FunkHub</url>
+  <launchable type="desktop-id">funkhub.desktop</launchable>
+
+  <description>
+    <p>FunkHub is a simple desktop application for discovering, installing, and launching Friday Night Funkin' mods.</p>
+    <p>It provides an easy way to browse mods from GameBanana, install them into supported engines, and manage different engine instances from one place.</p>
+    <p>FunkHub focuses on being fast, simple to use, and fun to experiment with while managing FNF mods.</p>
+    <ul>
+      <li>Discover mods and browse categories from GameBanana</li>
+      <li>Install mods directly into engine mod folders</li>
+      <li>Install standalone executable mod packages</li>
+      <li>Manage multiple engine instances</li>
+      <li>Launch engines directly from the launcher</li>
+      <li>Track downloads and update status</li>
+      <li>Support one-click protocol installs (funkhub://)</li>
+    </ul>
+    <p>Supported engines include Psych Engine, Base Game / V-Slice, Codename Engine, FPS Plus, JS Engine, ALE Psych, and P-Slice.</p>
+    <p>FunkHub uses the GameBanana API to retrieve mod metadata and provide a streamlined mod installation experience.</p>
+  </description>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/Crew-Awesome/FunkHub/main/assets/art/screenshots/funkhub-screenshot-discover.png</image>
+      <caption>Browse and discover mods by category</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Crew-Awesome/FunkHub/main/assets/art/screenshots/funkhub-screenshot-library.png</image>
+      <caption>Manage installed mods and launch settings</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Crew-Awesome/FunkHub/main/assets/art/screenshots/funkhub-screenshot-engines.png</image>
+      <caption>Install and manage engine instances</caption>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="0.1.0" date="2026-03-15">
+      <description>
+        <ul>
+          <li>Initial release of FunkHub</li>
+          <li>GameBanana mod discovery</li>
+          <li>Engine manager</li>
+          <li>Mod library support</li>
+          <li>Download tracking system</li>
+          <li>Protocol installer support (funkhub://)</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1"/>
+</component>

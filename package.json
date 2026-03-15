@@ -2,6 +2,7 @@
   "name": "funkhub",
   "version": "0.1.0",
   "description": "A Friday Night Funkin Mod Launcher",
+  "license": "GPL-3.0",
   "author": {
     "name": "ImMalloy",
     "email": "henrydraft.jpeg@gmail.com"
@@ -88,7 +89,32 @@
       "icon": "build/icons/icon.png",
       "category": "Game",
       "maintainer": "ImMalloy <henrydraft.jpeg@gmail.com>",
-      "synopsis": "A Friday Night Funkin Mod Launcher"
+      "synopsis": "A Friday Night Funkin' mod launcher and manager.",
+      "description": "FunkHub is a simple desktop application for discovering, installing, and launching Friday Night Funkin' mods. It helps you browse GameBanana mods, install into supported engines, manage engine instances, and launch content from one place.",
+      "desktop": {
+        "Name": "FunkHub",
+        "Comment": "A Friday Night Funkin' mod launcher and manager.",
+        "Categories": "Game;",
+        "Keywords": "fnf;friday-night-funkin;mods;mod-manager;launcher;gamebanana;"
+      },
+      "extraFiles": [
+        {
+          "from": "build/linux/funkhub.metainfo.xml",
+          "to": "usr/share/metainfo/funkhub.metainfo.xml"
+        },
+        {
+          "from": "assets/art/screenshots/funkhub-screenshot-discover.png",
+          "to": "usr/share/funkhub/screenshots/funkhub-screenshot-discover.png"
+        },
+        {
+          "from": "assets/art/screenshots/funkhub-screenshot-library.png",
+          "to": "usr/share/funkhub/screenshots/funkhub-screenshot-library.png"
+        },
+        {
+          "from": "assets/art/screenshots/funkhub-screenshot-engines.png",
+          "to": "usr/share/funkhub/screenshots/funkhub-screenshot-engines.png"
+        }
+      ]
     },
     "mac": {
       "target": [
