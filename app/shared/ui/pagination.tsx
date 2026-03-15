@@ -7,12 +7,15 @@ import {
 
 import { cn } from "./utils";
 import { Button, buttonVariants } from "./button";
+import { useI18n } from "../../providers";
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
+  const { t } = useI18n();
+
   return (
     <nav
       role="navigation"
-      aria-label="pagination"
+      aria-label={t("ui.pagination", "pagination")}
       data-slot="pagination"
       className={cn("mx-auto flex w-full justify-center", className)}
       {...props}
@@ -67,33 +70,39 @@ function PaginationLink({
 
 function PaginationPrevious({
   className,
+  size = "default",
   ...props
 }: React.ComponentProps<typeof PaginationLink>) {
+  const { t } = useI18n();
+
   return (
     <PaginationLink
-      aria-label="Go to previous page"
-      size="default"
+      aria-label={t("ui.goToPreviousPage", "Go to previous page")}
+      size={size}
       className={cn("gap-1 px-2.5 sm:pl-2.5", className)}
       {...props}
     >
       <ChevronLeftIcon />
-      <span className="hidden sm:block">Previous</span>
+      <span className="hidden sm:block">{t("ui.previous", "Previous")}</span>
     </PaginationLink>
   );
 }
 
 function PaginationNext({
   className,
+  size = "default",
   ...props
 }: React.ComponentProps<typeof PaginationLink>) {
+  const { t } = useI18n();
+
   return (
     <PaginationLink
-      aria-label="Go to next page"
-      size="default"
+      aria-label={t("ui.goToNextPage", "Go to next page")}
+      size={size}
       className={cn("gap-1 px-2.5 sm:pr-2.5", className)}
       {...props}
     >
-      <span className="hidden sm:block">Next</span>
+      <span className="hidden sm:block">{t("ui.next", "Next")}</span>
       <ChevronRightIcon />
     </PaginationLink>
   );
@@ -103,6 +112,8 @@ function PaginationEllipsis({
   className,
   ...props
 }: React.ComponentProps<"span">) {
+  const { t } = useI18n();
+
   return (
     <span
       aria-hidden
@@ -111,7 +122,7 @@ function PaginationEllipsis({
       {...props}
     >
       <MoreHorizontalIcon className="size-4" />
-      <span className="sr-only">More pages</span>
+      <span className="sr-only">{t("ui.morePages", "More pages")}</span>
     </span>
   );
 }

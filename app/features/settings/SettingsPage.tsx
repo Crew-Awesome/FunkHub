@@ -569,7 +569,7 @@ export function Settings() {
               <div>
                 <p className="font-medium text-foreground">{t("settings.sendAnalytics", "Send analytics")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Help improve FunkHub by sharing usage data
+                  {t("settings.sendAnalyticsDesc", "Help improve FunkHub by sharing usage data")}
                 </p>
               </div>
               <input
@@ -590,17 +590,17 @@ export function Settings() {
 
         {/* About */}
         <div className={`${activeSection === "about" ? "" : "hidden"} bg-card border border-border rounded-xl p-6 text-center`}>
-          <h3 className="font-semibold text-foreground mb-2">FunkHub {displayVersion}</h3>
+          <h3 className="font-semibold text-foreground mb-2">{t("settings.aboutTitle", "FunkHub")} {displayVersion}</h3>
           <p className="text-sm text-muted-foreground">
-            A Friday Night Funkin Mod Launcher
+            {t("settings.aboutDescription", "A Friday Night Funkin Mod Launcher")}
           </p>
           <div className="mt-4 flex items-center justify-center gap-3">
             <a
               href="https://x.com/immalloy"
               target="_blank"
               rel="noopener noreferrer"
-              title="Creator"
-              aria-label="Creator"
+              title={t("settings.creator", "Creator")}
+              aria-label={t("settings.creator", "Creator")}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-secondary/50 hover:bg-secondary transition-colors"
             >
               <Twitter className="w-4.5 h-4.5" />
@@ -609,8 +609,8 @@ export function Settings() {
               href="https://discord.gg/cdP7JhDv4u"
               target="_blank"
               rel="noopener noreferrer"
-              title="Discord Server"
-              aria-label="Discord Server"
+              title={t("settings.discordServer", "Discord Server")}
+              aria-label={t("settings.discordServer", "Discord Server")}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-secondary/50 hover:bg-secondary transition-colors"
             >
               <MessageCircle className="w-4.5 h-4.5" />
