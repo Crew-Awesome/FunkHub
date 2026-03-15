@@ -572,14 +572,18 @@ async function installArchiveInternal(webContents, payload) {
         await flattenSingleTopFolder(extractTempPath);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Extraction failed";
-        if (mode === "mod" && /exit code 2/i.test(message)) {
+        if (mode === "mod") {
           emitProgress(webContents, {
             jobId,
             phase: "install",
             progress: 0.9,
             message: treatAsStandaloneMod
-              ? "Archive extraction failed; keeping package for manual launcher setup"
-              : "Archive extraction failed; saving package as raw file",
+              ? (/exit code 2/i.test(message)
+                ? "Archive extraction unsupported for this format; keeping package for manual launcher setup"
+                : "Archive extraction failed; keeping package for manual launcher setup")
+              : (/exit code 2/i.test(message)
+                ? "Archive extraction unsupported for this format; saving package as raw file"
+                : "Archive extraction failed; saving package as raw file"),
             timestamp: now(),
           });
           finalInstallPath = treatAsStandaloneMod

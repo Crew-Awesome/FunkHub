@@ -127,7 +127,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="h-[90vh] w-[min(98vw,1780px)] max-w-none overflow-hidden p-0">
+      <DialogContent className="h-[90vh] w-[min(96vw,1700px)] max-w-none overflow-hidden p-0 sm:max-w-none">
         <DialogHeader className="sticky top-0 z-10 bg-card border-b border-border px-5 py-4">
           <DialogTitle>Mod Visualizer</DialogTitle>
         </DialogHeader>
@@ -141,17 +141,22 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
         )}
 
         {!loading && !error && profile && (
-          <div className="h-[calc(90vh-70px)] p-4 md:p-6">
-            <div className="grid h-full grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(430px,0.7fr)]">
-              <section className="min-h-0 space-y-5 overflow-y-auto pr-1">
-                <div className="overflow-hidden rounded-xl border border-border bg-secondary/30">
+          <div className="h-[calc(90vh-72px)] p-4 md:p-6">
+            <div className="grid h-full grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(420px,0.8fr)]">
+              <section className="min-h-0 overflow-y-auto pr-1">
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <h3 className="text-2xl font-bold text-foreground">{profile.name}</h3>
+                  {categoryLabel && <p className="mt-1 text-sm text-muted-foreground">{categoryLabel}</p>}
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-xl border border-border bg-secondary/30">
                   {mediaGallery.length > 0 ? (
                     <>
-                      <div className="relative">
+                      <div className="relative aspect-video w-full bg-secondary/40">
                         <img
                           src={mediaGallery[Math.min(activeMediaIndex, mediaGallery.length - 1)]}
                           alt={profile.name}
-                          className="h-[320px] w-full object-cover lg:h-[480px]"
+                          className="h-full w-full object-cover"
                         />
                         {mediaGallery.length > 1 && (
                           <>
@@ -191,19 +196,19 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                       )}
                     </>
                   ) : (
-                    <div className="flex min-h-[280px] items-center justify-center text-sm text-muted-foreground">
+                    <div className="flex min-h-[360px] items-center justify-center text-sm text-muted-foreground">
                       No preview image
                     </div>
                   )}
                 </div>
 
-                <div className="rounded-xl border border-border bg-card p-4">
+                <div className="mt-4 rounded-xl border border-border bg-card p-4">
                   <h4 className="mb-2 text-sm font-semibold text-foreground">Description</h4>
                   <p className="text-sm leading-relaxed text-muted-foreground">{plainText(profile.description ?? profile.text)}</p>
                 </div>
 
                 {profile.credits.length > 0 && (
-                  <div className="rounded-xl border border-border bg-card p-4">
+                  <div className="mt-4 rounded-xl border border-border bg-card p-4">
                     <h4 className="mb-3 text-sm font-semibold text-foreground">Credits</h4>
                     <div className="space-y-2">
                       {profile.credits.map((group) => (
@@ -235,12 +240,9 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                 )}
               </section>
 
-              <aside className="min-h-0 space-y-4 overflow-y-auto pr-1">
+              <aside className="min-h-0 overflow-y-auto pr-1">
                 <div className="rounded-xl border border-border bg-card p-4">
-                  <h3 className="text-xl font-bold text-foreground">{profile.name}</h3>
-                  {categoryLabel && <p className="mt-1 text-sm text-muted-foreground">{categoryLabel}</p>}
-
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="rounded-lg bg-secondary/60 p-3">
                       <p className="text-xs text-muted-foreground">Downloads</p>
                       <p className="font-semibold text-foreground">{formatDownloads(profile.downloadCount)}</p>
@@ -309,7 +311,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                   )}
                 </div>
 
-                <div className="rounded-xl border border-border bg-card p-4">
+                <div className="mt-4 rounded-xl border border-border bg-card p-4">
                   <h4 className="mb-3 text-sm font-semibold text-foreground">Files</h4>
                   <div className="space-y-3">
                     {profile.files.length === 0 && (
