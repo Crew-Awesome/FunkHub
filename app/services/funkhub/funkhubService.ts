@@ -900,29 +900,39 @@ export class FunkHubService {
     funkHubStorageService.saveDownloadHistory(this.downloadHistory);
   }
 
-  queueInstall(modId: number, fileId: number, selectedEngineId?: string, priority = 0): DownloadTask {
+  private queueInstallTask(input: {
+    modId: number;
+    fileId: number;
+    selectedEngineId?: string;
+    priority?: number;
+    downloadUrlOverride?: string;
+  }): DownloadTask {
     const abortController = new AbortController();
-    const taskId = `${modId}-${fileId}-${Date.now()}`;
+    const taskId = `${input.modId}-${input.fileId}-${Date.now()}`;
 
     return downloadManager.enqueue({
       task: {
         id: taskId,
-        modId,
-        fileId,
-        fileName: `file-${fileId}`,
-        priority,
+        modId: input.modId,
+        fileId: input.fileId,
+        fileName: `file-${input.fileId}`,
+        priority: input.priority,
       },
       cancel: () => abortController.abort(),
       run: async (task, update) => {
-        const profile = await this.getModProfile(modId);
-        const selectedFile = profile.files.find((file) => file.id === fileId) ?? profile.files[0];
+        const profile = await this.getModProfile(input.modId);
+        const profileFile = profile.files.find((file) => file.id === input.fileId) ?? profile.files[0];
 
-        if (!selectedFile) {
+        if (!profileFile) {
           throw new Error("Selected file is missing or has been removed.");
         }
 
-        const preferredEngine = selectedEngineId
-          ? this.installedEngines.find((engine) => engine.id === selectedEngineId)
+        const selectedFile = input.downloadUrlOverride
+          ? { ...profileFile, downloadUrl: input.downloadUrlOverride }
+          : profileFile;
+
+        const preferredEngine = input.selectedEngineId
+          ? this.installedEngines.find((engine) => engine.id === input.selectedEngineId)
           : undefined;
 
         const requiredHint = modInstallerService.detectRequiredEngine(profile);
@@ -993,7 +1003,7 @@ export class FunkHubService {
           return;
         }
 
-        const response = await fetch(`https://gamebanana.com/dl/${selectedFile.id}`, {
+        const response = await fetch(selectedFile.downloadUrl || `https://gamebanana.com/dl/${selectedFile.id}`, {
           signal: abortController.signal,
         });
 
@@ -1046,6 +1056,33 @@ export class FunkHubService {
           message: "Downloaded (desktop bridge unavailable)",
         });
       },
+    });
+  }
+
+  queueProtocolInstall(input: {
+    modId: number;
+    selectedEngineId?: string;
+    priority?: number;
+    fileId?: number;
+    downloadUrl?: string;
+  }): DownloadTask {
+    const fromUrl = input.downloadUrl?.match(/\/dl\/(\d+)/i);
+    const resolvedFileId = input.fileId ?? (fromUrl ? Number(fromUrl[1]) : 0);
+    return this.queueInstallTask({
+      modId: input.modId,
+      fileId: resolvedFileId,
+      selectedEngineId: input.selectedEngineId,
+      priority: input.priority ?? 20,
+      downloadUrlOverride: input.downloadUrl,
+    });
+  }
+
+  queueInstall(modId: number, fileId: number, selectedEngineId?: string, priority = 0): DownloadTask {
+    return this.queueInstallTask({
+      modId,
+      fileId,
+      selectedEngineId,
+      priority,
     });
   }
 }

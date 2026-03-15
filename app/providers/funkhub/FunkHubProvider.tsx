@@ -143,22 +143,33 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     handledDeepLinksRef.current.add(rawUrl);
 
     try {
-      const parsed = new URL(rawUrl);
-      if (parsed.protocol !== "funkhub:") {
+      if (!rawUrl.startsWith("funkhub:")) {
         return;
       }
 
-      const action = (parsed.hostname || parsed.pathname.replace(/^\//, "")).toLowerCase();
-      if (action !== "install") {
-        return;
+      let modId = 0;
+      let engineParam = "";
+      let archiveUrl = "";
+
+      if (/^funkhub:\/\/install\?/i.test(rawUrl) || /^funkhub:install\?/i.test(rawUrl)) {
+        const parsed = new URL(rawUrl.replace(/^funkhub:install\?/i, "funkhub://install?"));
+        modId = Number(parsed.searchParams.get("mod") || parsed.searchParams.get("mod_id") || "0");
+        engineParam = (parsed.searchParams.get("engine") || "").trim().toLowerCase();
+        archiveUrl = (parsed.searchParams.get("url") || parsed.searchParams.get("archive") || "").trim();
+      } else {
+        const payload = rawUrl.replace(/^funkhub:\/\//i, "").replace(/^funkhub:/i, "");
+        const parts = payload.split(",");
+        if (parts.length < 3) {
+          throw new Error("Invalid protocol URL format. Expected funkhub://[ARCHIVE_URL],[MOD_TYPE],[MOD_ID]");
+        }
+        archiveUrl = decodeURIComponent(parts[0].trim());
+        modId = Number(decodeURIComponent(parts[2].trim()) || "0");
       }
 
-      const modId = Number(parsed.searchParams.get("mod") || "0");
       if (!Number.isFinite(modId) || modId <= 0) {
         throw new Error("Invalid mod id in protocol URL");
       }
 
-      const engineParam = (parsed.searchParams.get("engine") || "").trim().toLowerCase();
       const selectedEngine = engineParam
         ? installedEngines.find((engine) => (
           engine.id.toLowerCase() === engineParam
@@ -171,13 +182,27 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         throw new Error(`Engine '${engineParam}' is not installed`);
       }
 
+      if (archiveUrl && !/^https?:\/\//i.test(archiveUrl)) {
+        throw new Error("Protocol archive URL must be http/https");
+      }
+
       const profile = await funkHubService.getModProfile(modId);
-      const firstFile = profile.files[0];
-      if (!firstFile) {
+      if (profile.files.length === 0) {
         throw new Error("No downloadable files found for this mod");
       }
 
-      funkHubService.queueInstall(modId, firstFile.id, selectedEngine?.id, 20);
+      const fileIdFromUrl = archiveUrl.match(/\/dl\/(\d+)/i);
+      const selectedFileId = fileIdFromUrl
+        ? Number(fileIdFromUrl[1])
+        : profile.files[0].id;
+
+      funkHubService.queueProtocolInstall({
+        modId,
+        fileId: selectedFileId,
+        downloadUrl: archiveUrl || undefined,
+        selectedEngineId: selectedEngine?.id,
+        priority: 20,
+      });
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Failed to process protocol install URL");
     }
