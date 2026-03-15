@@ -82,7 +82,7 @@ const componentPayload = {
 };
 
 if (!existingComponent) {
-  const fileFormats = ["i18next_json", "i18next", "json", "json-nested"];
+  const fileFormats = ["i18next", "json", "json-nested"];
   let lastError;
   for (const fileFormat of fileFormats) {
     try {

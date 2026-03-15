@@ -21,7 +21,7 @@
     "commitAuthor": "Weblate <noreply@funkhub-translations>",
     "enableSuggestions": "1",
     "suggestionVoting": "1",
-    "suggestionAutoAccept": "1",
+    "suggestionAutoAccept": "0",
     "pushOnCommit": "1",
     "languageRegex": "^[a-z]{2}(-[A-Z]{2})?$"
   }
