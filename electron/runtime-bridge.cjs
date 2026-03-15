@@ -8,7 +8,13 @@ const { app } = require("electron");
 const { path7za } = require("7zip-bin");
 
 const ARCHIVE_EXTENSIONS = [".zip", ".rar", ".7z"];
+const GITHUB_RELEASES_URL = "https://github.com/Crew-Awesome/FunkHub/releases/latest";
 const jobState = new Map();
+const appUpdateState = {
+  initialized: false,
+  autoUpdater: null,
+  lastInfo: null,
+};
 
 function resolve7zipBinaryPath() {
   const candidates = [];
@@ -68,6 +74,156 @@ function getItchAuthFilePath() {
 
 function now() {
   return Date.now();
+}
+
+function normalizeVersionParts(version) {
+  const cleaned = String(version || "").trim().replace(/^v/i, "");
+  const parts = cleaned.split(/[^0-9]+/).filter(Boolean).slice(0, 3).map((part) => Number(part));
+  while (parts.length < 3) {
+    parts.push(0);
+  }
+  return parts.map((part) => (Number.isFinite(part) ? part : 0));
+}
+
+function compareVersions(a, b) {
+  const left = normalizeVersionParts(a);
+  const right = normalizeVersionParts(b);
+  for (let index = 0; index < 3; index += 1) {
+    if (left[index] > right[index]) {
+      return 1;
+    }
+    if (left[index] < right[index]) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+function emitAppUpdateStatus(payload) {
+  const { BrowserWindow } = require("electron");
+  const windows = BrowserWindow.getAllWindows();
+  for (const win of windows) {
+    if (win.isDestroyed()) {
+      continue;
+    }
+    win.webContents.send("funkhub:app-update", {
+      ...payload,
+      timestamp: now(),
+    });
+  }
+}
+
+function mapUpdaterInfo(updateInfo) {
+  const currentVersion = String(app.getVersion() || "0.0.0").replace(/^v/i, "");
+  const latestVersion = String(updateInfo?.version || currentVersion).replace(/^v/i, "");
+  const releaseName = String(updateInfo?.releaseName || `FunkHub v${latestVersion}`);
+  const releaseNotes = updateInfo?.releaseNotes;
+  let notes = "";
+  if (Array.isArray(releaseNotes)) {
+    notes = releaseNotes.map((entry) => {
+      if (entry && typeof entry.note === "string") {
+        return entry.note;
+      }
+      return "";
+    }).filter(Boolean).join("\n\n");
+  } else if (typeof releaseNotes === "string") {
+    notes = releaseNotes;
+  }
+
+  return {
+    available: compareVersions(latestVersion, currentVersion) > 0,
+    currentVersion,
+    latestVersion,
+    releaseName,
+    releaseUrl: GITHUB_RELEASES_URL,
+    publishedAt: typeof updateInfo?.releaseDate === "string" ? updateInfo.releaseDate : undefined,
+    notes,
+  };
+}
+
+function canUseNativeAutoUpdater() {
+  if (!app.isPackaged) {
+    return false;
+  }
+  if (process.platform !== "win32" && process.platform !== "darwin") {
+    return false;
+  }
+  const version = String(app.getVersion() || "").toLowerCase();
+  if (version.includes("nightly") || version.includes("indev")) {
+    return false;
+  }
+  return true;
+}
+
+function ensureAppUpdaterInitialized() {
+  if (appUpdateState.initialized && appUpdateState.autoUpdater) {
+    return appUpdateState.autoUpdater;
+  }
+
+  const { autoUpdater } = require("electron-updater");
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.allowDowngrade = false;
+  autoUpdater.setFeedURL({
+    provider: "github",
+    owner: "Crew-Awesome",
+    repo: "FunkHub",
+    private: false,
+  });
+
+  autoUpdater.on("checking-for-update", () => {
+    emitAppUpdateStatus({ status: "checking", message: "Checking for app updates" });
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    const mapped = mapUpdaterInfo(info);
+    appUpdateState.lastInfo = mapped;
+    emitAppUpdateStatus({ status: "available", info: mapped, message: "Update available" });
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    const info = {
+      available: false,
+      currentVersion: String(app.getVersion() || "0.0.0").replace(/^v/i, ""),
+      latestVersion: String(app.getVersion() || "0.0.0").replace(/^v/i, ""),
+      releaseName: "No update",
+      releaseUrl: GITHUB_RELEASES_URL,
+      notes: "You are on the latest version.",
+    };
+    appUpdateState.lastInfo = info;
+    emitAppUpdateStatus({ status: "idle", info, message: "No updates available" });
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    emitAppUpdateStatus({
+      status: "downloading",
+      info: appUpdateState.lastInfo || undefined,
+      progress: Number(progress?.percent || 0),
+      downloadedBytes: Number(progress?.transferred || 0),
+      totalBytes: Number(progress?.total || 0),
+      speedBytesPerSecond: Number(progress?.bytesPerSecond || 0),
+      message: "Downloading update",
+    });
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    const mapped = mapUpdaterInfo(info);
+    appUpdateState.lastInfo = mapped;
+    emitAppUpdateStatus({ status: "downloaded", info: mapped, progress: 100, message: "Update ready to install" });
+  });
+
+  autoUpdater.on("error", (error) => {
+    emitAppUpdateStatus({
+      status: "error",
+      info: appUpdateState.lastInfo || undefined,
+      message: error instanceof Error ? error.message : "App update failed",
+    });
+  });
+
+  appUpdateState.initialized = true;
+  appUpdateState.autoUpdater = autoUpdater;
+  return autoUpdater;
 }
 
 function isArchive(filePath) {
@@ -1656,6 +1812,82 @@ async function handleUpdateSettings(payload) {
   return next;
 }
 
+async function handleCheckAppUpdate() {
+  if (!canUseNativeAutoUpdater()) {
+    const currentVersion = String(app.getVersion() || "0.0.0").replace(/^v/i, "");
+    return {
+      ok: true,
+      info: {
+        available: false,
+        currentVersion,
+        latestVersion: currentVersion,
+        releaseName: "Auto updater unavailable",
+        releaseUrl: GITHUB_RELEASES_URL,
+        notes: process.platform === "linux"
+          ? "In-app auto updates are not enabled on Linux builds yet."
+          : "In-app auto updates are unavailable in this build.",
+      },
+    };
+  }
+
+  try {
+    const updater = ensureAppUpdaterInitialized();
+    const result = await updater.checkForUpdates();
+    const mapped = mapUpdaterInfo(result?.updateInfo || {});
+    appUpdateState.lastInfo = mapped;
+    return { ok: true, info: mapped };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Failed to check app update",
+    };
+  }
+}
+
+async function handleDownloadAppUpdate() {
+  if (!canUseNativeAutoUpdater()) {
+    return {
+      ok: false,
+      error: process.platform === "linux"
+        ? "In-app auto download is not enabled on Linux builds yet."
+        : "In-app auto download is unavailable in this build.",
+    };
+  }
+
+  try {
+    const updater = ensureAppUpdaterInitialized();
+    await updater.downloadUpdate();
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Failed to download app update",
+    };
+  }
+}
+
+async function handleInstallAppUpdate() {
+  if (!canUseNativeAutoUpdater()) {
+    return {
+      ok: false,
+      error: "In-app update install is unavailable in this build.",
+    };
+  }
+
+  try {
+    const updater = ensureAppUpdaterInitialized();
+    setTimeout(() => {
+      updater.quitAndInstall(false, true);
+    }, 200);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Failed to install app update",
+    };
+  }
+}
+
 module.exports = {
   handleInstallArchive,
   handleInstallEngine,
@@ -1676,4 +1908,7 @@ module.exports = {
   handleImportModFolder,
   handleGetSettings,
   handleUpdateSettings,
+  handleCheckAppUpdate,
+  handleDownloadAppUpdate,
+  handleInstallAppUpdate,
 };

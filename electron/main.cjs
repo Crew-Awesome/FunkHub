@@ -20,6 +20,9 @@ const {
   handleImportModFolder,
   handleGetSettings,
   handleUpdateSettings,
+  handleCheckAppUpdate,
+  handleDownloadAppUpdate,
+  handleInstallAppUpdate,
 } = require("./runtime-bridge.cjs");
 
 let mainWindow = null;
@@ -181,6 +184,18 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:openExternalUrl", async (_event, payload) => {
     return handleOpenExternalUrl(payload);
+  });
+
+  ipcMain.handle("funkhub:checkAppUpdate", async () => {
+    return handleCheckAppUpdate();
+  });
+
+  ipcMain.handle("funkhub:downloadAppUpdate", async () => {
+    return handleDownloadAppUpdate();
+  });
+
+  ipcMain.handle("funkhub:installAppUpdate", async () => {
+    return handleInstallAppUpdate();
   });
 
   ipcMain.handle("funkhub:deletePath", async (_event, payload) => {

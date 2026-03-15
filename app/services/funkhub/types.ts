@@ -275,10 +275,14 @@ export interface DesktopBridge {
   pickFile: (payload?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => Promise<{ canceled: boolean; path?: string }>;
   openAnyPath: (payload: { targetPath: string }) => Promise<{ ok: boolean; openedPath?: string; error?: string }>;
   openExternalUrl: (payload: { url: string }) => Promise<{ ok: boolean; error?: string }>;
+  checkAppUpdate: () => Promise<{ ok: boolean; info?: AppUpdateInfo; error?: string }>;
+  downloadAppUpdate: () => Promise<{ ok: boolean; error?: string }>;
+  installAppUpdate: () => Promise<{ ok: boolean; error?: string }>;
   getSettings: () => Promise<Partial<FunkHubSettings>>;
   updateSettings: (payload: Partial<FunkHubSettings>) => Promise<Partial<FunkHubSettings>>;
   getPendingDeepLinks: () => Promise<{ links: string[] }>;
   onDeepLink: (listener: (payload: { url: string }) => void) => () => void;
+  onAppUpdateStatus: (listener: (payload: DesktopAppUpdateStatus) => void) => () => void;
 }
 
 export interface ModUpdateInfo {
@@ -300,6 +304,17 @@ export interface AppUpdateInfo {
   publishedAt?: string;
   notes?: string;
   downloadUrl?: string;
+}
+
+export interface DesktopAppUpdateStatus {
+  status: "idle" | "checking" | "available" | "downloading" | "downloaded" | "error";
+  info?: AppUpdateInfo;
+  progress?: number;
+  downloadedBytes?: number;
+  totalBytes?: number;
+  speedBytesPerSecond?: number;
+  message?: string;
+  timestamp: number;
 }
 
 export interface InstalledEngine {

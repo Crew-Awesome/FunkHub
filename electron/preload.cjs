@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld("funkhubDesktop", {
   openPath: (payload) => ipcRenderer.invoke("funkhub:openPath", payload),
   openAnyPath: (payload) => ipcRenderer.invoke("funkhub:openAnyPath", payload),
   openExternalUrl: (payload) => ipcRenderer.invoke("funkhub:openExternalUrl", payload),
+  checkAppUpdate: () => ipcRenderer.invoke("funkhub:checkAppUpdate"),
+  downloadAppUpdate: () => ipcRenderer.invoke("funkhub:downloadAppUpdate"),
+  installAppUpdate: () => ipcRenderer.invoke("funkhub:installAppUpdate"),
   deletePath: (payload) => ipcRenderer.invoke("funkhub:deletePath", payload),
   getItchAuthStatus: () => ipcRenderer.invoke("funkhub:getItchAuthStatus"),
   clearItchAuth: () => ipcRenderer.invoke("funkhub:clearItchAuth"),
@@ -35,6 +38,13 @@ contextBridge.exposeInMainWorld("funkhubDesktop", {
     ipcRenderer.on("funkhub:install-progress", wrapped);
     return () => {
       ipcRenderer.removeListener("funkhub:install-progress", wrapped);
+    };
+  },
+  onAppUpdateStatus: (listener) => {
+    const wrapped = (_event, payload) => listener(payload);
+    ipcRenderer.on("funkhub:app-update", wrapped);
+    return () => {
+      ipcRenderer.removeListener("funkhub:app-update", wrapped);
     };
   },
 });

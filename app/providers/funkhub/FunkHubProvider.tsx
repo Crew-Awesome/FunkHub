@@ -3,6 +3,7 @@ import { funkHubService } from "../../services/funkhub";
 import {
   AppUpdateInfo,
   CategoryNode,
+  DesktopAppUpdateStatus,
   DownloadTask,
   EngineDefinition,
   FunkHubSettings,
@@ -85,6 +86,9 @@ interface FunkHubContextValue {
   appUpdateChecking: boolean;
   checkAppUpdate: () => Promise<void>;
   openAppUpdateDownload: () => Promise<void>;
+  downloadAppUpdate: () => Promise<void>;
+  installAppUpdate: () => Promise<void>;
+  appUpdateStatus?: DesktopAppUpdateStatus;
 }
 
 const FunkHubContext = createContext<FunkHubContextValue | undefined>(undefined);
@@ -113,6 +117,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | undefined>(undefined);
   const [appUpdateChecking, setAppUpdateChecking] = useState(false);
   const [appUpdateError, setAppUpdateError] = useState<string | undefined>(undefined);
+  const [appUpdateStatus, setAppUpdateStatus] = useState<DesktopAppUpdateStatus | undefined>(
+    funkHubService.getDesktopAppUpdateStatus(),
+  );
   const startupUpdateCheckedRef = useRef(false);
   const t = useCallback((key: string, fallback: string, vars?: Record<string, string | number>) => {
     return translate(normalizeLocale(settings.locale), key, fallback, vars);
@@ -168,6 +175,14 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     const targetUrl = appUpdate.downloadUrl || appUpdate.releaseUrl;
     await funkHubService.openExternalUrl(targetUrl);
   }, [appUpdate]);
+
+  const downloadAppUpdate = useCallback(async () => {
+    await funkHubService.downloadAppUpdate();
+  }, []);
+
+  const installAppUpdate = useCallback(async () => {
+    await funkHubService.installAppUpdate();
+  }, []);
 
   const getModProfile = useCallback((modId: number) => funkHubService.getModProfile(modId), []);
 
@@ -420,6 +435,26 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   }, [handleDeepLink]);
 
   useEffect(() => {
+    if (!window.funkhubDesktop?.onAppUpdateStatus) {
+      return;
+    }
+
+    const unsubscribe = window.funkhubDesktop.onAppUpdateStatus((payload) => {
+      setAppUpdateStatus(payload);
+      if (payload.info) {
+        setAppUpdate(payload.info);
+      }
+      if (payload.status === "error") {
+        setAppUpdateError(payload.message || t("updates.autoUpdaterError", "App update failed"));
+      }
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [t]);
+
+  useEffect(() => {
     if (startupUpdateCheckedRef.current) {
       return;
     }
@@ -435,7 +470,15 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       .then(async (latest) => {
         setAppUpdate(latest);
         if (latest.available && settings.autoDownloadAppUpdates) {
-          await funkHubService.openExternalUrl(latest.downloadUrl || latest.releaseUrl);
+          if (window.funkhubDesktop?.downloadAppUpdate) {
+            try {
+              await funkHubService.downloadAppUpdate();
+            } catch {
+              await funkHubService.openExternalUrl(latest.downloadUrl || latest.releaseUrl);
+            }
+          } else {
+            await funkHubService.openExternalUrl(latest.downloadUrl || latest.releaseUrl);
+          }
         }
       })
       .catch((error) => {
@@ -579,6 +622,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       appUpdateChecking,
       checkAppUpdate,
       openAppUpdateDownload,
+      downloadAppUpdate,
+      installAppUpdate,
+      appUpdateStatus,
     }),
     [
       loading,
@@ -596,6 +642,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       appUpdate,
       appUpdateError,
       appUpdateChecking,
+      appUpdateStatus,
       selectedCategoryId,
       discoverSort,
       discoverPage,
@@ -606,6 +653,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       refreshModUpdates,
       checkAppUpdate,
       openAppUpdateDownload,
+      downloadAppUpdate,
+      installAppUpdate,
       getModProfile,
       listModsBySubmitter,
     ],

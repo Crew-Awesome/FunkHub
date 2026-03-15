@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS, funkHubStorageService } from "./storage";
 import {
   AppUpdateInfo,
   CategoryNode,
+  DesktopAppUpdateStatus,
   DownloadTask,
   EngineDefinition,
   EngineHealth,
@@ -109,6 +110,10 @@ export class FunkHubService {
 
   private desktopProgressUnsubscribe: (() => void) | undefined;
 
+  private desktopAppUpdateUnsubscribe: (() => void) | undefined;
+
+  private desktopAppUpdateStatus: DesktopAppUpdateStatus | undefined;
+
   constructor() {
     this.settings = funkHubStorageService.getSettings();
     this.installedMods = funkHubStorageService.getInstalledMods();
@@ -127,6 +132,7 @@ export class FunkHubService {
     }
 
     this.setupDesktopProgressBridge();
+    this.setupDesktopAppUpdateBridge();
   }
 
   getSettings(): FunkHubSettings {
@@ -254,10 +260,50 @@ export class FunkHubService {
       };
     }
 
+    const platform = detectClientPlatform();
+
+    if (window.funkhubDesktop?.checkAppUpdate && (platform === "windows" || platform === "macos")) {
+      const result = await window.funkhubDesktop.checkAppUpdate();
+      if (!result.ok) {
+        throw new Error(result.error || "Update check failed");
+      }
+      if (result.info) {
+        return result.info;
+      }
+    }
+
     return checkLatestAppUpdate({
       currentVersion,
-      platform: detectClientPlatform(),
+      platform,
     });
+  }
+
+  getDesktopAppUpdateStatus(): DesktopAppUpdateStatus | undefined {
+    return this.desktopAppUpdateStatus
+      ? { ...this.desktopAppUpdateStatus }
+      : undefined;
+  }
+
+  async downloadAppUpdate(): Promise<void> {
+    if (!window.funkhubDesktop?.downloadAppUpdate) {
+      throw new Error("Desktop auto updater is unavailable");
+    }
+
+    const result = await window.funkhubDesktop.downloadAppUpdate();
+    if (!result.ok) {
+      throw new Error(result.error || "Failed to download app update");
+    }
+  }
+
+  async installAppUpdate(): Promise<void> {
+    if (!window.funkhubDesktop?.installAppUpdate) {
+      throw new Error("Desktop auto updater is unavailable");
+    }
+
+    const result = await window.funkhubDesktop.installAppUpdate();
+    if (!result.ok) {
+      throw new Error(result.error || "Failed to install app update");
+    }
   }
 
   async reconcileDiskState(): Promise<void> {
@@ -356,6 +402,16 @@ export class FunkHubService {
         message: payload.message,
         error: payload.phase === "error" ? payload.message : existing.error,
       });
+    });
+  }
+
+  private setupDesktopAppUpdateBridge(): void {
+    if (!window.funkhubDesktop?.onAppUpdateStatus) {
+      return;
+    }
+
+    this.desktopAppUpdateUnsubscribe = window.funkhubDesktop.onAppUpdateStatus((payload) => {
+      this.desktopAppUpdateStatus = payload;
     });
   }
 
