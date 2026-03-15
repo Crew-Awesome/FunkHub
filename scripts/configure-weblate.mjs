@@ -12,6 +12,8 @@ const config = JSON.parse(configRaw);
 
 const projectSlug = config.project.slug;
 const strictSync = String(process.env.WEBLATE_STRICT_SYNC || "false").toLowerCase() === "true";
+const apiRetries = Number(process.env.WEBLATE_API_RETRIES || 5);
+const retryDelayMs = Number(process.env.WEBLATE_API_RETRY_DELAY_MS || 1000);
 
 function isGithubHostKeyError(message) {
   const normalized = message.toLowerCase();
@@ -19,28 +21,83 @@ function isGithubHostKeyError(message) {
     || normalized.includes("no ed25519 host key is known for github.com");
 }
 
-async function api(pathname, { method = "GET", body } = {}) {
-  const response = await fetch(`${WEBLATE_URL}${pathname}`, {
-    method,
-    headers: {
-      Authorization: `Token ${token}`,
-      Accept: "application/json",
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
+function isRetryableStatus(status) {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
   });
+}
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Weblate API ${method} ${pathname} failed: ${response.status} ${response.statusText} :: ${text}`);
+function toPathname(pathOrUrl) {
+  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
+    const parsed = new URL(pathOrUrl);
+    return `${parsed.pathname}${parsed.search}`;
+  }
+  return pathOrUrl;
+}
+
+async function api(pathOrUrl, { method = "GET", body } = {}) {
+  const pathname = toPathname(pathOrUrl);
+  let attempt = 0;
+
+  while (true) {
+    attempt += 1;
+    let response;
+
+    try {
+      response = await fetch(`${WEBLATE_URL}${pathname}`, {
+        method,
+        headers: {
+          Authorization: `Token ${token}`,
+          Accept: "application/json",
+          ...(body ? { "Content-Type": "application/json" } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (error) {
+      if (attempt < apiRetries) {
+        const delay = retryDelayMs * attempt;
+        console.warn(`[warn] Weblate API ${method} ${pathname} network error on attempt ${attempt}/${apiRetries}: ${error instanceof Error ? error.message : String(error)}. Retrying in ${delay}ms...`);
+        await sleep(delay);
+        continue;
+      }
+      throw error;
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      if (attempt < apiRetries && isRetryableStatus(response.status)) {
+        const delay = retryDelayMs * attempt;
+        console.warn(`[warn] Weblate API ${method} ${pathname} returned ${response.status} on attempt ${attempt}/${apiRetries}. Retrying in ${delay}ms...`);
+        await sleep(delay);
+        continue;
+      }
+      throw new Error(`Weblate API ${method} ${pathname} failed: ${response.status} ${response.statusText} :: ${text}`);
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      return {};
+    }
+
+    return response.json();
+  }
+}
+
+async function listAllResults(pathname) {
+  let nextPath = pathname;
+  const results = [];
+
+  while (nextPath) {
+    const page = await api(nextPath);
+    results.push(...(page.results || []));
+    nextPath = page.next ? toPathname(page.next) : null;
   }
 
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    return {};
-  }
-
-  return response.json();
+  return results;
 }
 
 async function tryPatchComponent(project, component, body) {
@@ -165,6 +222,25 @@ if (!existingComponent) {
 await tryPatchComponent(projectSlug, config.component.slug, {
   commit_author: config.component.commitAuthor,
 });
+
+const allowedLanguageCodes = new Set((config.component.allowedLanguages || []).map((code) => String(code)));
+if (allowedLanguageCodes.size > 0) {
+  const translations = await listAllResults(`/api/components/${projectSlug}/${config.component.slug}/translations/?page_size=1000`);
+  for (const translation of translations) {
+    const languageCode = String(translation.language_code || translation.language?.code || "");
+    if (!languageCode || allowedLanguageCodes.has(languageCode)) {
+      continue;
+    }
+
+    try {
+      await api(translation.url, { method: "DELETE" });
+      console.log(`[info] removed disallowed translation '${languageCode}' from '${config.component.slug}'`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[warn] failed removing translation '${languageCode}': ${message}`);
+    }
+  }
+}
 
 const repositoryOperationFailures = [];
 for (const operation of ["pull", "file-scan", "commit", "push"]) {
