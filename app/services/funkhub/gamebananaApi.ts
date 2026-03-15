@@ -297,7 +297,7 @@ export class GameBananaApiService {
     };
   }
 
-  async listMods({ page = 1, perPage = 20, categoryId, sort = "Generic_NewAndUpdated" }: ListModsParams = {}): Promise<GameBananaModSummary[]> {
+  async listMods({ page = 1, perPage = 20, categoryId, submitterId, sort = "Generic_NewAndUpdated" }: ListModsParams = {}): Promise<GameBananaModSummary[]> {
     const url = new URL(`${APIV11_BASE}/Mod/Index`);
     url.searchParams.set("_nPage", String(page));
     url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
@@ -306,6 +306,9 @@ export class GameBananaApiService {
 
     if (categoryId) {
       url.searchParams.set("_aFilters[Generic_Category]", String(categoryId));
+    }
+    if (submitterId) {
+      url.searchParams.set("_aFilters[Generic_Submitter]", String(submitterId));
     }
 
     const cacheKey = `listMods:${url.toString()}`;

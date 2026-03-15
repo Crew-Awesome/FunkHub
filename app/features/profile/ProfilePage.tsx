@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { UserCircle2, Wrench, Clock3 } from "lucide-react";
+import { UserCircle2 } from "lucide-react";
 
 export function Profile() {
   return (
@@ -15,27 +15,9 @@ export function Profile() {
 
         <h1 className="text-2xl font-bold text-foreground">Profile Coming Soon</h1>
         <p className="mt-3 text-muted-foreground">
-          We are still building account features. This section will include account linking,
-          cloud sync, preferences, and diagnostics export.
+          We are still building account features. This section will include account linking
+          and creator-focused profile tools.
         </p>
-
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
-          <div className="rounded-lg border border-border p-3">
-            <Wrench className="w-4 h-4 text-primary mb-2" />
-            <p className="text-sm font-medium text-foreground">Account Linking</p>
-            <p className="text-xs text-muted-foreground mt-1">GameBanana and itch.io integration</p>
-          </div>
-          <div className="rounded-lg border border-border p-3">
-            <Clock3 className="w-4 h-4 text-primary mb-2" />
-            <p className="text-sm font-medium text-foreground">Activity History</p>
-            <p className="text-xs text-muted-foreground mt-1">Install, update, and launch timeline</p>
-          </div>
-          <div className="rounded-lg border border-border p-3">
-            <Wrench className="w-4 h-4 text-primary mb-2" />
-            <p className="text-sm font-medium text-foreground">Diagnostics</p>
-            <p className="text-xs text-muted-foreground mt-1">One-click issue report package</p>
-          </div>
-        </div>
       </motion.div>
     </div>
   );

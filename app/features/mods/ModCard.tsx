@@ -1,15 +1,15 @@
 import { motion } from "motion/react";
-import { Download, Star, Eye } from "lucide-react";
+import { Download, Heart, UserCircle2 } from "lucide-react";
 
 interface ModCardProps {
   id?: number;
   title: string;
   author: string;
   thumbnail: string;
-  rating?: number;
+  likes?: number;
   downloads?: string | number;
-  onInstall?: () => void;
   onView?: () => void;
+  onAuthorClick?: () => void;
   statusLabel?: string;
 }
 
@@ -31,12 +31,26 @@ function formatDownloads(value: string | number | undefined): string {
   return "0";
 }
 
-export function ModCard({ title, author, thumbnail, rating = 0, downloads, onInstall, onView, statusLabel }: ModCardProps) {
+function formatLikes(value: number | undefined): string {
+  if (!value || value < 0) {
+    return "0";
+  }
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(1)}K`;
+  }
+  return String(value);
+}
+
+export function ModCard({ title, author, thumbnail, likes, downloads, onView, onAuthorClick, statusLabel }: ModCardProps) {
   return (
     <motion.div
       className="bg-card rounded-xl overflow-hidden border border-border group cursor-pointer"
-      whileHover={{ y: -4, boxShadow: "0 8px 24px rgba(79, 140, 255, 0.15)" }}
+      whileHover={{ y: -4, boxShadow: "0 8px 24px var(--hover-glow)" }}
       transition={{ duration: 0.2 }}
+      onClick={onView}
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-secondary">
         <img
@@ -45,26 +59,7 @@ export function ModCard({ title, author, thumbnail, rating = 0, downloads, onIns
           alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4 gap-2">
-          <button
-            onClick={(event) => {
-              event.stopPropagation();
-              onInstall?.();
-            }}
-            className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            Install
-          </button>
-          <button
-            onClick={(event) => {
-              event.stopPropagation();
-              onView?.();
-            }}
-            className="px-4 py-2 bg-secondary/90 hover:bg-secondary text-foreground rounded-lg text-sm font-medium transition-colors"
-          >
-            View
-          </button>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
 
       <div className="p-4">
@@ -74,12 +69,22 @@ export function ModCard({ title, author, thumbnail, rating = 0, downloads, onIns
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary whitespace-nowrap">{statusLabel}</span>
           )}
         </div>
-        <p className="text-xs text-muted-foreground mb-3">by {author}</p>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onAuthorClick?.();
+          }}
+          className="text-xs text-muted-foreground mb-3 inline-flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          <UserCircle2 className="w-3.5 h-3.5" />
+          by {author}
+        </button>
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" />
-            <span>{rating}</span>
+            <Heart className="w-3.5 h-3.5 fill-primary/25 text-primary" />
+            <span>{formatLikes(likes)}</span>
           </div>
           <div className="flex items-center gap-1">
             <Download className="w-3.5 h-3.5" />

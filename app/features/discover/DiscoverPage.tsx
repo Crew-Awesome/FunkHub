@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall, UserCircle2, Layers } from "lucide-react";
 import { motion } from "motion/react";
-import { ModCard, ModVisualizerModal } from "../mods";
+import { ModCard, ModVisualizerModal, UserProfileModal } from "../mods";
 import { useFunkHub } from "../../providers";
-import type { CategoryNode } from "../../services/funkhub";
+import type { CategoryNode, GameBananaMember } from "../../services/funkhub";
 
 export function Discover() {
   const {
@@ -20,7 +20,6 @@ export function Discover() {
     hasMoreDiscover,
     searchQuery,
     setSearchQuery,
-    installMod,
     installedMods,
     modUpdates,
   } = useFunkHub();
@@ -28,12 +27,45 @@ export function Discover() {
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<number[]>([]);
   const [categorySearch, setCategorySearch] = useState("");
   const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
+  const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
 
   useEffect(() => {
     if (!selectedCategoryId && categories.length > 0) {
       setSelectedCategoryId(categories[0].id);
     }
   }, [categories, selectedCategoryId, setSelectedCategoryId]);
+
+  useEffect(() => {
+    const collectExpandableIds = (nodes: CategoryNode[], acc: number[] = []): number[] => {
+      for (const node of nodes) {
+        if (node.children.length > 0) {
+          acc.push(node.id);
+          collectExpandableIds(node.children, acc);
+        }
+      }
+      return acc;
+    };
+    setExpandedCategoryIds(collectExpandableIds(categories));
+  }, [categories]);
+
+  const usernameFilter = useMemo(() => {
+    const trimmed = searchQuery.trim();
+    if (trimmed.startsWith("@")) {
+      return trimmed.slice(1).trim().toLowerCase();
+    }
+    const prefixed = trimmed.match(/^user:\s*(.+)$/i);
+    if (prefixed?.[1]) {
+      return prefixed[1].trim().toLowerCase();
+    }
+    return "";
+  }, [searchQuery]);
+
+  const visibleMods = useMemo(() => {
+    if (!usernameFilter) {
+      return discoverMods;
+    }
+    return discoverMods.filter((mod) => (mod.submitter?.name ?? "").toLowerCase().includes(usernameFilter));
+  }, [discoverMods, usernameFilter]);
 
   const filteredCategoryTree = useMemo(() => {
     const term = categorySearch.trim().toLowerCase();
@@ -124,7 +156,7 @@ export function Discover() {
               <img
                 src={category.iconUrl}
                 alt=""
-                className="w-4 h-4 rounded-sm object-cover"
+                className="w-4 h-4 object-contain"
                 loading="lazy"
               />
             ) : (
@@ -187,10 +219,16 @@ export function Discover() {
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
         <section>
           <div className="mb-4 text-sm text-muted-foreground">
-            {loading ? "Loading mods..." : `Showing ${discoverMods.length} mods`}
+            {loading ? "Loading mods..." : `Showing ${visibleMods.length} mods`}
           </div>
+          {usernameFilter && (
+            <div className="mb-4 text-sm text-muted-foreground inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5">
+              <UserCircle2 className="w-4 h-4" />
+              Filtered by user: <span className="text-foreground">{usernameFilter}</span>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {discoverMods.map((mod, index) => (
+            {visibleMods.map((mod, index) => (
               <motion.div
                 key={mod.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -202,10 +240,18 @@ export function Discover() {
                   title={mod.name}
                   author={mod.submitter?.name ?? "Unknown"}
                   thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
-                  rating={mod.likeCount ? Math.max(3.8, Math.min(5, mod.likeCount / 100 + 3.5)) : 4.5}
+                  likes={mod.likeCount}
                   downloads={mod.downloadCount ?? mod.viewCount}
-                  onInstall={() => installMod(mod.id, 0)}
                   onView={() => setSelectedModId(mod.id)}
+                  onAuthorClick={() => {
+                    if (mod.submitter?.id) {
+                      setSelectedSubmitter({
+                        id: mod.submitter.id,
+                        name: mod.submitter.name,
+                        avatarUrl: mod.submitter.avatarUrl,
+                      });
+                    }
+                  }}
                   statusLabel={(() => {
                     const installed = installedMods.find((entry) => entry.modId === mod.id);
                     if (!installed) {
@@ -224,17 +270,6 @@ export function Discover() {
         <aside className="bg-card border border-border rounded-xl p-4 xl:sticky xl:top-4">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h2 className="text-sm font-semibold text-foreground">Categories</h2>
-            <button
-              onClick={() => setSelectedCategoryId(undefined)}
-              className={[
-                "px-2 py-1 rounded text-xs border transition-colors",
-                selectedCategoryId === undefined
-                  ? "border-primary/30 text-primary bg-primary/10"
-                  : "border-border text-muted-foreground hover:bg-secondary",
-              ].join(" ")}
-            >
-              All
-            </button>
           </div>
           <div className="mb-3">
             <input
@@ -245,6 +280,18 @@ export function Discover() {
             />
           </div>
           <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-1">
+            <button
+              onClick={() => setSelectedCategoryId(undefined)}
+              className={[
+                "w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors text-left border",
+                selectedCategoryId === undefined
+                  ? "bg-primary/10 text-primary border-primary/20"
+                  : "hover:bg-secondary text-foreground border-transparent",
+              ].join(" ")}
+            >
+              <Layers className="w-4 h-4" />
+              <span>All</span>
+            </button>
             {renderCategoryTree(filteredCategoryTree)}
           </div>
         </aside>
@@ -274,6 +321,17 @@ export function Discover() {
         modId={selectedModId}
         open={Boolean(selectedModId)}
         onClose={() => setSelectedModId(undefined)}
+        onOpenSubmitter={(submitter) => setSelectedSubmitter(submitter)}
+      />
+
+      <UserProfileModal
+        open={Boolean(selectedSubmitter)}
+        submitter={selectedSubmitter}
+        onClose={() => setSelectedSubmitter(undefined)}
+        onOpenMod={(modId) => {
+          setSelectedSubmitter(undefined);
+          setSelectedModId(modId);
+        }}
       />
     </div>
   );

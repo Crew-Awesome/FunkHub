@@ -721,6 +721,12 @@ export class FunkHubService {
     }
   }
 
+  clearDownloadHistory(): void {
+    downloadManager.clearHistory();
+    this.downloadHistory = downloadManager.getTasks();
+    funkHubStorageService.saveDownloadHistory(this.downloadHistory);
+  }
+
   queueInstall(modId: number, fileId: number, selectedEngineId?: string, priority = 0): DownloadTask {
     const abortController = new AbortController();
     const taskId = `${modId}-${fileId}-${Date.now()}`;

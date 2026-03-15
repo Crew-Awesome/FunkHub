@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, Download, Clock3, User, ExternalLink } from "lucide-react";
 import { useFunkHub } from "../../providers";
-import type { GameBananaModProfile } from "../../services/funkhub";
+import { modInstallerService } from "../../services/funkhub";
+import type { GameBananaMember, GameBananaModProfile } from "../../services/funkhub";
 
 interface ModVisualizerModalProps {
   modId?: number;
   open: boolean;
   onClose: () => void;
+  onOpenSubmitter?: (submitter: Pick<GameBananaMember, "id" | "name" | "avatarUrl">) => void;
 }
 
 function formatDownloads(value?: number): string {
@@ -50,7 +52,7 @@ function plainText(value?: string): string {
   return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalProps) {
+export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: ModVisualizerModalProps) {
   const { getModProfile, installMod, installedEngines } = useFunkHub();
   const [loading, setLoading] = useState(false);
   const [showLoadingState, setShowLoadingState] = useState(false);
@@ -95,7 +97,8 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
   const heroImage = useMemo(() => profile?.imageUrl ?? profile?.thumbnailUrl, [profile]);
   const categoryLabel = profile?.rootCategory?.name ?? profile?.category?.name ?? profile?.superCategory?.name;
   const selectedEngine = installedEngines.find((engine) => engine.id === selectedEngineId);
-  const hasDependencyWarning = Boolean(profile?.requiredEngine && selectedEngine && selectedEngine.slug !== profile.requiredEngine);
+  const isExecutableMod = Boolean(profile && profile.files.some((file) => modInstallerService.isExecutableMod(profile, file)));
+  const hasDependencyWarning = Boolean(!isExecutableMod && profile?.requiredEngine && selectedEngine && selectedEngine.slug !== profile.requiredEngine);
 
   useEffect(() => {
     if (!loading) {
@@ -135,7 +138,7 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
         )}
 
         {error && (
-          <div className="p-8 text-sm text-red-300">{error}</div>
+          <div className="p-8 text-sm text-destructive">{error}</div>
         )}
 
         {!loading && !error && profile && (
@@ -157,7 +160,7 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
                   {categoryLabel && <p className="text-sm text-muted-foreground mt-1">{categoryLabel}</p>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="bg-secondary/50 rounded-lg p-3">
                     <p className="text-muted-foreground">Downloads</p>
                     <p className="text-foreground font-semibold">{formatDownloads(profile.downloadCount)}</p>
@@ -166,43 +169,52 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
                     <p className="text-muted-foreground">Version</p>
                     <p className="text-foreground font-semibold">{profile.version ?? "Unknown"}</p>
                   </div>
-                  <div className="bg-secondary/50 rounded-lg p-3">
-                    <p className="text-muted-foreground">Author</p>
-                    <p className="text-foreground font-semibold line-clamp-1">{profile.submitter?.name ?? "Unknown"}</p>
-                  </div>
+                   <div className="bg-secondary/50 rounded-lg p-3">
+                     <p className="text-muted-foreground">Author</p>
+                     <button
+                       onClick={() => {
+                         if (profile.submitter?.id) {
+                           onOpenSubmitter?.({
+                             id: profile.submitter.id,
+                             name: profile.submitter.name,
+                             avatarUrl: profile.submitter.avatarUrl,
+                           });
+                         }
+                       }}
+                       className="text-foreground font-semibold line-clamp-1 inline-flex items-center gap-2 hover:text-primary transition-colors"
+                     >
+                       {profile.submitter?.avatarUrl
+                         ? <img src={profile.submitter.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" loading="lazy" />
+                         : <User className="w-4 h-4" />}
+                       <span>{profile.submitter?.name ?? "Unknown"}</span>
+                     </button>
+                   </div>
                   <div className="bg-secondary/50 rounded-lg p-3">
                     <p className="text-muted-foreground">Updated</p>
                     <p className="text-foreground font-semibold">{formatDate(profile.dateUpdated || profile.dateModified || profile.dateAdded)}</p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <select
-                    value={selectedEngineId}
-                    onChange={(event) => setSelectedEngineId(event.target.value)}
-                    className="px-3 py-2 bg-input-background border border-border rounded-lg text-sm text-foreground"
-                  >
-                    {installedEngines.map((engine) => (
-                      <option key={engine.id} value={engine.id}>
-                        {engine.name} v{engine.version}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => {
-                      const targetFile = profile.files[0];
-                      if (targetFile) {
-                        installMod(profile.id, targetFile.id, selectedEngineId || undefined);
-                      }
-                    }}
-                    disabled={profile.files.length === 0}
-                    className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium"
-                  >
-                    Install First File
-                  </button>
-                  <button
-                    onClick={() => window.open(profile.profileUrl, "_blank", "noopener,noreferrer")}
-                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium inline-flex items-center gap-2"
+                 <div className="flex flex-wrap gap-2 items-center">
+                   {!isExecutableMod && (
+                     <>
+                       <span className="text-sm text-muted-foreground">Engine:</span>
+                       <select
+                         value={selectedEngineId}
+                         onChange={(event) => setSelectedEngineId(event.target.value)}
+                         className="px-3 py-2 bg-input-background border border-border rounded-lg text-sm text-foreground"
+                       >
+                         {installedEngines.map((engine) => (
+                           <option key={engine.id} value={engine.id}>
+                             {engine.name} {engine.version}
+                           </option>
+                         ))}
+                       </select>
+                     </>
+                   )}
+                   <button
+                     onClick={() => window.open(profile.profileUrl, "_blank", "noopener,noreferrer")}
+                     className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium inline-flex items-center gap-2"
                   >
                     <ExternalLink className="w-4 h-4" />
                     Open on GameBanana
@@ -240,8 +252,9 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
                     </div>
                     <button
                       onClick={() => installMod(profile.id, file.id, selectedEngineId || undefined)}
-                      className="px-3 py-2 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-medium"
+                      className="px-3 py-2 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-medium inline-flex items-center gap-1.5"
                     >
+                      <Download className="w-3.5 h-3.5" />
                       Install
                     </button>
                   </div>
@@ -258,18 +271,21 @@ export function ModVisualizerModal({ modId, open, onClose }: ModVisualizerModalP
                       <p className="text-sm font-medium text-foreground mb-1">{group.groupName}</p>
                       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                         {group.authors.map((author) => (
-                          <a
+                          <button
                             key={`${group.groupName}-${author.id}`}
-                            href={author.profileUrl || undefined}
-                            target={author.profileUrl ? "_blank" : undefined}
-                            rel={author.profileUrl ? "noopener noreferrer" : undefined}
+                            type="button"
+                            onClick={() => {
+                              if (author.id > 0) {
+                                onOpenSubmitter?.({ id: author.id, name: author.name, avatarUrl: author.avatarUrl });
+                              }
+                            }}
                             className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-secondary/70 hover:bg-secondary text-muted-foreground"
                           >
                             {author.avatarUrl
                               ? <img src={author.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover" loading="lazy" />
                               : <User className="w-3 h-3" />}
                             <span>{author.name}</span>
-                          </a>
+                          </button>
                         ))}
                       </div>
                     </div>

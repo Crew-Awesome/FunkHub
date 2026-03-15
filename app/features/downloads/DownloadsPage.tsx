@@ -20,14 +20,22 @@ function formatBytes(bytes: number | undefined): string {
 }
 
 export function Downloads() {
-  const { downloads, cancelDownload, retryDownload } = useFunkHub();
+  const { downloads, cancelDownload, retryDownload, clearDownloads } = useFunkHub();
   const activeDownloads = downloads.filter((task) => task.status === "queued" || task.status === "downloading" || task.status === "installing");
   const completedDownloads = downloads.filter((task) => task.status === "completed").slice(0, 5);
   const failedDownloads = downloads.filter((task) => task.status === "failed").slice(0, 8);
 
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold text-foreground mb-6">Downloads</h1>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-3xl font-bold text-foreground">Downloads</h1>
+        <button
+          onClick={clearDownloads}
+          className="px-3 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-sm text-foreground"
+        >
+          Clear Downloads
+        </button>
+      </div>
 
       {activeDownloads.length > 0 ? (
         <div className="space-y-4">
@@ -40,7 +48,7 @@ export function Downloads() {
               className="bg-card border border-border rounded-xl p-6"
             >
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-chart-4 flex items-center justify-center flex-shrink-0">
                   <Download className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -78,8 +86,8 @@ export function Downloads() {
                   <span className="font-medium text-primary">{Math.round(download.progress * 100)}%</span>
                 </div>
                 <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-primary to-blue-500"
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-primary to-chart-3"
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.round(download.progress * 100)}%` }}
                     transition={{ duration: 0.5 }}

@@ -38,6 +38,7 @@ interface FunkHubContextValue {
   refreshDiscover: () => Promise<void>;
   refreshModUpdates: () => Promise<void>;
   getModProfile: (modId: number) => Promise<GameBananaModProfile>;
+  listModsBySubmitter: (input: { submitterId: number; categoryId?: number; page?: number; perPage?: number }) => Promise<GameBananaModSummary[]>;
   installMod: (modId: number, fileId: number, selectedEngineId?: string, priority?: number) => void;
   installEngine: (slug: InstalledEngine["slug"], downloadUrl: string, version: string) => Promise<void>;
   importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string) => Promise<void>;
@@ -58,6 +59,7 @@ interface FunkHubContextValue {
   launchInstalledMod: (installedId: string) => Promise<void>;
   cancelDownload: (taskId: string) => void;
   retryDownload: (taskId: string) => void;
+  clearDownloads: () => void;
   setDefaultEngine: (engineId: string) => void;
   removeInstalledMod: (installedId: string, options?: { deleteFiles?: boolean }) => Promise<void>;
   updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
@@ -206,6 +208,12 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       refreshDiscover,
       refreshModUpdates,
       getModProfile: (modId) => funkHubService.getModProfile(modId),
+      listModsBySubmitter: (input) => funkHubService.listMods({
+        submitterId: input.submitterId,
+        categoryId: input.categoryId,
+        page: input.page,
+        perPage: input.perPage,
+      }),
       installMod: (modId, fileId, selectedEngineId, priority = 0) => {
         try {
           funkHubService.queueInstall(modId, fileId, selectedEngineId, priority);
@@ -251,6 +259,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       },
       retryDownload: (taskId) => {
         funkHubService.retryDownload(taskId);
+      },
+      clearDownloads: () => {
+        funkHubService.clearDownloadHistory();
+        setDownloads(funkHubService.getDownloadHistory());
       },
       setDefaultEngine: (engineId) => {
         funkHubService.setDefaultEngine(engineId);

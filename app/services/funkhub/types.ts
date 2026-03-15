@@ -276,6 +276,7 @@ export interface ListModsParams {
   page?: number;
   perPage?: number;
   categoryId?: number;
+  submitterId?: number;
   sort?: string;
 }
 

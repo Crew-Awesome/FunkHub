@@ -103,6 +103,21 @@ export class DownloadManager {
     this.updateTask({ ...nextTask, id: taskId });
   }
 
+  clearHistory(): void {
+    for (const [taskId, task] of this.tasks.entries()) {
+      if (task.status === "queued" || task.status === "downloading" || task.status === "installing") {
+        continue;
+      }
+      this.tasks.delete(taskId);
+      this.jobs.delete(taskId);
+    }
+    this.queue = this.queue.filter((entry) => {
+      const status = this.tasks.get(entry.task.id)?.status;
+      return status === "queued" || status === "downloading" || status === "installing";
+    });
+    this.emit();
+  }
+
   private emit(): void {
     const snapshot = this.getTasks();
     this.listeners.forEach((listener) => listener(snapshot));

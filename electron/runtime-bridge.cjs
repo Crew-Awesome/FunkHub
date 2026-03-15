@@ -725,6 +725,8 @@ async function handleLaunchEngine(payload) {
       path.basename(installPath || ""),
       "funkin",
       "alepsych",
+      "ale-psych",
+      "ale psych",
       "psych",
       "engine",
     ]);
@@ -760,20 +762,56 @@ async function handleLaunchEngine(payload) {
     args = [launchable];
   }
 
-  let child;
-  try {
-    child = spawn(command, args, {
-      detached: true,
-      stdio: "ignore",
-      windowsHide: true,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "spawn failed";
-    if (message.includes("ENOENT")) {
-      throw new Error(`Launcher command not found: ${command}. Set a valid launcher path.`);
+  const child = await new Promise((resolve, reject) => {
+    let resolved = false;
+    let spawned;
+
+    try {
+      spawned = spawn(command, args, {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "spawn failed";
+      if (message.includes("ENOENT")) {
+        reject(new Error(`Launcher command not found: ${command}. Set a valid launcher path.`));
+        return;
+      }
+      reject(error);
+      return;
     }
-    throw error;
-  }
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(spawned);
+      }
+    }, 250);
+
+    spawned.once("spawn", () => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        resolve(spawned);
+      }
+    });
+
+    spawned.once("error", (error) => {
+      if (resolved) {
+        return;
+      }
+      resolved = true;
+      clearTimeout(timeout);
+      const message = error instanceof Error ? error.message : "spawn failed";
+      if (message.includes("ENOENT")) {
+        reject(new Error(`Launcher command not found: ${command}. Set a valid launcher path.`));
+        return;
+      }
+      reject(error instanceof Error ? error : new Error(message));
+    });
+  });
+
   child.unref();
 
   return { ok: true, launchedPath: launchable };
@@ -853,7 +891,7 @@ async function handleInspectEngineInstall(payload) {
     return { ok: true, health: "broken_install", message: "Engine directory is missing" };
   }
 
-  const launchablePath = await findLaunchableExecutable(absolutePath, [path.basename(installPath), "funkin", "engine"]);
+  const launchablePath = await findLaunchableExecutable(absolutePath, [path.basename(installPath), "funkin", "alepsych", "ale-psych", "ale psych", "psych", "engine"]);
   if (!launchablePath) {
     const hint = await getLaunchFailureHint(absolutePath);
     return { ok: true, health: "missing_binary", message: hint };

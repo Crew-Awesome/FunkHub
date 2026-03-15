@@ -13,11 +13,11 @@ export function EngineCard({ name, version, isDefault, onLaunch, onManage }: Eng
   return (
     <motion.div
       className="bg-card rounded-xl border border-border p-6 group cursor-pointer"
-      whileHover={{ y: -4, boxShadow: "0 8px 24px rgba(79, 140, 255, 0.15)" }}
+      whileHover={{ y: -4, boxShadow: "0 8px 24px var(--hover-glow)" }}
       transition={{ duration: 0.2 }}
     >
       <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center flex-shrink-0">
+        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-chart-4 flex items-center justify-center flex-shrink-0">
           <Cpu className="w-6 h-6 text-white" />
         </div>
 

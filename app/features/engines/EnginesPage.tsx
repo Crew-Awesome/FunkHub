@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Plus, Cpu, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
 import { EngineCard } from "./EngineCard";
@@ -35,6 +35,10 @@ export function Engines() {
   const [manageLauncherPath, setManageLauncherPath] = useState("");
   const [manageExecutablePath, setManageExecutablePath] = useState("");
   const [selectedReleaseBySlug, setSelectedReleaseBySlug] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    refreshEngineHealth().catch(() => undefined);
+  }, [refreshEngineHealth]);
 
   const availableEngines = enginesCatalog;
   const hasEngines = installedEngines.length > 0;
@@ -144,12 +148,17 @@ export function Engines() {
   const healthMeta = (engineId: string) => {
     const health = getEngineHealth(engineId);
     if (health.health === "ready") {
-      return { label: "Ready", tone: "text-emerald-300 bg-emerald-500/10 border-emerald-500/20", icon: ShieldCheck };
+      return { label: "Ready", tone: "text-foreground/85 bg-primary/10 border-primary/20", icon: ShieldCheck };
     }
     if (health.health === "missing_binary") {
-      return { label: "Missing Binary", tone: "text-amber-300 bg-amber-500/10 border-amber-500/20", icon: ShieldAlert };
+      return { label: "Executable Not Detected", tone: "text-amber-500 dark:text-amber-300 bg-amber-500/10 border-amber-500/20", icon: ShieldAlert };
     }
-    return { label: "Broken", tone: "text-red-300 bg-red-500/10 border-red-500/20", icon: ShieldX };
+    return { label: "Engine Install Broken", tone: "text-destructive bg-destructive/10 border-destructive/20", icon: ShieldX };
+  };
+
+  const formatVersionLabel = (version: string) => {
+    const trimmed = version.trim();
+    return /^[0-9]/.test(trimmed) ? `v${trimmed}` : trimmed;
   };
 
   const hasUpdateForEngine = (engineSlug: EngineSlug, installedVersion: string) => {
@@ -315,7 +324,7 @@ export function Engines() {
               )}
 
               {installError && (
-                <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 p-3 text-sm flex items-center gap-2">
+                <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive p-3 text-sm flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   {installError}
                 </div>
@@ -423,14 +432,14 @@ export function Engines() {
           )}
 
           {installError && (
-            <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 p-3 text-sm flex items-center gap-2">
+            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive p-3 text-sm flex items-center gap-2">
               <AlertCircle className="w-4 h-4" />
               {installError}
             </div>
           )}
 
           {actionError && (
-            <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 p-3 text-sm flex items-center gap-2">
+            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive p-3 text-sm flex items-center gap-2">
               <AlertCircle className="w-4 h-4" />
               {actionError}
             </div>
@@ -453,7 +462,7 @@ export function Engines() {
                   const meta = healthMeta(engine.id);
                   const Icon = meta.icon;
                   return (
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded border ${meta.tone}`}>
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded border ${meta.tone}`} title={getEngineHealth(engine.id).message}>
                       <Icon className="w-3.5 h-3.5" />
                       {meta.label}
                     </span>
@@ -467,7 +476,7 @@ export function Engines() {
               </div>
               <EngineCard
                 name={engine.name}
-                version={engine.version}
+                version={formatVersionLabel(engine.version)}
                 isDefault={engine.isDefault}
                 onLaunch={() => {
                   if (!busyEngineId) {
@@ -480,13 +489,18 @@ export function Engines() {
                   }
                 }}
               />
+              {getEngineHealth(engine.id).health !== "ready" && getEngineHealth(engine.id).message && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {getEngineHealth(engine.id).message}
+                </p>
+              )}
             </div>
           </motion.div>
         ))}
       </div>
 
       {actionError && (
-        <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 p-3 text-sm flex items-center gap-2">
+        <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive p-3 text-sm flex items-center gap-2">
           <AlertCircle className="w-4 h-4" />
           {actionError}
         </div>
@@ -497,19 +511,6 @@ export function Engines() {
           {notice}
         </div>
       )}
-
-      {/* Engine Info */}
-      <div className="mt-8 bg-card border border-border rounded-xl p-6">
-        <h3 className="font-semibold text-foreground mb-3">About Game Engines</h3>
-        <p className="text-muted-foreground text-sm leading-relaxed">
-          Different mods require different game engines to run. FunkHub manages multiple engine installations
-          so you can play any mod. Set a default engine for quick launches, or switch between engines based on
-          mod requirements.
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Detected device platform: {currentPlatform}
-        </p>
-      </div>
 
       {manageEngineId && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center">
@@ -522,7 +523,7 @@ export function Engines() {
               return (
                 <>
                   <h3 className="text-lg font-semibold text-foreground">Manage {engine.name}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">v{engine.version}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{formatVersionLabel(engine.version)}</p>
 
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <button onClick={() => setDefaultEngine(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Set Default</button>
@@ -563,7 +564,7 @@ export function Engines() {
                   <div className="mt-5 flex justify-between gap-2">
                     <button
                       onClick={() => setConfirmUninstall({ id: engine.id, name: engine.name, version: engine.version, path: engine.installPath })}
-                      className="px-3 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm"
+                      className="px-3 py-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive text-sm"
                     >
                       Uninstall
                     </button>
@@ -584,7 +585,7 @@ export function Engines() {
           <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5">
             <h3 className="text-lg font-semibold text-foreground">Confirm engine uninstall</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Remove <span className="text-foreground font-medium">{confirmUninstall.name}</span> v{confirmUninstall.version}?
+               Remove <span className="text-foreground font-medium">{confirmUninstall.name}</span> {formatVersionLabel(confirmUninstall.version)}?
             </p>
             <p className="mt-2 text-xs text-muted-foreground break-all">{confirmUninstall.path}</p>
             <div className="mt-5 flex justify-end gap-2">
@@ -601,7 +602,7 @@ export function Engines() {
                   setManageEngineId(null);
                   await handleUninstall(target.id);
                 }}
-                className="px-3 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm"
+                className="px-3 py-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive text-sm"
               >
                 Uninstall
               </button>

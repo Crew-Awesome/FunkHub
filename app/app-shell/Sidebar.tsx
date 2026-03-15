@@ -1,7 +1,6 @@
 import { Link, useLocation } from "react-router";
-import { Search, Library, Download, RefreshCw, Settings as SettingsIcon, Cpu, Bell } from "lucide-react";
+import { Search, Library, Download, RefreshCw, Settings as SettingsIcon, Cpu } from "lucide-react";
 import { motion } from "motion/react";
-import { useFunkHub } from "../providers";
 
 const navItems = [
   { icon: Search, label: "Discover Mods", path: "/" },
@@ -13,10 +12,6 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
-  const { downloads, modUpdates } = useFunkHub();
-  const activeJobs = downloads.filter((task) => ["queued", "downloading", "installing"].includes(task.status)).length;
-  const failedJobs = downloads.filter((task) => task.status === "failed").length;
-  const notificationCount = activeJobs + failedJobs + modUpdates.length;
 
   return (
     <aside className="w-[220px] bg-sidebar border-r border-sidebar-border flex flex-col h-full">
@@ -61,34 +56,24 @@ export function Sidebar() {
 
       {/* Bottom Section with User Controls */}
       <div className="p-3 border-t border-sidebar-border">
-        <div className="flex items-center gap-2 mb-3">
-          <Link to="/settings" className="flex-1">
-            <button className="w-full p-2 hover:bg-sidebar-accent rounded-lg transition-colors flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <Link to="/profile" className="flex-1">
+            <div className="flex items-center gap-3 p-2 hover:bg-sidebar-accent rounded-lg transition-colors cursor-pointer">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-semibold text-white">FH</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-sidebar-foreground truncate">Player</p>
+                <p className="text-xs text-muted-foreground truncate">View Profile</p>
+              </div>
+            </div>
+          </Link>
+          <Link to="/settings">
+            <button className="p-2 hover:bg-sidebar-accent rounded-lg transition-colors flex items-center justify-center">
               <SettingsIcon className="w-5 h-5 text-sidebar-foreground/70" />
             </button>
           </Link>
-          <Link to="/downloads">
-            <button className="p-2 hover:bg-sidebar-accent rounded-lg transition-colors relative">
-              <Bell className="w-5 h-5 text-sidebar-foreground/70" />
-              {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-primary text-[10px] text-white flex items-center justify-center">
-                  {notificationCount > 99 ? "99+" : notificationCount}
-                </span>
-              )}
-            </button>
-          </Link>
         </div>
-        <Link to="/profile">
-          <div className="flex items-center gap-3 p-2 hover:bg-sidebar-accent rounded-lg transition-colors cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-semibold text-white">FH</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">Player</p>
-              <p className="text-xs text-muted-foreground truncate">View Profile</p>
-            </div>
-          </div>
-        </Link>
       </div>
     </aside>
   );
