@@ -8,6 +8,7 @@ import {
   ListModsParams,
   SearchModsParams,
 } from "./types";
+import { detectRequiredEngineFromMetadata } from "./engineDetection";
 
 const APIV11_BASE = "https://gamebanana.com/apiv11";
 const APIV7_BASE = "https://gamebanana.com/apiv7";
@@ -148,37 +149,11 @@ function normalizeSummary(record: Record<string, unknown>): GameBananaModSummary
 }
 
 function detectRequiredEngine(mod: Pick<GameBananaModProfile, "name" | "text" | "rootCategory">): GameBananaModProfile["requiredEngine"] {
-  const haystack = `${mod.name} ${mod.text ?? ""} ${mod.rootCategory?.name ?? ""}`.toLowerCase();
-
-  if (haystack.includes("p-slice") || haystack.includes("pslice")) {
-    return "p-slice";
-  }
-
-  if (haystack.includes("fps+") || haystack.includes("fps plus")) {
-    return "fps-plus";
-  }
-
-  if (haystack.includes("ale psych") || haystack.includes("ale engine")) {
-    return "ale-psych";
-  }
-
-  if (haystack.includes("js engine") || haystack.includes("fnf js")) {
-    return "js-engine";
-  }
-
-  if (haystack.includes("codename")) {
-    return "codename";
-  }
-
-  if (haystack.includes("psych")) {
-    return "psych";
-  }
-
-  if (haystack.includes("v-slice") || haystack.includes("base game") || haystack.includes("basegame")) {
-    return "basegame";
-  }
-
-  return undefined;
+  return detectRequiredEngineFromMetadata({
+    name: mod.name,
+    text: mod.text,
+    rootCategoryName: mod.rootCategory?.name,
+  });
 }
 
 function detectDependencies(text?: string): string[] {

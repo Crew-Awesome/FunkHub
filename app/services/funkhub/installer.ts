@@ -7,6 +7,7 @@ import {
   InstalledEngine,
   InstalledMod,
 } from "./types";
+import { detectRequiredEngineFromMetadata } from "./engineDetection";
 
 const EXECUTABLE_EXTENSIONS = [".exe", ".msi", ".app", ".dmg", ".pkg", ".appimage", ".sh", ".bat"];
 const ARCHIVE_EXTENSIONS = [".zip", ".rar", ".7z"];
@@ -17,17 +18,6 @@ const EXECUTABLE_HINTS = ["standalone", "portable", "launcher", "runtime", "bina
 function sanitizeFileStem(fileName: string): string {
   const stem = fileName.replace(/\.[^/.]+$/, "").trim();
   return stem.replace(/[^A-Za-z0-9._ -]/g, "_") || "mod";
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function includesAny(text: string, tokens: string[]): boolean {
-  return tokens.some((token) => {
-    const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(token)}([^a-z0-9]|$)`, "i");
-    return pattern.test(text);
-  });
 }
 
 export class ModInstallerService {
@@ -42,29 +32,11 @@ export class ModInstallerService {
       return mod.requiredEngine;
     }
 
-    const haystack = `${mod.name} ${mod.text ?? ""} ${mod.rootCategory?.name ?? ""}`.toLowerCase();
-    if (includesAny(haystack, ["base game", "basegame", "v-slice", "vanilla"])) {
-      return "basegame";
-    }
-    if (includesAny(haystack, ["ale psych", "ale-psych"])) {
-      return "ale-psych";
-    }
-    if (includesAny(haystack, ["psych", "psych engine", "psychengine"])) {
-      return "psych";
-    }
-    if (includesAny(haystack, ["codename", "codename engine"])) {
-      return "codename";
-    }
-    if (includesAny(haystack, ["fps+", "fps plus"])) {
-      return "fps-plus";
-    }
-    if (includesAny(haystack, ["js engine", "fnf js"])) {
-      return "js-engine";
-    }
-    if (includesAny(haystack, ["p-slice", "pslice"])) {
-      return "p-slice";
-    }
-    return undefined;
+    return detectRequiredEngineFromMetadata({
+      name: mod.name,
+      text: mod.text,
+      rootCategoryName: mod.rootCategory?.name,
+    });
   }
 
   isArchive(file: Pick<GameBananaFile, "fileName">): boolean {
