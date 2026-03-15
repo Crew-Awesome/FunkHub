@@ -784,7 +784,7 @@ export class FunkHubService {
       throw new Error("Desktop bridge unavailable for launching");
     }
 
-    if (installed.standalone || installed.installPath.startsWith("executables/")) {
+    if (installed.standalone || installed.installPath.startsWith("executables")) {
       await window.funkhubDesktop.launchEngine({
         installPath: installed.installPath,
         launcher: installed.launcher,
@@ -809,7 +809,7 @@ export class FunkHubService {
     if (!target) {
       throw new Error("Installed mod not found");
     }
-    if (!(target.standalone || target.installPath.startsWith("executables/"))) {
+    if (!(target.standalone || target.installPath.startsWith("executables"))) {
       throw new Error("Launch options can only be set for standalone packages");
     }
 

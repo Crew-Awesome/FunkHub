@@ -437,6 +437,14 @@ async function installRawModPackage({ resolvedInstallPath, installSubdir, archiv
   return destinationDir;
 }
 
+async function installRawStandalonePackage({ resolvedInstallPath, archiveName, tempArchivePath, jobId }) {
+  const safeArchiveName = path.basename(archiveName || `package-${jobId}.bin`).replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `package-${jobId}.bin`;
+  await removePath(resolvedInstallPath);
+  await ensureDir(resolvedInstallPath);
+  await fs.copyFile(tempArchivePath, path.join(resolvedInstallPath, safeArchiveName));
+  return resolvedInstallPath;
+}
+
 async function resolveInstallDirs(mode, installPath) {
   const settings = await getEffectiveSettings();
   const defaultRoot = getDefaultDataRoot();
@@ -476,6 +484,7 @@ async function installArchiveInternal(webContents, payload) {
     installSubdir,
     allowMissingExecutable,
   } = payload;
+  const treatAsStandaloneMod = mode === "mod" && typeof installPath === "string" && installPath.startsWith("executables/");
 
   if (!jobId) {
     throw new Error("Missing jobId");
@@ -536,16 +545,25 @@ async function installArchiveInternal(webContents, payload) {
         jobId,
         phase: "install",
         progress: 0.9,
-        message: "Package is not a supported archive; installing as raw file",
+        message: treatAsStandaloneMod
+          ? "Package is not a supported archive; saving executable package"
+          : "Package is not a supported archive; installing as raw file",
         timestamp: now(),
       });
-      finalInstallPath = await installRawModPackage({
-        resolvedInstallPath,
-        installSubdir,
-        archiveName,
-        tempArchivePath,
-        jobId,
-      });
+      finalInstallPath = treatAsStandaloneMod
+        ? await installRawStandalonePackage({
+            resolvedInstallPath,
+            archiveName,
+            tempArchivePath,
+            jobId,
+          })
+        : await installRawModPackage({
+            resolvedInstallPath,
+            installSubdir,
+            archiveName,
+            tempArchivePath,
+            jobId,
+          });
     } else {
       try {
         await extractArchive(tempArchivePath, extractTempPath, cancelState, webContents, jobId);
@@ -559,16 +577,25 @@ async function installArchiveInternal(webContents, payload) {
             jobId,
             phase: "install",
             progress: 0.9,
-            message: "Archive extraction failed; saving package as raw file",
+            message: treatAsStandaloneMod
+              ? "Archive extraction failed; keeping package for manual launcher setup"
+              : "Archive extraction failed; saving package as raw file",
             timestamp: now(),
           });
-          finalInstallPath = await installRawModPackage({
-            resolvedInstallPath,
-            installSubdir,
-            archiveName,
-            tempArchivePath,
-            jobId,
-          });
+          finalInstallPath = treatAsStandaloneMod
+            ? await installRawStandalonePackage({
+                resolvedInstallPath,
+                archiveName,
+                tempArchivePath,
+                jobId,
+              })
+            : await installRawModPackage({
+                resolvedInstallPath,
+                installSubdir,
+                archiveName,
+                tempArchivePath,
+                jobId,
+              });
         } else {
           throw error;
         }
@@ -576,14 +603,21 @@ async function installArchiveInternal(webContents, payload) {
 
       if (finalInstallPath === resolvedInstallPath) {
         if (mode === "mod") {
-          const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
-          const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
-          const modRoot = await ensureModFolderStructure(extractTempPath, safeFolderName);
-          const destination = path.join(resolvedInstallPath, safeFolderName);
-          await removePath(destination);
-          await ensureDir(resolvedInstallPath);
-          await fs.rename(modRoot, destination);
-          finalInstallPath = destination;
+          if (treatAsStandaloneMod) {
+            await removePath(resolvedInstallPath);
+            await ensureDir(path.dirname(resolvedInstallPath));
+            await fs.rename(extractTempPath, resolvedInstallPath);
+            finalInstallPath = resolvedInstallPath;
+          } else {
+            const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
+            const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
+            const modRoot = await ensureModFolderStructure(extractTempPath, safeFolderName);
+            const destination = path.join(resolvedInstallPath, safeFolderName);
+            await removePath(destination);
+            await ensureDir(resolvedInstallPath);
+            await fs.rename(modRoot, destination);
+            finalInstallPath = destination;
+          }
         } else {
           await removePath(resolvedInstallPath);
           await ensureDir(path.dirname(resolvedInstallPath));

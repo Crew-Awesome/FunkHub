@@ -124,12 +124,17 @@ export class ModInstallerService {
     modId: number;
     modName: string;
   }): DesktopInstallRequest {
+    const installSubdir = sanitizeFileStem(`${input.modName}-${input.modId}-${input.file.id}`);
+    const installPath = input.plan.type === "executable"
+      ? `${input.plan.targetPath}/${installSubdir}`
+      : input.plan.targetPath;
+
     return {
       jobId: input.jobId,
       fileName: input.file.fileName,
       mode: "mod",
-      installPath: input.plan.targetPath,
-      installSubdir: sanitizeFileStem(`${input.modName}-${input.modId}-${input.file.id}`),
+      installPath,
+      installSubdir: input.plan.type === "executable" ? undefined : installSubdir,
       downloadUrl: input.file.downloadUrl || `https://gamebanana.com/dl/${input.file.id}`,
     };
   }
@@ -165,7 +170,7 @@ export class ModInstallerService {
       developers: this.extractDevelopers(input.mod),
       categoryName: input.mod.rootCategory?.name,
       screenshotUrls: input.mod.screenshotUrls,
-      standalone: input.request.installPath.startsWith("executables/"),
+      standalone: input.request.installPath.startsWith("executables"),
     };
   }
 

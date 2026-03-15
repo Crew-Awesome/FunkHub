@@ -39,7 +39,7 @@ export function Library() {
     () => installedEngines.find((engine) => selectedMod && selectedMod.installPath.startsWith(engine.installPath)),
     [installedEngines, selectedMod],
   );
-  const isStandaloneMod = Boolean(selectedMod && (selectedMod.standalone || selectedMod.installPath.startsWith("executables/")));
+  const isStandaloneMod = Boolean(selectedMod && (selectedMod.standalone || selectedMod.installPath.startsWith("executables")));
 
   useEffect(() => {
     if (!selectedMod) {
