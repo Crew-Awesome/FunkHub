@@ -449,7 +449,7 @@ async function installArchiveInternal(webContents, payload) {
 
   jobState.set(jobId, cancelState);
 
-  const { downloadsPath, resolvedInstallPath } = await resolveInstallDirs(mode, installPath);
+  const { rootPath, downloadsPath, resolvedInstallPath } = await resolveInstallDirs(mode, installPath);
   await ensureDir(downloadsPath);
   await ensureDir(resolvedInstallPath);
 
@@ -533,7 +533,7 @@ async function installArchiveInternal(webContents, payload) {
     });
 
     return {
-      installPath: finalInstallPath,
+      installPath: path.relative(rootPath, finalInstallPath).replace(/\\/g, "/"),
       versionDetected: detectVersionFromName(archiveName),
       normalized: true,
     };
@@ -700,7 +700,12 @@ async function handleLaunchEngine(payload) {
   const rootPath = dataRootDirectory
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
-  const absolutePath = safeJoin(rootPath, installPath);
+  const absolutePath = path.isAbsolute(installPath)
+    ? path.resolve(installPath)
+    : safeJoin(rootPath, installPath);
+  if (!isPathInside(rootPath, absolutePath)) {
+    throw new Error("installPath must be inside FunkHub data root");
+  }
   let launchable;
   if (typeof executablePath === "string" && executablePath.trim().length > 0) {
     const rawExecutable = executablePath.trim();
@@ -854,7 +859,9 @@ async function handleOpenPath(payload) {
   const rootPath = dataRootDirectory
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
-  const absolutePath = safeJoin(rootPath, targetPath);
+  const absolutePath = path.isAbsolute(targetPath)
+    ? path.resolve(targetPath)
+    : safeJoin(rootPath, targetPath);
   if (!isPathInside(rootPath, absolutePath)) {
     throw new Error("targetPath must be inside FunkHub data root");
   }
@@ -899,7 +906,9 @@ async function handleDeletePath(payload) {
   const rootPath = dataRootDirectory
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
-  const absolutePath = safeJoin(rootPath, targetPath);
+  const absolutePath = path.isAbsolute(targetPath)
+    ? path.resolve(targetPath)
+    : safeJoin(rootPath, targetPath);
   if (!isPathInside(rootPath, absolutePath)) {
     throw new Error("targetPath must be inside FunkHub data root");
   }

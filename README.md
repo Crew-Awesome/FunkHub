@@ -1,12 +1,32 @@
 # FunkHub
 
-<p>
-  <img src="assets/art/logo/funkhub-logo-256.png" alt="FunkHub Logo" width="96" />
+<p align="center">
+  <img src="assets/art/banner/funkhub-banner-2048x640.png" alt="FunkHub Banner" width="900" />
 </p>
 
 **A Friday Night Funkin Mod Launcher**
 
-FunkHub is a desktop app for discovering, installing, and launching Friday Night Funkin' mods and engine instances.
+FunkHub is a simple desktop app for finding, installing, and launching Friday Night Funkin' content.
+It is made to be easy to use, fast to navigate, and fun to mess around with.
+
+## What it does
+
+- Discover mods and browse categories from GameBanana
+- Install mods into engine mod folders
+- Install standalone executable packages
+- Manage engine instances and launch them directly
+- Track downloads and basic update status
+- Handle one-click protocol installs (`funkhub://`)
+
+## Supported engines
+
+- Psych Engine
+- Base Game / V-Slice
+- Codename Engine
+- FPS Plus
+- JS Engine
+- ALE Psych
+- P-Slice
 
 ## Run locally
 
@@ -26,18 +46,3 @@ bun run build:desktop:linux   # AppImage + .deb (x64)
 bun run build:desktop:win     # NSIS + portable (x64)
 bun run build:desktop:mac     # DMG + ZIP
 ```
-
-## Release workflow
-
-GitHub Release automation is in `.github/workflows/release.yml` and runs on tags named `v*`.
-
-1. Update `version` in `package.json`
-2. Commit and push to `main`
-3. Create and push a tag:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-The workflow builds Linux (AppImage + .deb), Windows (.exe), and macOS (.dmg + .zip), then publishes them to the GitHub Release.

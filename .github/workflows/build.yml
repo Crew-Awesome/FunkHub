@@ -102,19 +102,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s globstar nullglob
-          dmg=(dist-desktop/**/*.dmg)
-          zip=(dist-desktop/**/*.zip)
-          if [[ ${#dmg[@]} -eq 0 ]]; then
+          dmg_count=$(find dist-desktop -type f -name "*.dmg" | wc -l | tr -d ' ')
+          zip_count=$(find dist-desktop -type f -name "*.zip" | wc -l | tr -d ' ')
+          if [[ "$dmg_count" -eq 0 ]]; then
             echo "No macOS installer (.dmg) was produced under dist-desktop/."
             exit 1
           fi
-          if [[ ${#zip[@]} -eq 0 ]]; then
+          if [[ "$zip_count" -eq 0 ]]; then
             echo "No macOS archive (.zip) was produced under dist-desktop/."
             exit 1
           fi
-          printf 'Found macOS DMG: %s\n' "${dmg[@]}"
-          printf 'Found macOS ZIP: %s\n' "${zip[@]}"
+          find dist-desktop -type f -name "*.dmg" -print
+          find dist-desktop -type f -name "*.zip" -print
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
