@@ -11,11 +11,21 @@ on:
   schedule:
     - cron: "*/30 * * * *"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: weblate-sync
+  cancel-in-progress: true
+
 jobs:
   configure-and-sync:
     name: Configure existing Weblate project
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, 'Update translations via Weblate') }}
     runs-on: ubuntu-latest
     environment: translations
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
@@ -32,4 +42,22 @@ jobs:
           WEBLATE_API_TOKEN: ${{ secrets.WEBLATE_API_TOKEN }}
           PROJECT_API_TOKEN: ${{ secrets.PROJECT_API_TOKEN }}
           PROJECT_API_KEY: ${{ secrets.PROJECT_API_KEY }}
-        run: node ./scripts/configure-weblate.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Weblate sync attempt ${attempt}/3"
+            if node ./scripts/configure-weblate.mjs; then
+              echo "Weblate sync succeeded on attempt ${attempt}."
+              break
+            fi
+
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "Weblate sync failed after 3 attempts."
+              exit 1
+            fi
+
+            sleep_seconds=$((attempt * 20))
+            echo "Transient Weblate failure. Retrying in ${sleep_seconds}s..."
+            sleep "$sleep_seconds"
+          done

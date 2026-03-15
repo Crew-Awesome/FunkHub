@@ -2,12 +2,13 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Folder, Download, Palette, Sliders, Info, Twitter, MessageCircle, FolderOpen, Link2, Copy } from "lucide-react";
 import { useFunkHub, useI18n, useTheme } from "../../providers";
+import type { SupportedLocale } from "../../i18n";
 
 const ITCH_OAUTH_CLIENT_ID = "4f345ebf07699f30d702a69fd6dca358";
 
 export function Settings() {
   const { theme, toggleTheme } = useTheme();
-  const { t } = useI18n();
+  const { t, locale, locales, setLocale } = useI18n();
   const {
     settings,
     itchAuth,
@@ -434,6 +435,26 @@ export function Settings() {
                          checked:after:translate-x-5"
               />
             </label>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                {t("settings.language", "Language")}
+              </label>
+              <select
+                value={locale}
+                onChange={(event) => {
+                  void setLocale(event.target.value as SupportedLocale);
+                }}
+                className="w-full px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                {locales.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">{t("settings.language.help", "UI language used by FunkHub")}</p>
+            </div>
 
           </div>
         </motion.section>

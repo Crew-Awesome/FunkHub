@@ -7,6 +7,11 @@ export type SupportedLocale = "en" | "es-419" | "ru" | "pt-BR";
 
 type Dictionary = Record<string, string>;
 
+export interface LocaleOption {
+  code: SupportedLocale;
+  label: string;
+}
+
 const dictionaries: Record<SupportedLocale, Dictionary> = {
   en,
   "es-419": es419,
@@ -14,11 +19,11 @@ const dictionaries: Record<SupportedLocale, Dictionary> = {
   "pt-BR": ptBR,
 };
 
-export const supportedLocales: Array<{ code: SupportedLocale; labelKey: string }> = [
-  { code: "en", labelKey: "settings.language.english" },
-  { code: "es-419", labelKey: "settings.language.spanishLatam" },
-  { code: "ru", labelKey: "settings.language.russian" },
-  { code: "pt-BR", labelKey: "settings.language.portugueseBrazil" },
+export const supportedLocales: LocaleOption[] = [
+  { code: "en", label: "English" },
+  { code: "es-419", label: "Espanol (Latinoamerica)" },
+  { code: "ru", label: "Russkiy" },
+  { code: "pt-BR", label: "Portugues (Brasil)" },
 ];
 
 export function normalizeLocale(rawLocale: string | undefined): SupportedLocale {

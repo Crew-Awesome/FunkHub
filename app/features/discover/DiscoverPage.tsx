@@ -5,11 +5,12 @@ import { useNavigate } from "react-router";
 import { ModCard, ModVisualizerModal, UserProfileModal } from "../mods";
 import { useFunkHub, useI18n } from "../../providers";
 import type { CategoryNode, GameBananaMember } from "../../services/funkhub";
+import type { SupportedLocale } from "../../i18n";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../shared/ui/sheet";
 
 export function Discover() {
-  const { t } = useI18n();
+  const { t, locale, locales, setLocale } = useI18n();
   const {
     loading,
     discoverMods,
@@ -383,6 +384,24 @@ export function Discover() {
           </DialogHeader>
 
           <div className="space-y-3 text-sm">
+            <div className="rounded-lg border border-border p-3">
+              <p className="font-medium text-foreground">{t("discover.step0", "0) Choose your language")}</p>
+              <p className="mt-1 text-muted-foreground">{t("discover.step0Desc", "Pick your preferred UI language before continuing setup.")}</p>
+              <select
+                value={locale}
+                onChange={(event) => {
+                  void setLocale(event.target.value as SupportedLocale);
+                }}
+                className="mt-2 w-full rounded-lg border border-border bg-input-background px-3 py-2 text-foreground"
+              >
+                {locales.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="rounded-lg border border-border p-3">
               <p className="font-medium text-foreground">{t("discover.step1", "1) Choose your game folder")}</p>
               <p className="mt-1 text-muted-foreground">{t("discover.step1Desc", "Pick your Friday Night Funkin' directory so FunkHub can open and reference local files.")}</p>

@@ -4,7 +4,7 @@ import { useFunkHub } from "./funkhub/FunkHubProvider";
 
 interface I18nContextValue {
   locale: SupportedLocale;
-  locales: Array<{ code: SupportedLocale; labelKey: string }>;
+  locales: Array<{ code: SupportedLocale; label: string }>;
   setLocale: (locale: SupportedLocale) => Promise<void>;
   t: (key: string, fallback?: string, vars?: Record<string, string | number>) => string;
 }
