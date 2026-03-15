@@ -5,7 +5,7 @@ import ptBR from "./locales/pt-BR.json";
 
 export type SupportedLocale = "en" | "es-419" | "ru" | "pt-BR";
 
-type Dictionary = Record<string, string>;
+type Dictionary = Record<string, string | null | undefined>;
 
 export interface LocaleOption {
   code: SupportedLocale;
@@ -58,7 +58,9 @@ export function translate(
   fallback?: string,
   vars?: Record<string, string | number>,
 ): string {
-  const source = dictionaries[locale][key] ?? dictionaries.en[key] ?? fallback ?? key;
+  const localeValue = dictionaries[locale][key];
+  const englishValue = dictionaries.en[key];
+  const source = pickTranslation(localeValue, englishValue, fallback, key);
   if (!vars) {
     return source;
   }
@@ -69,4 +71,29 @@ export function translate(
     }
     return String(vars[token]);
   });
+}
+
+function hasTranslation(value: string | null | undefined): value is string {
+  return value != null && value.trim() !== "";
+}
+
+function pickTranslation(
+  localeValue: string | null | undefined,
+  englishValue: string | null | undefined,
+  fallback: string | undefined,
+  key: string,
+): string {
+  if (hasTranslation(localeValue)) {
+    return localeValue;
+  }
+
+  if (hasTranslation(englishValue)) {
+    return englishValue;
+  }
+
+  if (hasTranslation(fallback)) {
+    return fallback;
+  }
+
+  return key;
 }
