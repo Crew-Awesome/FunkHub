@@ -15,12 +15,57 @@ const EXECUTABLE_CATEGORY_IDS = new Set([3827]);
 const HYBRID_EXECUTABLE_CATEGORY_IDS = new Set([3046, 3828]);
 const EXECUTABLE_HINTS = ["standalone", "portable", "launcher", "runtime", "binary", "exec"];
 
+type ModCategoryLike = {
+  id?: number;
+  name?: string;
+  profileUrl?: string;
+};
+
+type ModCategorySource = {
+  rootCategory?: ModCategoryLike;
+  category?: ModCategoryLike;
+  superCategory?: ModCategoryLike;
+};
+
 function sanitizeFileStem(fileName: string): string {
   const stem = fileName.replace(/\.[^/.]+$/, "").trim();
   return stem.replace(/[^A-Za-z0-9._ -]/g, "_") || "mod";
 }
 
 export class ModInstallerService {
+  private getCategoryCandidates(mod: ModCategorySource): ModCategoryLike[] {
+    return [mod.rootCategory, mod.category, mod.superCategory].filter((category): category is ModCategoryLike => Boolean(category));
+  }
+
+  private isExecutableCategory(category: ModCategoryLike): boolean {
+    const id = typeof category.id === "number" ? category.id : 0;
+    if (id > 0 && EXECUTABLE_CATEGORY_IDS.has(id)) {
+      return true;
+    }
+
+    const name = String(category.name || "").toLowerCase();
+    if (name.includes("executables") || name.includes("executable")) {
+      return true;
+    }
+
+    const profileUrl = String(category.profileUrl || "").toLowerCase();
+    return profileUrl.includes("/mods/cats/3827");
+  }
+
+  private isHybridExecutableCategory(category: ModCategoryLike): boolean {
+    const id = typeof category.id === "number" ? category.id : 0;
+    if (id > 0 && HYBRID_EXECUTABLE_CATEGORY_IDS.has(id)) {
+      return true;
+    }
+
+    const name = String(category.name || "").toLowerCase();
+    return name.includes("launcher") || name.includes("runtime");
+  }
+
+  isExecutableCategoryMod(mod: ModCategorySource): boolean {
+    return this.getCategoryCandidates(mod).some((category) => this.isExecutableCategory(category));
+  }
+
   private extractDevelopers(mod: Pick<GameBananaModProfile, "credits" | "submitter">): string[] {
     const fromCredits = (mod.credits ?? []).flatMap((group) => group.authors.map((author) => author.name));
     const fromSubmitter = mod.submitter?.name ? [mod.submitter.name] : [];
@@ -44,32 +89,28 @@ export class ModInstallerService {
     return ARCHIVE_EXTENSIONS.some((extension) => lower.endsWith(extension));
   }
 
-  isExecutableMod(mod: Pick<GameBananaModProfile, "rootCategory">, file: Pick<GameBananaFile, "fileName">): boolean {
+  isExecutableMod(mod: Pick<GameBananaModProfile, "rootCategory" | "category" | "superCategory">, file: Pick<GameBananaFile, "fileName">): boolean {
     const lowerFileName = file.fileName.toLowerCase();
     const fromExtension = EXECUTABLE_EXTENSIONS.some((extension) => lowerFileName.endsWith(extension));
+    const categories = this.getCategoryCandidates(mod);
 
     if (fromExtension) {
       return true;
     }
 
-    const categoryId = mod.rootCategory?.id;
-    if (categoryId && EXECUTABLE_CATEGORY_IDS.has(categoryId)) {
+    if (categories.some((category) => this.isExecutableCategory(category))) {
       return true;
     }
 
-    if (categoryId && HYBRID_EXECUTABLE_CATEGORY_IDS.has(categoryId)) {
+    if (categories.some((category) => this.isHybridExecutableCategory(category))) {
       return EXECUTABLE_HINTS.some((hint) => lowerFileName.includes(hint));
     }
 
-    if (categoryId && categoryId !== 43771) {
-      return true;
-    }
-
-    return mod.rootCategory?.name.toLowerCase().includes("executables") === true;
+    return false;
   }
 
   createInstallPlan(input: {
-    mod: Pick<GameBananaModProfile, "requiredEngine" | "rootCategory" | "name" | "text">;
+    mod: Pick<GameBananaModProfile, "requiredEngine" | "rootCategory" | "category" | "superCategory" | "name" | "text">;
     file: Pick<GameBananaFile, "fileName">;
     selectedEngine?: InstalledEngine;
     forceInstallType?: "executable" | "standard_mod";

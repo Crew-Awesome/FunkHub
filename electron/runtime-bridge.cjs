@@ -342,6 +342,50 @@ async function extractArchive(archivePath, outputDir, cancelState, webContents, 
   });
 }
 
+async function extractRarWithUnrar(archivePath, outputDir, cancelState, webContents, jobId) {
+  await ensureDir(outputDir);
+
+  return new Promise((resolve, reject) => {
+    const child = spawn("unrar", ["x", "-o+", "-idq", archivePath, `${outputDir}${path.sep}`], {
+      windowsHide: true,
+    });
+
+    cancelState.process = child;
+
+    child.on("error", (error) => {
+      cancelState.process = null;
+      if (error && error.code === "ENOENT") {
+        resolve(false);
+        return;
+      }
+      reject(error);
+    });
+
+    child.on("close", (code) => {
+      cancelState.process = null;
+
+      if (cancelState.cancelled) {
+        reject(new Error("Extraction cancelled"));
+        return;
+      }
+
+      if (code === 0) {
+        emitProgress(webContents, {
+          jobId,
+          phase: "extract",
+          progress: 1,
+          message: "Extraction complete",
+          timestamp: now(),
+        });
+        resolve(true);
+        return;
+      }
+
+      resolve(false);
+    });
+  });
+}
+
 async function downloadToFile(url, outputPath, cancelState, webContents, jobId) {
   const response = await fetch(url, { signal: cancelState.controller.signal });
 
@@ -536,7 +580,8 @@ async function installArchiveInternal(webContents, payload) {
     });
 
     const archiveSignature = await detectArchiveSignature(tempArchivePath);
-    const canExtract = archiveSignature !== "unknown";
+    const hasArchiveExtension = ARCHIVE_EXTENSIONS.some((extension) => archiveName.toLowerCase().endsWith(extension));
+    const canExtract = archiveSignature !== "unknown" || hasArchiveExtension;
 
     let finalInstallPath = resolvedInstallPath;
 
@@ -572,7 +617,29 @@ async function installArchiveInternal(webContents, payload) {
         await flattenSingleTopFolder(extractTempPath);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Extraction failed";
-        if (mode === "mod") {
+        const canRetryWithUnrar = mode === "mod"
+          && archiveSignature === "rar"
+          && /exit code 2/i.test(message);
+        let recoveredFromRarFallback = false;
+
+        if (canRetryWithUnrar) {
+          emitProgress(webContents, {
+            jobId,
+            phase: "extract",
+            progress: 0.8,
+            message: "7z failed for RAR, retrying extraction with unrar",
+            timestamp: now(),
+          });
+
+          recoveredFromRarFallback = await extractRarWithUnrar(tempArchivePath, extractTempPath, cancelState, webContents, jobId);
+          if (recoveredFromRarFallback) {
+            await flattenSingleTopFolder(extractTempPath);
+            await extractNestedArchiveIfPresent(extractTempPath, cancelState, webContents, jobId);
+            await flattenSingleTopFolder(extractTempPath);
+          }
+        }
+
+        if (!recoveredFromRarFallback && mode === "mod") {
           emitProgress(webContents, {
             jobId,
             phase: "install",
@@ -600,7 +667,7 @@ async function installArchiveInternal(webContents, payload) {
                 tempArchivePath,
                 jobId,
               });
-        } else {
+        } else if (!recoveredFromRarFallback) {
           throw error;
         }
       }

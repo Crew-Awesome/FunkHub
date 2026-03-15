@@ -80,7 +80,8 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
           setActiveMediaIndex(0);
           const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
           setSelectedEngineId(defaultEngine?.id ?? "");
-          const defaultExecutable = next.rootCategory?.id === 3827 || next.files.some((file) => modInstallerService.isExecutableMod(next, file));
+          const defaultExecutable = modInstallerService.isExecutableCategoryMod(next)
+            || next.files.some((file) => modInstallerService.isExecutableMod(next, file));
           setInstallMode(defaultExecutable ? "executable" : "mod_folder");
         }
       })
@@ -112,7 +113,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
   const categoryLabel = profile?.rootCategory?.name ?? profile?.category?.name ?? profile?.superCategory?.name;
   const selectedEngine = installedEngines.find((engine) => engine.id === selectedEngineId);
   const isExecutableMod = Boolean(profile && profile.files.some((file) => modInstallerService.isExecutableMod(profile, file)));
-  const executableCategoryDefault = profile?.rootCategory?.id === 3827;
+  const executableCategoryDefault = Boolean(profile && modInstallerService.isExecutableCategoryMod(profile));
   const supportsExecutableInstall = Boolean(executableCategoryDefault || isExecutableMod);
   const installAsExecutable = supportsExecutableInstall && installMode === "executable";
   const hasDependencyWarning = Boolean(!isExecutableMod && profile?.requiredEngine && selectedEngine && selectedEngine.slug !== profile.requiredEngine);
