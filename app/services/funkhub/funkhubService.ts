@@ -1073,6 +1073,7 @@ export class FunkHubService {
             jobId: task.id,
             plan,
             file: selectedFile,
+            modId: profile.id,
             modName: profile.name,
           });
 
