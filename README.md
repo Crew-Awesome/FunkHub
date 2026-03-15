@@ -30,6 +30,20 @@ made using the Gamebanana API.
 - ALE Psych
 - P-Slice
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/art/screenshots/funkhub-screenshot-discover.png" alt="Discover Mods" width="900" />
+</p>
+
+<p align="center">
+  <img src="assets/art/screenshots/funkhub-screenshot-library.png" alt="Library" width="900" />
+</p>
+
+<p align="center">
+  <img src="assets/art/screenshots/funkhub-screenshot-engines.png" alt="Instances" width="900" />
+</p>
+
 ## Run locally
 
 ```bash
