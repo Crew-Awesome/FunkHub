@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { X, Download, Clock3, User, ExternalLink } from "lucide-react";
+import { X, Download, Clock3, User, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFunkHub } from "../../providers";
 import { modInstallerService } from "../../services/funkhub";
 import type { GameBananaMember, GameBananaModProfile } from "../../services/funkhub";
@@ -59,6 +59,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
   const [profile, setProfile] = useState<GameBananaModProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedEngineId, setSelectedEngineId] = useState<string>("");
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
 
   useEffect(() => {
     if (!open || !modId) {
@@ -73,6 +74,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
       .then((next) => {
         if (!cancelled) {
           setProfile(next);
+          setActiveMediaIndex(0);
           const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
           setSelectedEngineId(defaultEngine?.id ?? "");
         }
@@ -94,7 +96,14 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
     };
   }, [open, modId, getModProfile]);
 
-  const heroImage = useMemo(() => profile?.imageUrl ?? profile?.thumbnailUrl, [profile]);
+  const mediaGallery = useMemo(() => {
+    if (!profile) {
+      return [] as string[];
+    }
+    const merged = [profile.imageUrl, profile.thumbnailUrl, ...(profile.screenshotUrls ?? [])]
+      .filter((entry): entry is string => Boolean(entry && entry.trim()));
+    return Array.from(new Set(merged));
+  }, [profile]);
   const categoryLabel = profile?.rootCategory?.name ?? profile?.category?.name ?? profile?.superCategory?.name;
   const selectedEngine = installedEngines.find((engine) => engine.id === selectedEngineId);
   const isExecutableMod = Boolean(profile && profile.files.some((file) => modInstallerService.isExecutableMod(profile, file)));
@@ -145,8 +154,51 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
           <div className="p-5 space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-6">
               <div className="rounded-xl overflow-hidden bg-secondary min-h-[220px]">
-                {heroImage ? (
-                  <img src={heroImage} alt={profile.name} className="w-full h-full object-cover" />
+                {mediaGallery.length > 0 ? (
+                  <div>
+                    <div className="relative">
+                      <img
+                        src={mediaGallery[Math.min(activeMediaIndex, mediaGallery.length - 1)]}
+                        alt={profile.name}
+                        className="w-full h-[320px] object-cover"
+                      />
+                      {mediaGallery.length > 1 && (
+                        <>
+                          <button
+                            onClick={() => setActiveMediaIndex((current) => (current - 1 + mediaGallery.length) % mediaGallery.length)}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/55 hover:bg-black/70 text-white"
+                            aria-label="Previous image"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setActiveMediaIndex((current) => (current + 1) % mediaGallery.length)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/55 hover:bg-black/70 text-white"
+                            aria-label="Next image"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {mediaGallery.length > 1 && (
+                      <div className="flex gap-2 p-3 overflow-x-auto border-t border-border/60 bg-card/30">
+                        {mediaGallery.map((image, index) => (
+                          <button
+                            key={`${image}-${index}`}
+                            onClick={() => setActiveMediaIndex(index)}
+                            className={[
+                              "w-16 h-12 rounded overflow-hidden border shrink-0",
+                              index === activeMediaIndex ? "border-primary" : "border-border",
+                            ].join(" ")}
+                            aria-label={`Preview ${index + 1}`}
+                          >
+                            <img src={image} alt="" className="w-full h-full object-cover" loading="lazy" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
                     No preview image

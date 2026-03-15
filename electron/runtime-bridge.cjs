@@ -866,6 +866,29 @@ async function handleOpenPath(payload) {
   return { ok: true, openedPath: absolutePath };
 }
 
+async function handleOpenAnyPath(payload) {
+  const targetPath = payload?.targetPath;
+  if (!targetPath) {
+    throw new Error("targetPath is required");
+  }
+
+  const { shell } = require("electron");
+  const { dataRootDirectory } = await getEffectiveSettings();
+  const rootPath = dataRootDirectory
+    ? path.resolve(dataRootDirectory)
+    : getDefaultDataRoot();
+  const absolutePath = path.isAbsolute(targetPath)
+    ? path.resolve(targetPath)
+    : safeJoin(rootPath, targetPath);
+
+  const error = await shell.openPath(absolutePath);
+  if (error) {
+    return { ok: false, error };
+  }
+
+  return { ok: true, openedPath: absolutePath };
+}
+
 async function handleDeletePath(payload) {
   const targetPath = payload?.targetPath;
   if (!targetPath) {
@@ -930,6 +953,37 @@ async function handleInspectEngineInstall(payload) {
   };
 }
 
+async function handleInspectPath(payload) {
+  const targetPath = payload?.targetPath;
+  if (!targetPath) {
+    throw new Error("targetPath is required");
+  }
+
+  const { dataRootDirectory } = await getEffectiveSettings();
+  const rootPath = dataRootDirectory
+    ? path.resolve(dataRootDirectory)
+    : getDefaultDataRoot();
+  const absolutePath = path.isAbsolute(targetPath)
+    ? path.resolve(targetPath)
+    : safeJoin(rootPath, targetPath);
+
+  try {
+    const stats = await fs.stat(absolutePath);
+    return {
+      ok: true,
+      exists: true,
+      isDirectory: stats.isDirectory(),
+      absolutePath,
+    };
+  } catch {
+    return {
+      ok: true,
+      exists: false,
+      absolutePath,
+    };
+  }
+}
+
 async function handleImportEngineFolder(payload) {
   const sourcePath = payload?.sourcePath;
   const slug = payload?.slug;
@@ -971,6 +1025,42 @@ async function handleImportEngineFolder(payload) {
     installPath: relInstallPath,
     modsPath: `${relInstallPath}/mods`,
     detectedVersion: detectVersionFromName(path.basename(sourceAbsolute)) || version || "imported",
+  };
+}
+
+async function handleImportModFolder(payload) {
+  const sourcePath = payload?.sourcePath;
+  const targetModsPath = payload?.targetModsPath;
+  const installSubdir = payload?.installSubdir;
+
+  if (!sourcePath || !targetModsPath || !installSubdir) {
+    throw new Error("sourcePath, targetModsPath and installSubdir are required");
+  }
+
+  const sourceAbsolute = path.resolve(sourcePath);
+  const sourceStats = await fs.stat(sourceAbsolute);
+  if (!sourceStats.isDirectory()) {
+    throw new Error("sourcePath must be a directory");
+  }
+
+  const { dataRootDirectory } = await getEffectiveSettings();
+  const rootPath = dataRootDirectory
+    ? path.resolve(dataRootDirectory)
+    : getDefaultDataRoot();
+  const targetRoot = safeJoin(rootPath, targetModsPath);
+  const targetInstall = safeJoin(rootPath, `${targetModsPath}/${installSubdir}`);
+
+  if (!isPathInside(rootPath, targetInstall)) {
+    throw new Error("target path must be inside FunkHub data root");
+  }
+
+  await ensureDir(targetRoot);
+  await removePath(targetInstall);
+  await fs.cp(sourceAbsolute, targetInstall, { recursive: true });
+
+  return {
+    ok: true,
+    installPath: path.relative(rootPath, targetInstall).replace(/\\/g, "/"),
   };
 }
 
@@ -1271,6 +1361,7 @@ module.exports = {
   handleCancelInstall,
   handleLaunchEngine,
   handleOpenPath,
+  handleOpenAnyPath,
   handleDeletePath,
   handleGetItchAuthStatus,
   handleClearItchAuth,
@@ -1278,7 +1369,9 @@ module.exports = {
   handleListItchBaseGameReleases,
   handleResolveItchBaseGameDownload,
   handleInspectEngineInstall,
+  handleInspectPath,
   handleImportEngineFolder,
+  handleImportModFolder,
   handleGetSettings,
   handleUpdateSettings,
 };

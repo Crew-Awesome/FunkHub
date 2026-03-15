@@ -235,7 +235,7 @@ export function Discover() {
                   author={mod.submitter?.name ?? "Unknown"}
                   thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
                   likes={mod.likeCount}
-                  downloads={mod.downloadCount ?? mod.viewCount}
+                  downloads={mod.downloadCount}
                   onView={() => setSelectedModId(mod.id)}
                   onAuthorClick={() => {
                     if (mod.submitter?.id) {

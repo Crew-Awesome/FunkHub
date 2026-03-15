@@ -6,6 +6,7 @@ const {
   handleCancelInstall,
   handleLaunchEngine,
   handleOpenPath,
+  handleOpenAnyPath,
   handleDeletePath,
   handleGetItchAuthStatus,
   handleClearItchAuth,
@@ -13,10 +14,70 @@ const {
   handleListItchBaseGameReleases,
   handleResolveItchBaseGameDownload,
   handleInspectEngineInstall,
+  handleInspectPath,
   handleImportEngineFolder,
+  handleImportModFolder,
   handleGetSettings,
   handleUpdateSettings,
 } = require("./runtime-bridge.cjs");
+
+let mainWindow = null;
+const pendingDeepLinks = [];
+
+function extractDeepLinkFromArgv(argv) {
+  if (!Array.isArray(argv)) {
+    return undefined;
+  }
+  return argv.find((value) => typeof value === "string" && value.startsWith("funkhub://"));
+}
+
+function enqueueDeepLink(rawUrl) {
+  if (typeof rawUrl !== "string" || !rawUrl.startsWith("funkhub://")) {
+    return;
+  }
+  pendingDeepLinks.push(rawUrl);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("funkhub:deep-link", { url: rawUrl });
+  }
+}
+
+function registerProtocolHandler() {
+  try {
+    if (process.defaultApp && process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient("funkhub", process.execPath, [path.resolve(process.argv[1])]);
+      return;
+    }
+    app.setAsDefaultProtocolClient("funkhub");
+  } catch {
+  }
+}
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
+
+app.on("second-instance", (_event, argv) => {
+  const deepLink = extractDeepLinkFromArgv(argv);
+  if (deepLink) {
+    enqueueDeepLink(deepLink);
+  }
+
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+  }
+});
+
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  enqueueDeepLink(url);
+  if (!mainWindow && app.isReady()) {
+    createWindow();
+  }
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -38,9 +99,32 @@ function createWindow() {
   } else {
     win.loadFile(path.join(__dirname, "../dist/index.html"));
   }
+
+  mainWindow = win;
+  win.on("closed", () => {
+    if (mainWindow === win) {
+      mainWindow = null;
+    }
+  });
+
+  win.webContents.on("did-finish-load", () => {
+    if (pendingDeepLinks.length > 0) {
+      for (const url of pendingDeepLinks) {
+        win.webContents.send("funkhub:deep-link", { url });
+      }
+    }
+  });
+
+  return win;
 }
 
 app.whenReady().then(() => {
+  registerProtocolHandler();
+  const startupDeepLink = extractDeepLinkFromArgv(process.argv);
+  if (startupDeepLink) {
+    enqueueDeepLink(startupDeepLink);
+  }
+
   ipcMain.handle("funkhub:installArchive", async (event, payload) => {
     return handleInstallArchive(event.sender, payload);
   });
@@ -59,6 +143,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:openPath", async (_event, payload) => {
     return handleOpenPath(payload);
+  });
+
+  ipcMain.handle("funkhub:openAnyPath", async (_event, payload) => {
+    return handleOpenAnyPath(payload);
   });
 
   ipcMain.handle("funkhub:deletePath", async (_event, payload) => {
@@ -89,8 +177,16 @@ app.whenReady().then(() => {
     return handleInspectEngineInstall(payload);
   });
 
+  ipcMain.handle("funkhub:inspectPath", async (_event, payload) => {
+    return handleInspectPath(payload);
+  });
+
   ipcMain.handle("funkhub:importEngineFolder", async (_event, payload) => {
     return handleImportEngineFolder(payload);
+  });
+
+  ipcMain.handle("funkhub:importModFolder", async (_event, payload) => {
+    return handleImportModFolder(payload);
   });
 
   ipcMain.handle("funkhub:pickFolder", async (_event, payload) => {
@@ -130,6 +226,12 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:getSettings", async () => {
     return handleGetSettings();
+  });
+
+  ipcMain.handle("funkhub:getPendingDeepLinks", async () => {
+    const links = [...pendingDeepLinks];
+    pendingDeepLinks.length = 0;
+    return { links };
   });
 
   ipcMain.handle("funkhub:updateSettings", async (_event, payload) => {

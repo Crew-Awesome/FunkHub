@@ -29,7 +29,7 @@ function formatDownloads(value: string | number | undefined): string {
     return String(value);
   }
 
-  return "0";
+  return "--";
 }
 
 function formatLikes(value: number | undefined): string {

@@ -103,6 +103,11 @@ export interface InstalledMod {
   requiredEngine?: EngineSlug;
   dependencies?: string[];
   sourceFileId: number;
+  description?: string;
+  developers?: string[];
+  categoryName?: string;
+  screenshotUrls?: string[];
+  manual?: boolean;
   updateAvailable?: boolean;
   latestVersion?: string;
 }
@@ -233,10 +238,29 @@ export interface DesktopBridge {
     detectedVersion?: string;
     error?: string;
   }>;
+  importModFolder: (payload: {
+    sourcePath: string;
+    targetModsPath: string;
+    installSubdir: string;
+  }) => Promise<{
+    ok: boolean;
+    installPath?: string;
+    error?: string;
+  }>;
+  inspectPath: (payload: { targetPath: string }) => Promise<{
+    ok: boolean;
+    exists: boolean;
+    isDirectory?: boolean;
+    absolutePath?: string;
+    error?: string;
+  }>;
   pickFolder: (payload?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>;
   pickFile: (payload?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => Promise<{ canceled: boolean; path?: string }>;
+  openAnyPath: (payload: { targetPath: string }) => Promise<{ ok: boolean; openedPath?: string; error?: string }>;
   getSettings: () => Promise<Partial<FunkHubSettings>>;
   updateSettings: (payload: Partial<FunkHubSettings>) => Promise<Partial<FunkHubSettings>>;
+  getPendingDeepLinks: () => Promise<{ links: string[] }>;
+  onDeepLink: (listener: (payload: { url: string }) => void) => () => void;
 }
 
 export interface ModUpdateInfo {

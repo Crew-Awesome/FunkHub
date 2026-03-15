@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Play, RefreshCw, Trash2, Star } from "lucide-react";
+import { Play, RefreshCw, Trash2, FolderPlus } from "lucide-react";
 import { useFunkHub } from "../../providers";
 
 export function Library() {
@@ -12,10 +12,19 @@ export function Library() {
     refreshModUpdates,
     installMod,
     launchInstalledMod,
+    browseFolder,
+    addManualMod,
   } = useFunkHub();
   const [selectedModId, setSelectedModId] = useState(installedMods[0]?.id);
   const [deleteFilesOnRemove, setDeleteFilesOnRemove] = useState(true);
   const [selectedProfileShots, setSelectedProfileShots] = useState<string[]>([]);
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualName, setManualName] = useState("");
+  const [manualAuthor, setManualAuthor] = useState("");
+  const [manualVersion, setManualVersion] = useState("");
+  const [manualDescription, setManualDescription] = useState("");
+  const [manualEngineId, setManualEngineId] = useState(installedEngines[0]?.id ?? "");
+  const [manualSourcePath, setManualSourcePath] = useState("");
 
   const selectedMod = installedMods.find((mod) => mod.id === selectedModId) ?? installedMods[0];
   const selectedEngineInstall = useMemo(
@@ -26,6 +35,16 @@ export function Library() {
   useEffect(() => {
     let cancelled = false;
     if (!selectedMod) {
+      setSelectedProfileShots([]);
+      return;
+    }
+
+    if (selectedMod.screenshotUrls && selectedMod.screenshotUrls.length > 0) {
+      setSelectedProfileShots(Array.from(new Set(selectedMod.screenshotUrls)));
+      return;
+    }
+
+    if (selectedMod.manual || selectedMod.modId <= 0) {
       setSelectedProfileShots([]);
       return;
     }
@@ -50,6 +69,12 @@ export function Library() {
     };
   }, [selectedMod?.modId, getModProfile]);
 
+  useEffect(() => {
+    if (!manualEngineId && installedEngines.length > 0) {
+      setManualEngineId(installedEngines[0].id);
+    }
+  }, [installedEngines, manualEngineId]);
+
   if (!selectedMod) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -63,7 +88,16 @@ export function Library() {
       {/* Mod List */}
       <div className="w-80 bg-card border-r border-border overflow-y-auto">
         <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">Installed Mods ({installedMods.length})</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-semibold text-foreground">Installed Mods ({installedMods.length})</h2>
+            <button
+              onClick={() => setShowManualModal(true)}
+              className="px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-xs inline-flex items-center gap-1"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+              Add Manual
+            </button>
+          </div>
         </div>
         <div className="p-2 space-y-1">
           {installedMods.map((mod) => (
@@ -93,7 +127,7 @@ export function Library() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">v{mod.version ?? "unknown"}</p>
-                  <p className="text-xs text-muted-foreground">{mod.engine}</p>
+                  <p className="text-xs text-muted-foreground">{mod.categoryName ?? mod.engine}</p>
                 </div>
               </div>
             </button>
@@ -201,9 +235,16 @@ export function Library() {
           <div className="bg-card border border-border rounded-lg p-6 mb-6">
             <h3 className="font-semibold text-foreground mb-3">About this mod</h3>
             <p className="text-muted-foreground leading-relaxed">
-              {selectedMod.modName} is installed from GameBanana and managed by FunkHub. This package is installed
-              into the selected engine path and can be launched with {selectedMod.engine}.
+              {selectedMod.description
+                ? selectedMod.description
+                : `${selectedMod.modName} is installed from GameBanana and managed by FunkHub. This package is installed into the selected engine path and can be launched with ${selectedMod.engine}.`}
             </p>
+            {selectedMod.developers && selectedMod.developers.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm text-muted-foreground mb-1">Developers</p>
+                <p className="text-sm text-foreground">{selectedMod.developers.join(", ")}</p>
+              </div>
+            )}
           </div>
 
           {/* Screenshots */}
@@ -233,6 +274,68 @@ export function Library() {
       >
         Refresh Update Status
       </button>
+
+      {showManualModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5">
+            <h3 className="text-lg font-semibold text-foreground">Add Manual Mod</h3>
+            <p className="text-xs text-muted-foreground mt-1">Import a local mod folder into an installed engine.</p>
+            <div className="mt-4 space-y-3">
+              <input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="Mod name" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
+              <input value={manualAuthor} onChange={(e) => setManualAuthor(e.target.value)} placeholder="Author (optional)" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
+              <input value={manualVersion} onChange={(e) => setManualVersion(e.target.value)} placeholder="Version (optional)" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
+              <textarea value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} placeholder="Description (optional)" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm min-h-20" />
+              <select value={manualEngineId} onChange={(e) => setManualEngineId(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm">
+                {installedEngines.map((engine) => (
+                  <option key={engine.id} value={engine.id}>{engine.name} ({engine.version})</option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <input value={manualSourcePath} onChange={(e) => setManualSourcePath(e.target.value)} placeholder="Mod folder path" className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
+                <button
+                  onClick={async () => {
+                    const selected = await browseFolder({ title: "Select mod folder" });
+                    if (selected) {
+                      setManualSourcePath(selected);
+                    }
+                  }}
+                  className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                >
+                  Browse
+                </button>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setShowManualModal(false)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Cancel</button>
+              <button
+                onClick={async () => {
+                  try {
+                    await addManualMod({
+                      modName: manualName,
+                      engineId: manualEngineId,
+                      sourcePath: manualSourcePath || undefined,
+                      description: manualDescription,
+                      version: manualVersion,
+                      author: manualAuthor,
+                    });
+                    setShowManualModal(false);
+                    setManualName("");
+                    setManualAuthor("");
+                    setManualVersion("");
+                    setManualDescription("");
+                    setManualSourcePath("");
+                  } catch (error) {
+                    window.alert(error instanceof Error ? error.message : "Failed to add manual mod");
+                  }
+                }}
+                className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm"
+              >
+                Import Mod
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

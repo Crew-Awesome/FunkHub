@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { Folder, Download, Palette, Sliders, Info, Twitter, MessageCircle } from "lucide-react";
+import { Folder, Download, Palette, Sliders, Info, Twitter, MessageCircle, FolderOpen } from "lucide-react";
 import { useFunkHub, useTheme } from "../../providers";
 
 const ITCH_OAUTH_CLIENT_ID = "4f345ebf07699f30d702a69fd6dca358";
@@ -14,6 +14,7 @@ export function Settings() {
     setDefaultEngine,
     updateSettings,
     browseFolder,
+    openFolderPath,
     connectItch,
     disconnectItch,
   } = useFunkHub();
@@ -33,6 +34,7 @@ export function Settings() {
   }, [settings.gameDirectory, settings.downloadsDirectory, settings.dataRootDirectory]);
 
   const defaultEngineId = installedEngines.find((engine) => engine.isDefault)?.id ?? "";
+  const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
 
   const saveStringSetting = async (
     key: "gameDirectory" | "downloadsDirectory" | "dataRootDirectory",
@@ -64,6 +66,14 @@ export function Settings() {
     }
 
     await updateSettings({ [key]: selected });
+  };
+
+  const openFolderSafe = async (targetPath: string) => {
+    try {
+      await openFolderPath(targetPath);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Failed to open folder");
+    }
   };
 
   return (
@@ -130,6 +140,34 @@ export function Settings() {
                 ))}
               </select>
             </div>
+          </div>
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.16 }}
+          className="bg-card border border-border rounded-xl p-6"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-sky-500/10 flex items-center justify-center">
+              <FolderOpen className="w-5 h-5 text-sky-500" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground">Quick Folder Access</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <button onClick={() => openFolderSafe(dataRootDirectory || ".")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">Open Data Root</button>
+            <button onClick={() => openFolderSafe("engines")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">Open Engines Folder</button>
+            <button onClick={() => openFolderSafe(downloadsDirectory || "downloads")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">Open Downloads Folder</button>
+            <button onClick={() => openFolderSafe(defaultEngine?.modsPath || "engines")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">Open Mods Folder</button>
+            <button
+              onClick={() => gameDirectory.trim() && openFolderSafe(gameDirectory)}
+              disabled={!gameDirectory.trim()}
+              className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Open Game Folder
+            </button>
           </div>
         </motion.section>
 

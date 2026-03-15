@@ -26,11 +26,24 @@ function toNumber(value: unknown): number {
   }
 
   if (typeof value === "string") {
-    const parsed = Number(value);
+    const parsed = Number(value.replace(/,/g, "").trim());
     return Number.isNaN(parsed) ? 0 : parsed;
   }
 
   return 0;
+}
+
+function firstDefinedNumber(...values: unknown[]): number | undefined {
+  for (const value of values) {
+    if (value === undefined || value === null || value === "") {
+      continue;
+    }
+    const parsed = toNumber(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
 }
 
 function firstImageUrl(previewMedia: unknown, preferredKey: "_sFile220" | "_sFile530" | "_sFile100" = "_sFile220"): string | undefined {
@@ -111,10 +124,10 @@ function normalizeSummary(record: Record<string, unknown>): GameBananaModSummary
     dateAdded: toNumber(record._tsDateAdded),
     dateModified: toNumber(record._tsDateModified),
     dateUpdated: toNumber(record._tsDateUpdated),
-    likeCount: toNumber(record._nLikeCount),
+    likeCount: firstDefinedNumber(record._nLikeCount, record._nLikes),
     postCount: toNumber(record._nPostCount),
-    viewCount: toNumber(record._nViewCount),
-    downloadCount: toNumber(record._nDownloadCount),
+    viewCount: firstDefinedNumber(record._nViewCount, record._nViews),
+    downloadCount: firstDefinedNumber(record._nDownloadCount, record._nDownloads),
     isObsolete: Boolean(record._bIsObsolete),
     submitter: {
       id: toNumber(submitter._idRow),

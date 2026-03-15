@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { funkHubService } from "../../services/funkhub";
 import {
   CategoryNode,
@@ -65,6 +65,9 @@ interface FunkHubContextValue {
   updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
   browseFile: (options?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => Promise<string | undefined>;
+  openFolderPath: (targetPath: string) => Promise<void>;
+  addManualMod: (input: { modName: string; engineId: string; sourcePath?: string; description?: string; version?: string; author?: string }) => Promise<void>;
+  reconcileDiskState: () => Promise<void>;
   connectItch: (clientId: string) => Promise<void>;
   disconnectItch: () => Promise<void>;
   refreshItchAuth: () => Promise<void>;
@@ -91,6 +94,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const discoverPerPage = 24;
   const [hasMoreDiscover, setHasMoreDiscover] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const handledDeepLinksRef = useRef<Set<string>>(new Set());
 
   const refreshDiscover = useCallback(async () => {
     try {
@@ -121,6 +125,64 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     setInstalledMods(funkHubService.getInstalledMods());
   }, []);
 
+  const getModProfile = useCallback((modId: number) => funkHubService.getModProfile(modId), []);
+
+  const listModsBySubmitter = useCallback((input: { submitterId: number; categoryId?: number; page?: number; perPage?: number }) => (
+    funkHubService.listMods({
+      submitterId: input.submitterId,
+      categoryId: input.categoryId,
+      page: input.page,
+      perPage: input.perPage,
+    })
+  ), []);
+
+  const handleDeepLink = useCallback(async (rawUrl: string) => {
+    if (!rawUrl || handledDeepLinksRef.current.has(rawUrl)) {
+      return;
+    }
+    handledDeepLinksRef.current.add(rawUrl);
+
+    try {
+      const parsed = new URL(rawUrl);
+      if (parsed.protocol !== "funkhub:") {
+        return;
+      }
+
+      const action = (parsed.hostname || parsed.pathname.replace(/^\//, "")).toLowerCase();
+      if (action !== "install") {
+        return;
+      }
+
+      const modId = Number(parsed.searchParams.get("mod") || "0");
+      if (!Number.isFinite(modId) || modId <= 0) {
+        throw new Error("Invalid mod id in protocol URL");
+      }
+
+      const engineParam = (parsed.searchParams.get("engine") || "").trim().toLowerCase();
+      const selectedEngine = engineParam
+        ? installedEngines.find((engine) => (
+          engine.id.toLowerCase() === engineParam
+          || engine.slug.toLowerCase() === engineParam
+          || engine.name.toLowerCase().replace(/\s+/g, "-") === engineParam
+        ))
+        : undefined;
+
+      if (engineParam && !selectedEngine) {
+        throw new Error(`Engine '${engineParam}' is not installed`);
+      }
+
+      const profile = await funkHubService.getModProfile(modId);
+      const firstFile = profile.files[0];
+      if (!firstFile) {
+        throw new Error("No downloadable files found for this mod");
+      }
+
+      funkHubService.queueInstall(modId, firstFile.id, selectedEngine?.id, 20);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Failed to process protocol install URL");
+    }
+  }, [installedEngines]);
+
   const refreshAll = useCallback(async () => {
     setLoading(true);
 
@@ -150,9 +212,14 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         ]);
       setInstalledMods(funkHubService.getInstalledMods());
       setInstalledEngines(funkHubService.getInstalledEngines());
+      await funkHubService.reconcileDiskState();
+      setInstalledMods(funkHubService.getInstalledMods());
+      setInstalledEngines(funkHubService.getInstalledEngines());
       setSettings(funkHubService.getSettings());
       setItchAuth(await funkHubService.getItchAuthStatus());
       await funkHubService.refreshEngineHealth();
+      await funkHubService.hydrateInstalledModMetadata();
+      setInstalledMods(funkHubService.getInstalledMods());
       await refreshModUpdates();
       await refreshDiscover();
     } finally {
@@ -177,6 +244,35 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshDiscover();
   }, [refreshDiscover]);
+
+  useEffect(() => {
+    if (!window.funkhubDesktop?.onDeepLink || !window.funkhubDesktop?.getPendingDeepLinks) {
+      return;
+    }
+
+    let cancelled = false;
+    window.funkhubDesktop.getPendingDeepLinks()
+      .then((payload) => {
+        if (cancelled) {
+          return;
+        }
+        for (const rawUrl of payload.links || []) {
+          handleDeepLink(rawUrl);
+        }
+      })
+      .catch(() => undefined);
+
+    const unsubscribe = window.funkhubDesktop.onDeepLink((payload) => {
+      if (!cancelled && payload?.url) {
+        handleDeepLink(payload.url);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [handleDeepLink]);
 
   useEffect(() => {
     setDiscoverPage(1);
@@ -208,13 +304,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setSearchQuery,
       refreshDiscover,
       refreshModUpdates,
-      getModProfile: (modId) => funkHubService.getModProfile(modId),
-      listModsBySubmitter: (input) => funkHubService.listMods({
-        submitterId: input.submitterId,
-        categoryId: input.categoryId,
-        page: input.page,
-        perPage: input.perPage,
-      }),
+      getModProfile,
+      listModsBySubmitter,
       installMod: (modId, fileId, selectedEngineId, priority = 0) => {
         try {
           funkHubService.queueInstall(modId, fileId, selectedEngineId, priority);
@@ -279,6 +370,18 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       },
       browseFolder: async (options) => funkHubService.pickFolder(options),
       browseFile: async (options) => funkHubService.pickFile(options),
+      openFolderPath: async (targetPath) => {
+        await funkHubService.openAnyPath(targetPath);
+      },
+      addManualMod: async (input) => {
+        await funkHubService.addManualModFromFolder(input);
+        setInstalledMods(funkHubService.getInstalledMods());
+      },
+      reconcileDiskState: async () => {
+        await funkHubService.reconcileDiskState();
+        setInstalledMods(funkHubService.getInstalledMods());
+        setInstalledEngines(funkHubService.getInstalledEngines());
+      },
       connectItch: async (clientId) => {
         await funkHubService.connectItchOAuth(clientId);
         setItchAuth(await funkHubService.getItchAuthStatus());
@@ -312,7 +415,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       searchQuery,
       refreshDiscover,
       refreshModUpdates,
-      selectedCategoryId,
+      getModProfile,
+      listModsBySubmitter,
     ],
   );
 

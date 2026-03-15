@@ -21,6 +21,12 @@ function includesAny(text: string, tokens: string[]): boolean {
 }
 
 export class ModInstallerService {
+  private extractDevelopers(mod: Pick<GameBananaModProfile, "credits" | "submitter">): string[] {
+    const fromCredits = (mod.credits ?? []).flatMap((group) => group.authors.map((author) => author.name));
+    const fromSubmitter = mod.submitter?.name ? [mod.submitter.name] : [];
+    return Array.from(new Set([...fromSubmitter, ...fromCredits].map((name) => name.trim()).filter(Boolean))).slice(0, 12);
+  }
+
   detectRequiredEngine(mod: Pick<GameBananaModProfile, "requiredEngine" | "name" | "text" | "rootCategory">): EngineSlug | undefined {
     if (mod.requiredEngine) {
       return mod.requiredEngine;
@@ -135,7 +141,7 @@ export class ModInstallerService {
 
   async installViaDesktopBridge(input: {
     request: DesktopInstallRequest;
-    mod: Pick<GameBananaModProfile, "id" | "name" | "version" | "profileUrl" | "submitter" | "thumbnailUrl" | "imageUrl" | "dependencies">;
+    mod: Pick<GameBananaModProfile, "id" | "name" | "version" | "profileUrl" | "submitter" | "thumbnailUrl" | "imageUrl" | "dependencies" | "description" | "text" | "rootCategory" | "screenshotUrls" | "credits">;
     sourceFileId: number;
     requiredEngine?: EngineSlug;
   }): Promise<InstalledMod> {
@@ -159,13 +165,17 @@ export class ModInstallerService {
       requiredEngine: input.requiredEngine,
       dependencies: input.mod.dependencies,
       sourceFileId: input.sourceFileId,
+      description: input.mod.description ?? input.mod.text,
+      developers: this.extractDevelopers(input.mod),
+      categoryName: input.mod.rootCategory?.name,
+      screenshotUrls: input.mod.screenshotUrls,
     };
   }
 
   createFallbackInstalledRecord(input: {
     plan: InstallPlan;
     fileName: string;
-    mod: Pick<GameBananaModProfile, "id" | "name" | "version" | "profileUrl" | "submitter" | "thumbnailUrl" | "imageUrl" | "dependencies">;
+    mod: Pick<GameBananaModProfile, "id" | "name" | "version" | "profileUrl" | "submitter" | "thumbnailUrl" | "imageUrl" | "dependencies" | "description" | "text" | "rootCategory" | "screenshotUrls" | "credits">;
     sourceFileId: number;
   }): InstalledMod {
     const fallbackPath = `${input.plan.targetPath}/${sanitizeFileStem(input.fileName)}`;
@@ -183,6 +193,10 @@ export class ModInstallerService {
       requiredEngine: input.plan.requiredEngine,
       dependencies: input.mod.dependencies,
       sourceFileId: input.sourceFileId,
+      description: input.mod.description ?? input.mod.text,
+      developers: this.extractDevelopers(input.mod),
+      categoryName: input.mod.rootCategory?.name,
+      screenshotUrls: input.mod.screenshotUrls,
     };
   }
 }

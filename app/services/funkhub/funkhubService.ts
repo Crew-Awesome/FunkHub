@@ -189,6 +189,62 @@ export class FunkHubService {
     return result.path;
   }
 
+  async openAnyPath(targetPath: string): Promise<void> {
+    if (!targetPath.trim()) {
+      throw new Error("No folder path configured");
+    }
+    if (!window.funkhubDesktop?.openAnyPath) {
+      throw new Error("Desktop bridge unavailable for opening folders");
+    }
+    const result = await window.funkhubDesktop.openAnyPath({ targetPath: targetPath.trim() });
+    if (!result.ok) {
+      throw new Error(result.error || "Failed to open folder");
+    }
+  }
+
+  async reconcileDiskState(): Promise<void> {
+    if (!window.funkhubDesktop?.inspectPath) {
+      return;
+    }
+
+    const staleEngineIds = new Set<string>();
+    for (const engine of this.installedEngines) {
+      const check = await window.funkhubDesktop.inspectPath({ targetPath: engine.installPath });
+      if (!check.ok || !check.exists || !check.isDirectory) {
+        staleEngineIds.add(engine.id);
+      }
+    }
+
+    if (staleEngineIds.size > 0) {
+      this.installedEngines = this.installedEngines.filter((engine) => !staleEngineIds.has(engine.id));
+      if (this.installedEngines.length > 0 && !this.installedEngines.some((engine) => engine.isDefault)) {
+        this.installedEngines = this.installedEngines.map((engine, index) => ({
+          ...engine,
+          isDefault: index === 0,
+        }));
+      }
+      funkHubStorageService.saveInstalledEngines(this.installedEngines);
+    }
+
+    const validEnginePaths = this.installedEngines.map((engine) => engine.installPath);
+    const nextMods: InstalledMod[] = [];
+
+    for (const mod of this.installedMods) {
+      const check = await window.funkhubDesktop.inspectPath({ targetPath: mod.installPath });
+      const orphanedByEngine = mod.installPath.startsWith("engines/")
+        && !validEnginePaths.some((enginePath) => mod.installPath.startsWith(enginePath));
+      if (!check.ok || !check.exists || orphanedByEngine) {
+        continue;
+      }
+      nextMods.push(mod);
+    }
+
+    if (nextMods.length !== this.installedMods.length) {
+      this.installedMods = nextMods;
+      funkHubStorageService.saveInstalledMods(this.installedMods);
+    }
+  }
+
   async getItchAuthStatus(): Promise<{ connected: boolean; connectedAt?: number; scopes?: string[] }> {
     if (!window.funkhubDesktop?.getItchAuthStatus) {
       return { connected: false };
@@ -499,6 +555,45 @@ export class FunkHubService {
     return this.updateCache;
   }
 
+  async hydrateInstalledModMetadata(): Promise<void> {
+    let changed = false;
+    const next = [...this.installedMods];
+
+    await Promise.all(next.map(async (mod, index) => {
+      if (mod.manual || mod.modId <= 0) {
+        return;
+      }
+      const needsHydration = !mod.description || !mod.developers || mod.developers.length === 0 || !mod.categoryName;
+      if (!needsHydration) {
+        return;
+      }
+      try {
+        const profile = await this.getModProfile(mod.modId);
+        const developers = Array.from(new Set([
+          profile.submitter?.name,
+          ...profile.credits.flatMap((group) => group.authors.map((author) => author.name)),
+        ].filter(Boolean) as string[]));
+
+        next[index] = {
+          ...mod,
+          description: mod.description || profile.description || profile.text,
+          developers: mod.developers && mod.developers.length > 0 ? mod.developers : developers,
+          categoryName: mod.categoryName || profile.rootCategory?.name,
+          screenshotUrls: mod.screenshotUrls && mod.screenshotUrls.length > 0 ? mod.screenshotUrls : profile.screenshotUrls,
+          thumbnailUrl: mod.thumbnailUrl || profile.imageUrl || profile.thumbnailUrl,
+          author: mod.author || profile.submitter?.name,
+        };
+        changed = true;
+      } catch {
+      }
+    }));
+
+    if (changed) {
+      this.installedMods = next;
+      funkHubStorageService.saveInstalledMods(this.installedMods);
+    }
+  }
+
   addEngineInstallation(input: { slug: EngineSlug; version: string; installPath: string; modsPath: string }): InstalledEngine {
     const engine: InstalledEngine = {
       id: crypto.randomUUID(),
@@ -566,6 +661,8 @@ export class FunkHubService {
     this.installedEngines = this.installedEngines.filter((engine) => engine.id !== engineId);
     this.engineHealthCache.delete(engineId);
 
+    this.installedMods = this.installedMods.filter((mod) => !mod.installPath.startsWith(installed.installPath));
+
     if (this.installedEngines.length > 0 && !this.installedEngines.some((engine) => engine.isDefault)) {
       this.installedEngines = this.installedEngines.map((engine, index) => ({
         ...engine,
@@ -574,6 +671,7 @@ export class FunkHubService {
     }
 
     funkHubStorageService.saveInstalledEngines(this.installedEngines);
+    funkHubStorageService.saveInstalledMods(this.installedMods);
   }
 
   setDefaultEngine(engineId: string): void {
@@ -713,6 +811,68 @@ export class FunkHubService {
     });
     await this.refreshEngineHealth(installed.id);
     return installed;
+  }
+
+  async addManualModFromFolder(input: {
+    modName: string;
+    engineId: string;
+    sourcePath?: string;
+    description?: string;
+    version?: string;
+    author?: string;
+  }): Promise<InstalledMod> {
+    const modName = input.modName.trim();
+    if (!modName) {
+      throw new Error("Mod name is required");
+    }
+
+    const engine = this.installedEngines.find((entry) => entry.id === input.engineId);
+    if (!engine) {
+      throw new Error("Select an installed engine");
+    }
+
+    const sourcePath = input.sourcePath || await this.pickFolder({ title: "Select mod folder to import" });
+    if (!sourcePath) {
+      throw new Error("Mod import cancelled");
+    }
+
+    if (!window.funkhubDesktop?.importModFolder) {
+      throw new Error("Desktop bridge unavailable for manual mod import");
+    }
+
+    const installSubdir = sanitizePathSegment(`${modName}-${Date.now()}`);
+    const result = await window.funkhubDesktop.importModFolder({
+      sourcePath,
+      targetModsPath: engine.modsPath,
+      installSubdir,
+    });
+
+    if (!result.ok || !result.installPath) {
+      throw new Error(result.error || "Failed to import manual mod folder");
+    }
+
+    const manualId = -Math.floor(Date.now() / 10);
+    const record: InstalledMod = {
+      id: crypto.randomUUID(),
+      modId: manualId,
+      modName,
+      version: input.version?.trim() || "manual",
+      author: input.author?.trim() || "Manual Import",
+      gamebananaUrl: "",
+      installedAt: Date.now(),
+      installPath: result.installPath,
+      engine: engine.slug,
+      requiredEngine: engine.slug,
+      sourceFileId: -1,
+      description: input.description?.trim() || "Imported manually from local folder.",
+      developers: input.author?.trim() ? [input.author.trim()] : ["Manual Import"],
+      categoryName: "Manual",
+      manual: true,
+    };
+
+    this.installedMods = [record, ...this.installedMods];
+    funkHubStorageService.saveInstalledMods(this.installedMods);
+    return record;
   }
 
   retryDownload(taskId: string): void {

@@ -53,6 +53,14 @@
     "asarUnpack": [
       "node_modules/7zip-bin/**"
     ],
+    "protocols": [
+      {
+        "name": "FunkHub Protocol",
+        "schemes": [
+          "funkhub"
+        ]
+      }
+    ],
     "npmRebuild": false,
     "linux": {
       "target": [

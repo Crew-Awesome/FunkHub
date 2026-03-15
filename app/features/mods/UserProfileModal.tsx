@@ -132,7 +132,7 @@ export function UserProfileModal({ open, submitter, onClose, onOpenMod }: UserPr
                         <p className="text-sm font-medium text-foreground line-clamp-1">{mod.name}</p>
                         <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                           <span className="inline-flex items-center gap-1"><Heart className="w-3.5 h-3.5 fill-primary/25 text-primary" />{formatCompact(mod.likeCount)}</span>
-                          <span className="inline-flex items-center gap-1"><Download className="w-3.5 h-3.5" />{formatCompact(mod.downloadCount ?? mod.viewCount)}</span>
+                          <span className="inline-flex items-center gap-1"><Download className="w-3.5 h-3.5" />{formatCompact(mod.downloadCount)}</span>
                         </div>
                       </div>
                     </div>
