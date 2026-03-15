@@ -199,6 +199,44 @@ jobs:
           find release-artifacts/FunkHub-macos -type f -name "*.dmg" -print
           find release-artifacts/FunkHub-macos -type f -name "*.zip" -print
 
+      - name: Build release asset manifest
+        id: assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t files < <(
+            {
+              find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage"
+              find release-artifacts/FunkHub-linux-deb -type f -name "*.deb"
+              find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe"
+              find release-artifacts/FunkHub-macos -type f -name "*.dmg"
+              find release-artifacts/FunkHub-macos -type f -name "*.zip"
+            } | sort
+          )
+
+          if [[ "${#files[@]}" -eq 0 ]]; then
+            echo "No release assets found after payload verification."
+            exit 1
+          fi
+
+          duplicate_basenames=$(printf '%s\n' "${files[@]##*/}" | sort | uniq -d || true)
+          if [[ -n "$duplicate_basenames" ]]; then
+            echo "Duplicate release asset basenames detected:"
+            printf '%s\n' "$duplicate_basenames"
+            echo "Refusing to upload ambiguous asset names."
+            exit 1
+          fi
+
+          echo "Release assets to upload:"
+          printf '%s\n' "${files[@]}"
+
+          {
+            echo "files<<EOF"
+            printf '%s\n' "${files[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release and upload binaries
         uses: softprops/action-gh-release@v2
         with:
@@ -206,9 +244,6 @@ jobs:
           name: FunkHub v${{ steps.version.outputs.value }}
           draft: false
           prerelease: false
-          files: |
-            release-artifacts/FunkHub-linux-appimage/**/*.AppImage
-            release-artifacts/FunkHub-linux-deb/**/*.deb
-            release-artifacts/FunkHub-windows/*.exe
-            release-artifacts/FunkHub-macos/**/*.dmg
-            release-artifacts/FunkHub-macos/**/*.zip
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          files: ${{ steps.assets.outputs.files }}
