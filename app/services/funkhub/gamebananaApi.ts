@@ -1,6 +1,5 @@
 import {
   CategoryNode,
-  FNF_CATEGORY_IDS,
   FNF_GAME_ID,
   GameBananaCategory,
   GameBananaFile,
@@ -534,8 +533,9 @@ export class GameBananaApiService {
     return payload.map((entry) => {
       const profileUrl = String(entry._sUrl ?? "");
       const parsedId = Number(profileUrl.split("/").at(-1));
+      const explicitId = toNumber((entry as Record<string, unknown>)._idRow);
       return {
-        id: Number.isNaN(parsedId) ? 0 : parsedId,
+        id: Number.isNaN(parsedId) || parsedId <= 0 ? explicitId : parsedId,
         name: String(entry._sName ?? "Unknown Category"),
         profileUrl,
         iconUrl: typeof entry._sIconUrl === "string" ? entry._sIconUrl : undefined,
@@ -559,8 +559,9 @@ export class GameBananaApiService {
     return payload.map((entry) => {
       const profileUrl = String(entry._sUrl ?? "");
       const parsedId = Number(profileUrl.split("/").at(-1));
+      const explicitId = toNumber((entry as Record<string, unknown>)._idRow);
       return {
-        id: Number.isNaN(parsedId) ? 0 : parsedId,
+        id: Number.isNaN(parsedId) || parsedId <= 0 ? explicitId : parsedId,
         name: String(entry._sName ?? "Unknown Category"),
         profileUrl,
         iconUrl: typeof entry._sIconUrl === "string" ? entry._sIconUrl : undefined,
@@ -571,48 +572,38 @@ export class GameBananaApiService {
     });
   }
 
+  private async buildCategoryTree(category: GameBananaCategory, visited: Set<number>): Promise<CategoryNode> {
+    const node: CategoryNode = {
+      ...category,
+      children: [],
+    };
+
+    if (!node.id || visited.has(node.id)) {
+      return node;
+    }
+
+    visited.add(node.id);
+    const children = await this.getSubCategories(node.id);
+
+    const builtChildren = await Promise.all(children
+      .filter((child) => child.id > 0)
+      .map((child) => this.buildCategoryTree(child, visited)));
+
+    node.children = builtChildren
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+    return node;
+  }
+
   async getFunkHubCategories(): Promise<CategoryNode[]> {
     const roots = await this.getRootCategories();
-    const map = new Map<number, CategoryNode>();
+    const visited = new Set<number>();
+    const tree = await Promise.all(
+      roots
+        .filter((root) => root.id > 0)
+        .map((root) => this.buildCategoryTree(root, visited)),
+    );
 
-    for (const root of roots) {
-      map.set(root.id, { ...root, children: [] });
-    }
-
-    const modFolders = map.get(43771);
-    if (modFolders) {
-      const modFolderChildren = await this.getSubCategories(43771);
-      for (const child of modFolderChildren) {
-        const node: CategoryNode = { ...child, children: [] };
-        map.set(node.id, node);
-        modFolders.children.push(node);
-      }
-    }
-
-    const otherModFolders = map.get(43773);
-    if (otherModFolders) {
-      const engineChildren = await this.getSubCategories(43773);
-      otherModFolders.children = engineChildren.map((category) => ({ ...category, children: [] }));
-      for (const child of otherModFolders.children) {
-        map.set(child.id, child);
-      }
-    }
-
-    for (const targetId of FNF_CATEGORY_IDS) {
-      if (!map.has(targetId)) {
-        const category = await this.getCategoryById(targetId);
-        map.set(targetId, { ...category, children: [] });
-      }
-    }
-
-    const selectedIds = new Set<number>([3827, 43771, 43773, ...FNF_CATEGORY_IDS]);
-    const selectedRoots = [...map.values()].filter((node) => selectedIds.has(node.id) && (node.parentId ?? 0) === 0);
-
-    if (selectedRoots.length > 0) {
-      return selectedRoots;
-    }
-
-    return [...map.values()].filter((node) => selectedIds.has(node.id));
+    return tree.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
   }
 
   async downloadModArchive(fileId: number, onProgress?: (downloadedBytes: number, totalBytes?: number) => void): Promise<Blob> {

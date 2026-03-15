@@ -10,6 +10,9 @@ import {
 
 const EXECUTABLE_EXTENSIONS = [".exe", ".msi", ".app", ".dmg", ".pkg", ".appimage", ".sh", ".bat"];
 const ARCHIVE_EXTENSIONS = [".zip", ".rar", ".7z"];
+const EXECUTABLE_CATEGORY_IDS = new Set([3827]);
+const HYBRID_EXECUTABLE_CATEGORY_IDS = new Set([3046, 3828]);
+const EXECUTABLE_HINTS = ["standalone", "portable", "launcher", "runtime", "binary", "exec"];
 
 function sanitizeFileStem(fileName: string): string {
   const stem = fileName.replace(/\.[^/.]+$/, "").trim();
@@ -71,7 +74,16 @@ export class ModInstallerService {
       return true;
     }
 
-    return mod.rootCategory?.id === 3827 || mod.rootCategory?.name.toLowerCase().includes("executables") === true;
+    const categoryId = mod.rootCategory?.id;
+    if (categoryId && EXECUTABLE_CATEGORY_IDS.has(categoryId)) {
+      return true;
+    }
+
+    if (categoryId && HYBRID_EXECUTABLE_CATEGORY_IDS.has(categoryId)) {
+      return EXECUTABLE_HINTS.some((hint) => lowerFileName.includes(hint));
+    }
+
+    return mod.rootCategory?.name.toLowerCase().includes("executables") === true;
   }
 
   createInstallPlan(input: {
