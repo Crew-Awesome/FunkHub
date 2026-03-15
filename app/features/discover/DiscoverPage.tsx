@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall, UserCircle2, Layers } from "lucide-react";
 import { motion } from "motion/react";
+import { useNavigate } from "react-router";
 import { ModCard, ModVisualizerModal, UserProfileModal } from "../mods";
 import { useFunkHub } from "../../providers";
 import type { CategoryNode, GameBananaMember } from "../../services/funkhub";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
 export function Discover() {
   const {
@@ -22,12 +24,30 @@ export function Discover() {
     setSearchQuery,
     installedMods,
     modUpdates,
+    settings,
+    updateSettings,
+    browseFolder,
   } = useFunkHub();
+  const navigate = useNavigate();
 
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<number[]>([]);
   const [categorySearch, setCategorySearch] = useState("");
   const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
+  const [onboardingOpen, setOnboardingOpen] = useState(!settings.firstRunCompleted);
+
+  const needsOnboarding = !settings.firstRunCompleted;
+
+  useEffect(() => {
+    if (needsOnboarding) {
+      setOnboardingOpen(true);
+    }
+  }, [needsOnboarding]);
+
+  const completeOnboarding = async () => {
+    await updateSettings({ firstRunCompleted: true });
+    setOnboardingOpen(false);
+  };
 
   useEffect(() => {
     const defaultExpanded: number[] = [];
@@ -150,6 +170,33 @@ export function Discover() {
     <div className="p-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-foreground mb-6">Discover Mods</h1>
+
+        {needsOnboarding && (
+          <div className="mb-6 rounded-xl border border-primary/25 bg-primary/5 p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Quick Start Setup</h2>
+                <p className="text-sm text-muted-foreground">
+                  Set your folders, install an engine, and test one-click installs before browsing mods.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setOnboardingOpen(true)}
+                  className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90"
+                >
+                  Open Wizard
+                </button>
+                <button
+                  onClick={completeOnboarding}
+                  className="rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-secondary"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search and Filters */}
         <div className="flex gap-4 mb-6">
@@ -304,6 +351,88 @@ export function Discover() {
           setSelectedModId(modId);
         }}
       />
+
+      <Dialog open={onboardingOpen} onOpenChange={setOnboardingOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Welcome to FunkHub</DialogTitle>
+            <DialogDescription>
+              Finish these setup steps so installs and launches work correctly.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm">
+            <div className="rounded-lg border border-border p-3">
+              <p className="font-medium text-foreground">1) Choose your game folder</p>
+              <p className="mt-1 text-muted-foreground">Pick your Friday Night Funkin' directory so FunkHub can open and reference local files.</p>
+              <button
+                onClick={async () => {
+                  const selected = await browseFolder({
+                    title: "Choose your FNF game folder",
+                    defaultPath: settings.gameDirectory || undefined,
+                  });
+                  if (selected) {
+                    await updateSettings({ gameDirectory: selected });
+                  }
+                }}
+                className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+              >
+                Choose Game Folder
+              </button>
+              <p className="mt-2 text-xs text-muted-foreground break-all">Current: {settings.gameDirectory || "Not set"}</p>
+            </div>
+
+            <div className="rounded-lg border border-border p-3">
+              <p className="font-medium text-foreground">2) Choose data root (engine installs)</p>
+              <p className="mt-1 text-muted-foreground">This is where FunkHub stores engine installs and imported content.</p>
+              <button
+                onClick={async () => {
+                  const selected = await browseFolder({
+                    title: "Choose engine install root",
+                    defaultPath: settings.dataRootDirectory || undefined,
+                  });
+                  if (selected) {
+                    await updateSettings({ dataRootDirectory: selected });
+                  }
+                }}
+                className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+              >
+                Choose Data Root
+              </button>
+              <p className="mt-2 text-xs text-muted-foreground break-all">Current: {settings.dataRootDirectory || "Not set (app default)"}</p>
+            </div>
+
+            <div className="rounded-lg border border-border p-3">
+              <p className="font-medium text-foreground">3) Install an engine and test one-click</p>
+              <p className="mt-1 text-muted-foreground">After installing an engine, test with a URL like:</p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">funkhub://mod/install/&lt;ModId&gt;/&lt;FileId&gt;</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  onClick={() => navigate("/engines")}
+                  className="rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                >
+                  Open Engines
+                </button>
+                <button
+                  onClick={() => navigate("/settings")}
+                  className="rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                >
+                  Open Settings
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <button
+              onClick={completeOnboarding}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+            >
+              Mark Setup Complete
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

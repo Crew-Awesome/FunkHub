@@ -132,6 +132,17 @@
         "nsis",
         "portable"
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icons/icon.ico",
+      "uninstallerIcon": "build/icons/icon.ico",
+      "artifactName": "FunkHub Setup ${version}.${ext}",
+      "shortcutName": "FunkHub"
+    },
+    "portable": {
+      "artifactName": "FunkHub ${version}.${ext}"
     }
   }
 }

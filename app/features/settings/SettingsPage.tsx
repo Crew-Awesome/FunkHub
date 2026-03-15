@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { Folder, Download, Palette, Sliders, Info, Twitter, MessageCircle, FolderOpen } from "lucide-react";
+import { Folder, Download, Palette, Sliders, Info, Twitter, MessageCircle, FolderOpen, Link2, Copy } from "lucide-react";
 import { useFunkHub, useTheme } from "../../providers";
 
 const ITCH_OAUTH_CLIENT_ID = "4f345ebf07699f30d702a69fd6dca358";
@@ -22,6 +22,7 @@ export function Settings() {
   const [downloadsDirectory, setDownloadsDirectory] = useState(settings.downloadsDirectory);
   const [dataRootDirectory, setDataRootDirectory] = useState(settings.dataRootDirectory);
   const [itchBusy, setItchBusy] = useState(false);
+  const [pollingIntervalSeconds, setPollingIntervalSeconds] = useState(String(settings.gameBananaIntegration.pollingIntervalSeconds || 300));
   const appVersion = (__FUNKHUB_VERSION__ || "0.0.0").trim();
   const buildChannel = (__FUNKHUB_CHANNEL__ || "release").toLowerCase();
   const isInDevBuild = buildChannel !== "release" || /nightly|github|ci|dev|alpha|beta|rc/i.test(appVersion);
@@ -31,7 +32,25 @@ export function Settings() {
     setGameDirectory(settings.gameDirectory);
     setDownloadsDirectory(settings.downloadsDirectory);
     setDataRootDirectory(settings.dataRootDirectory);
-  }, [settings.gameDirectory, settings.downloadsDirectory, settings.dataRootDirectory]);
+    setPollingIntervalSeconds(String(settings.gameBananaIntegration.pollingIntervalSeconds || 300));
+  }, [
+    settings.gameDirectory,
+    settings.downloadsDirectory,
+    settings.dataRootDirectory,
+    settings.gameBananaIntegration.pollingIntervalSeconds,
+  ]);
+
+  const updateGameBananaSettings = async (patch: Partial<typeof settings.gameBananaIntegration>) => {
+    await updateSettings({
+      gameBananaIntegration: {
+        ...settings.gameBananaIntegration,
+        ...patch,
+      },
+    });
+  };
+
+  const pairFormat = "funkhub://gamebanana/pair/{MemberId}/{SecretKey}";
+  const installFormat = "funkhub://mod/install/{ModId}/{FileId}";
 
   const defaultEngineId = installedEngines.find((engine) => engine.isDefault)?.id ?? "";
   const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
@@ -168,6 +187,87 @@ export function Settings() {
             >
               Open Game Folder
             </button>
+          </div>
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="bg-card border border-border rounded-xl p-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+              <Link2 className="w-5 h-5 text-indigo-500" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground">GameBanana One-Click</h2>
+          </div>
+
+          <div className="space-y-4 text-sm">
+            <div className="rounded-lg border border-border p-4">
+              <p className="font-medium text-foreground">Pair URL format</p>
+              <p className="mt-2 font-mono text-xs text-muted-foreground break-all">{pairFormat}</p>
+              <button
+                onClick={() => navigator.clipboard.writeText(pairFormat)}
+                className="mt-2 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs hover:bg-secondary"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy Pair Format
+              </button>
+            </div>
+
+            <div className="rounded-lg border border-border p-4">
+              <p className="font-medium text-foreground">Install URL format</p>
+              <p className="mt-2 font-mono text-xs text-muted-foreground break-all">{installFormat}</p>
+              <button
+                onClick={() => navigator.clipboard.writeText(installFormat)}
+                className="mt-2 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs hover:bg-secondary"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy Install Format
+              </button>
+            </div>
+
+            <div className="rounded-lg border border-border p-4">
+              <p className="font-medium text-foreground">Current pairing status</p>
+              <p className="mt-1 text-muted-foreground">
+                {settings.gameBananaIntegration.memberId
+                  ? `Paired as member ${settings.gameBananaIntegration.memberId}`
+                  : "Not paired yet"}
+              </p>
+              {settings.gameBananaIntegration.pairedAt && (
+                <p className="mt-1 text-xs text-muted-foreground">Last pair: {new Date(settings.gameBananaIntegration.pairedAt).toLocaleString()}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Remote queue polling rate (seconds)
+              </label>
+              <input
+                type="number"
+                min={30}
+                max={3600}
+                value={pollingIntervalSeconds}
+                onChange={(event) => setPollingIntervalSeconds(event.target.value)}
+                onBlur={() => {
+                  const next = Math.min(3600, Math.max(30, Number(pollingIntervalSeconds) || 300));
+                  setPollingIntervalSeconds(String(next));
+                  updateGameBananaSettings({ pollingIntervalSeconds: next });
+                }}
+                className="w-full px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">Recommended: 300 seconds (5 minutes).</p>
+            </div>
+
+            <div>
+              <button
+                onClick={() => updateGameBananaSettings({ memberId: undefined, secretKey: undefined, pairedAt: undefined, lastPairUrl: undefined })}
+                className="rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
+              >
+                Clear Stored Pairing
+              </button>
+            </div>
           </div>
         </motion.section>
 

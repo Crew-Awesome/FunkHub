@@ -11,6 +11,7 @@ import {
   InstalledMod,
   ModUpdateInfo,
 } from "../../services/funkhub";
+import { parseFunkHubDeepLink } from "../../services/funkhub/deepLink";
 
 interface FunkHubContextValue {
   loading: boolean;
@@ -151,66 +152,67 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      let modId = 0;
-      let engineParam = "";
-      let archiveUrl = "";
+      const parsedDeepLink = parseFunkHubDeepLink(rawUrl);
 
-      if (/^funkhub:\/\/install\?/i.test(rawUrl) || /^funkhub:install\?/i.test(rawUrl)) {
-        const parsed = new URL(rawUrl.replace(/^funkhub:install\?/i, "funkhub://install?"));
-        modId = Number(parsed.searchParams.get("mod") || parsed.searchParams.get("mod_id") || "0");
-        engineParam = (parsed.searchParams.get("engine") || "").trim().toLowerCase();
-        archiveUrl = (parsed.searchParams.get("url") || parsed.searchParams.get("archive") || "").trim();
-      } else {
-        const payload = rawUrl.replace(/^funkhub:\/\//i, "").replace(/^funkhub:/i, "");
-        const parts = payload.split(",");
-        if (parts.length < 3) {
-          throw new Error("Invalid protocol URL format. Expected funkhub://[ARCHIVE_URL],[MOD_TYPE],[MOD_ID]");
-        }
-        archiveUrl = decodeURIComponent(parts[0].trim());
-        modId = Number(decodeURIComponent(parts[2].trim()) || "0");
+      if (parsedDeepLink.kind === "pair") {
+        const nextSettings = await funkHubService.updateSettings({
+          gameBananaIntegration: {
+            ...settings.gameBananaIntegration,
+            memberId: parsedDeepLink.memberId,
+            secretKey: parsedDeepLink.secretKey,
+            pairedAt: Date.now(),
+            lastPairUrl: rawUrl,
+          },
+        });
+        setSettings(nextSettings);
+        window.alert("GameBanana pairing link received. Remote installs are now linked to this profile.");
+        return;
       }
 
-      if (!Number.isFinite(modId) || modId <= 0) {
-        throw new Error("Invalid mod id in protocol URL");
-      }
-
-      const selectedEngine = engineParam
+      const selectedEngine = parsedDeepLink.engine
         ? installedEngines.find((engine) => (
-          engine.id.toLowerCase() === engineParam
-          || engine.slug.toLowerCase() === engineParam
-          || engine.name.toLowerCase().replace(/\s+/g, "-") === engineParam
+          engine.id.toLowerCase() === parsedDeepLink.engine
+          || engine.slug.toLowerCase() === parsedDeepLink.engine
+          || engine.name.toLowerCase().replace(/\s+/g, "-") === parsedDeepLink.engine
         ))
         : undefined;
 
-      if (engineParam && !selectedEngine) {
-        throw new Error(`Engine '${engineParam}' is not installed`);
+      if (parsedDeepLink.engine && !selectedEngine) {
+        throw new Error(`Engine '${parsedDeepLink.engine}' is not installed`);
       }
 
-      if (archiveUrl && !/^https?:\/\//i.test(archiveUrl)) {
-        throw new Error("Protocol archive URL must be http/https");
+      if (parsedDeepLink.archiveUrl && !/^https?:\/\//i.test(parsedDeepLink.archiveUrl)) {
+        throw new Error("Install URL must be http/https");
       }
 
-      const profile = await funkHubService.getModProfile(modId);
+      const profile = await funkHubService.getModProfile(parsedDeepLink.modId);
       if (profile.files.length === 0) {
         throw new Error("No downloadable files found for this mod");
       }
 
-      const fileIdFromUrl = archiveUrl.match(/\/dl\/(\d+)/i);
-      const selectedFileId = fileIdFromUrl
-        ? Number(fileIdFromUrl[1])
-        : profile.files[0].id;
+      const fileIdFromUrl = parsedDeepLink.archiveUrl?.match(/\/dl\/(\d+)/i);
+      const selectedFileId = parsedDeepLink.fileId
+        || (fileIdFromUrl ? Number(fileIdFromUrl[1]) : profile.files[0].id);
+
+      if (!Number.isFinite(selectedFileId) || selectedFileId <= 0) {
+        throw new Error("No valid file id found in deep link or mod profile");
+      }
+
+      if (!profile.files.some((file) => file.id === selectedFileId)) {
+        throw new Error(`File ${selectedFileId} is not available for mod ${parsedDeepLink.modId}`);
+      }
 
       funkHubService.queueProtocolInstall({
-        modId,
+        modId: parsedDeepLink.modId,
         fileId: selectedFileId,
-        downloadUrl: archiveUrl || undefined,
+        downloadUrl: parsedDeepLink.archiveUrl || undefined,
         selectedEngineId: selectedEngine?.id,
         priority: 20,
       });
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Failed to process protocol install URL");
+      window.alert(error instanceof Error ? error.message : "Failed to process deep link");
     }
-  }, [installedEngines]);
+  }, [installedEngines, settings.gameBananaIntegration]);
 
   const refreshAll = useCallback(async () => {
     setLoading(true);

@@ -172,11 +172,19 @@ export interface FunkHubSettings {
   gameDirectory: string;
   downloadsDirectory: string;
   dataRootDirectory: string;
+  firstRunCompleted: boolean;
   maxConcurrentDownloads: number;
   compatibilityChecks: boolean;
   autoUpdateMods: boolean;
   sendAnalytics: boolean;
   showAnimations: boolean;
+  gameBananaIntegration: {
+    pollingIntervalSeconds: number;
+    memberId?: number;
+    secretKey?: string;
+    pairedAt?: number;
+    lastPairUrl?: string;
+  };
   engineLaunchOverrides: Record<string, {
     launcher: "native" | "wine" | "wine64" | "proton";
     launcherPath?: string;

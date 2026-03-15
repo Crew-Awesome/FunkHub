@@ -69,3 +69,19 @@ bun run build:desktop:linux            # AppImage + .deb (x64)
 bun run build:desktop:win     # NSIS + portable (x64)
 bun run build:desktop:mac     # DMG + ZIP
 ```
+
+## Download Guide
+
+Windows releases include two `.exe` files:
+
+- `FunkHub Setup <version>.exe` - installer (recommended for most users)
+- `FunkHub <version>.exe` - portable build (no install)
+
+Release downloads: https://github.com/Crew-Awesome/FunkHub/releases
+
+Nightly CI artifacts (temporary, 14-day retention):
+
+- https://nightly.link/Crew-Awesome/FunkHub/workflows/build.yml/main/FunkHub-linux-appimage.zip
+- https://nightly.link/Crew-Awesome/FunkHub/workflows/build.yml/main/FunkHub-linux-deb.zip
+- https://nightly.link/Crew-Awesome/FunkHub/workflows/build.yml/main/FunkHub-windows.zip
+- https://nightly.link/Crew-Awesome/FunkHub/workflows/build.yml/main/FunkHub-macos.zip

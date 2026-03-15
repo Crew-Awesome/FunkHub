@@ -20,7 +20,7 @@ jobs:
             artifact: FunkHub-windows
             package_cmd: node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never
             artifact_glob: |
-              dist-desktop/**/*.exe
+              dist-desktop/*.exe
               dist-desktop/**/builder-*.yml
               dist-desktop/**/*.blockmap
           - os: macos-latest
@@ -84,7 +84,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $files = Get-ChildItem -Path dist-desktop -Filter *.exe -Recurse -File
+          $files = Get-ChildItem -Path dist-desktop -Filter *.exe -File
           if ($files.Count -eq 0) {
             Write-Error "No Windows installers (.exe) were produced under dist-desktop/."
           }

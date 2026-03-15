@@ -11,11 +11,15 @@ const DEFAULT_SETTINGS: FunkHubSettings = {
   gameDirectory: "",
   downloadsDirectory: "",
   dataRootDirectory: "",
+  firstRunCompleted: false,
   maxConcurrentDownloads: 3,
   compatibilityChecks: true,
   autoUpdateMods: false,
   sendAnalytics: false,
   showAnimations: true,
+  gameBananaIntegration: {
+    pollingIntervalSeconds: 300,
+  },
   engineLaunchOverrides: {},
 };
 
