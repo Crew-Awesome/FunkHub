@@ -106,7 +106,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const discoverPerPage = 24;
   const [hasMoreDiscover, setHasMoreDiscover] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const handledDeepLinksRef = useRef<Set<string>>(new Set());
+  const processedDeepLinksRef = useRef<Map<string, number>>(new Map());
   const processingDeepLinksRef = useRef<Set<string>>(new Set());
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | undefined>(undefined);
   const [appUpdateChecking, setAppUpdateChecking] = useState(false);
@@ -176,17 +176,31 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   ), []);
 
   const handleDeepLink = useCallback(async (rawUrl: string) => {
-    if (!rawUrl || handledDeepLinksRef.current.has(rawUrl) || processingDeepLinksRef.current.has(rawUrl)) {
+    const normalizedUrl = rawUrl.trim();
+    if (!normalizedUrl) {
       return;
     }
-    processingDeepLinksRef.current.add(rawUrl);
+
+    const now = Date.now();
+    for (const [url, seenAt] of processedDeepLinksRef.current.entries()) {
+      if (now - seenAt > 60_000) {
+        processedDeepLinksRef.current.delete(url);
+      }
+    }
+
+    const lastProcessedAt = processedDeepLinksRef.current.get(normalizedUrl) ?? 0;
+    if (now - lastProcessedAt < 3_000 || processingDeepLinksRef.current.has(normalizedUrl)) {
+      return;
+    }
+
+    processingDeepLinksRef.current.add(normalizedUrl);
 
     try {
-      if (!/^funkhub:/i.test(rawUrl)) {
+      if (!/^funkhub:/i.test(normalizedUrl)) {
         return;
       }
 
-      const parsedDeepLink = parseFunkHubDeepLink(rawUrl);
+      const parsedDeepLink = parseFunkHubDeepLink(normalizedUrl);
 
       if (parsedDeepLink.kind === "pair") {
         const nextSettings = await funkHubService.updateSettings({
@@ -195,11 +209,11 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
             memberId: parsedDeepLink.memberId,
             secretKey: parsedDeepLink.secretKey,
             pairedAt: Date.now(),
-            lastPairUrl: rawUrl,
+            lastPairUrl: normalizedUrl,
           },
         });
         setSettings(nextSettings);
-        handledDeepLinksRef.current.add(rawUrl);
+        processedDeepLinksRef.current.set(normalizedUrl, Date.now());
         window.alert("GameBanana pairing link received. Remote installs are now linked to this profile.");
         return;
       }
@@ -284,11 +298,11 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         selectedEngineId,
         priority: 20,
       });
-      handledDeepLinksRef.current.add(rawUrl);
+      processedDeepLinksRef.current.set(normalizedUrl, Date.now());
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Failed to process deep link");
     } finally {
-      processingDeepLinksRef.current.delete(rawUrl);
+      processingDeepLinksRef.current.delete(normalizedUrl);
     }
   }, [installedEngines, settings.gameBananaIntegration]);
 
