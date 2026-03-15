@@ -20,17 +20,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never && node ./node_modules/electron-builder/cli.js --linux deb --x64 --publish never
+            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION} && node ./node_modules/electron-builder/cli.js --linux deb --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION}
           - os: windows-latest
             artifact: FunkHub-windows
-            package_cmd: node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never
+            package_cmd: node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION}
             artifact_glob: |
               dist-desktop/*.exe
               dist-desktop/**/builder-*.yml
               dist-desktop/**/*.blockmap
           - os: macos-latest
             artifact: FunkHub-macos
-            package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never
+            package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never --config.extraMetadata.version=${BUILD_VERSION}
             artifact_glob: |
               dist-desktop/**/*.dmg
               dist-desktop/**/*.zip
@@ -58,6 +58,19 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Resolve build version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            build_version="${GITHUB_REF_NAME#v}"
+          else
+            build_version=$(node -p "require('./package.json').version")
+          fi
+          echo "BUILD_VERSION=${build_version}" >> "$GITHUB_ENV"
+          echo "VITE_APP_VERSION=${build_version}" >> "$GITHUB_ENV"
+          echo "Resolved build version: ${build_version}"
+
       - name: Typecheck
         run: bun run typecheck
 
@@ -65,6 +78,7 @@ jobs:
         run: bun run build:renderer
 
       - name: Package desktop app
+        shell: bash
         run: ${{ matrix.package_cmd }}
 
       - name: Verify Linux output
