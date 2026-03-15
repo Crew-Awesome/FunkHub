@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Play, RefreshCw, Trash2, FolderPlus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
@@ -16,6 +16,7 @@ export function Library() {
     launchInstalledMod,
     browseFolder,
     browseFile,
+    openFolderPath,
     addManualMod,
     updateInstalledModLaunchOptions,
   } = useFunkHub();
@@ -199,6 +200,19 @@ export function Library() {
                 {t("library.installUpdate", "Install Update")}
               </button>
             )}
+            <button
+              onClick={async () => {
+                try {
+                  await openFolderPath(selectedMod.installPath);
+                } catch (error) {
+                  window.alert(error instanceof Error ? error.message : t("library.openModFolderFailed", "Failed to open mod folder"));
+                }
+              }}
+              className="px-6 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <FolderOpen className="w-5 h-5" />
+              {t("library.openModFolder", "Open Mod Folder")}
+            </button>
             <button
               onClick={() => removeInstalledMod(selectedMod.id, { deleteFiles: deleteFilesOnRemove })}
               className="px-6 py-3 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg font-medium transition-colors flex items-center gap-2"
