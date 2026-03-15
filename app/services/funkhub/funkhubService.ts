@@ -74,6 +74,25 @@ function sanitizePathSegment(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "latest";
 }
 
+function mergeSettings(base: FunkHubSettings, patch?: Partial<FunkHubSettings>): FunkHubSettings {
+  const next = {
+    ...base,
+    ...(patch || {}),
+  } as FunkHubSettings;
+
+  next.gameBananaIntegration = {
+    ...base.gameBananaIntegration,
+    ...(patch?.gameBananaIntegration || {}),
+  };
+
+  next.engineLaunchOverrides = {
+    ...base.engineLaunchOverrides,
+    ...(patch?.engineLaunchOverrides || {}),
+  };
+
+  return next;
+}
+
 export class FunkHubService {
   private installedMods: InstalledMod[] = [];
 
@@ -120,11 +139,10 @@ export class FunkHubService {
 
     try {
       const runtimeSettings = await window.funkhubDesktop.getSettings();
-      this.settings = {
-        ...DEFAULT_SETTINGS,
-        ...this.settings,
-        ...runtimeSettings,
-      };
+      this.settings = mergeSettings(
+        mergeSettings(DEFAULT_SETTINGS, this.settings),
+        runtimeSettings,
+      );
       downloadManager.setMaxConcurrent(this.settings.maxConcurrentDownloads);
       funkHubStorageService.saveSettings(this.settings);
     } catch {
@@ -135,10 +153,7 @@ export class FunkHubService {
   }
 
   async updateSettings(patch: Partial<FunkHubSettings>): Promise<FunkHubSettings> {
-    const nextSettings: FunkHubSettings = {
-      ...this.settings,
-      ...patch,
-    };
+    const nextSettings: FunkHubSettings = mergeSettings(this.settings, patch);
 
     nextSettings.maxConcurrentDownloads = Math.max(
       1,
@@ -148,11 +163,10 @@ export class FunkHubService {
     if (window.funkhubDesktop?.updateSettings) {
       try {
         const runtimeSettings = await window.funkhubDesktop.updateSettings(nextSettings);
-        this.settings = {
-          ...DEFAULT_SETTINGS,
-          ...nextSettings,
-          ...runtimeSettings,
-        };
+        this.settings = mergeSettings(
+          mergeSettings(DEFAULT_SETTINGS, nextSettings),
+          runtimeSettings,
+        );
       } catch {
         this.settings = nextSettings;
       }

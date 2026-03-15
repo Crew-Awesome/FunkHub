@@ -64,9 +64,20 @@ export class FunkHubStorageService {
 
   getSettings(): FunkHubSettings {
     const parsed = safeParse<Partial<FunkHubSettings>>(localStorage.getItem(STORAGE_KEYS.settings), {});
+    const mergedGameBananaIntegration = {
+      ...DEFAULT_SETTINGS.gameBananaIntegration,
+      ...(parsed.gameBananaIntegration || {}),
+    };
+    const mergedEngineLaunchOverrides = {
+      ...DEFAULT_SETTINGS.engineLaunchOverrides,
+      ...(parsed.engineLaunchOverrides || {}),
+    };
+
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      gameBananaIntegration: mergedGameBananaIntegration,
+      engineLaunchOverrides: mergedEngineLaunchOverrides,
     };
   }
 
