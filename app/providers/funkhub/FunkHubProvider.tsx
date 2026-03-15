@@ -226,9 +226,6 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
 
       setTrendingMods(trending);
       setCategories(categoryTree);
-      if (!selectedCategoryId && categoryTree.length > 0) {
-        setSelectedCategoryId(categoryTree[0].id);
-      }
       setEnginesCatalog(catalog);
       const filteredSorts = sorts.filter((sort) => ["Generic_Newest", "Generic_MostDownloaded", "Generic_MostLiked", "Generic_MostViewed"].includes(sort.alias));
       setModSortOptions(filteredSorts.length > 0

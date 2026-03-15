@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>com.funkhub.desktop</id>
-  <name>FunkHub</name>
-  <summary>A Friday Night Funkin' mod launcher and manager.</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0</project_license>
-  <developer_name>ImMalloy</developer_name>
+  <name>FunkHub</name>
+  <summary>A Friday Night Funkin' mod launcher and manager.</summary>
+  <developer id="com.funkhub">
+    <name>ImMalloy</name>
+  </developer>
   <url type="homepage">https://github.com/Crew-Awesome/FunkHub</url>
+  <url type="bugtracker">https://github.com/Crew-Awesome/FunkHub/issues</url>
+  <url type="vcs-browser">https://github.com/Crew-Awesome/FunkHub</url>
   <launchable type="desktop-id">funkhub.desktop</launchable>
+  <provides>
+    <binary>funkhub</binary>
+  </provides>
 
   <description>
     <p>FunkHub is a simple desktop application for discovering, installing, and launching Friday Night Funkin' mods.</p>
@@ -28,21 +35,21 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/Crew-Awesome/FunkHub/main/assets/art/screenshots/funkhub-screenshot-discover.png</image>
+      <image>https://github.com/Crew-Awesome/FunkHub/blob/main/assets/art/screenshots/funkhub-screenshot-discover.png?raw=true</image>
       <caption>Browse and discover mods by category</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/Crew-Awesome/FunkHub/main/assets/art/screenshots/funkhub-screenshot-library.png</image>
+      <image>https://github.com/Crew-Awesome/FunkHub/blob/main/assets/art/screenshots/funkhub-screenshot-library.png?raw=true</image>
       <caption>Manage installed mods and launch settings</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/Crew-Awesome/FunkHub/main/assets/art/screenshots/funkhub-screenshot-engines.png</image>
+      <image>https://github.com/Crew-Awesome/FunkHub/blob/main/assets/art/screenshots/funkhub-screenshot-engines.png?raw=true</image>
       <caption>Install and manage engine instances</caption>
     </screenshot>
   </screenshots>
 
   <releases>
-    <release version="0.1.0" date="2026-03-15">
+    <release version="0.1.0" type="stable" date="2026-03-15">
       <description>
         <ul>
           <li>Initial release of FunkHub</li>
@@ -56,5 +63,9 @@
     </release>
   </releases>
 
-  <content_rating type="oars-1.1"/>
+  <kudos>
+    <kudo>HiDpiIcon</kudo>
+  </kudos>
+
+  <content_rating type="oars-1.1" />
 </component>
