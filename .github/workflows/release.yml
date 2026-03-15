@@ -22,7 +22,7 @@ jobs:
             artifact: FunkHub-windows
             package_cmd: node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never
             artifact_glob: |
-              dist-desktop/**/*.exe
+              dist-desktop/*.exe
               dist-desktop/**/builder-*.yml
               dist-desktop/**/*.blockmap
           - os: macos-latest
@@ -86,7 +86,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $files = Get-ChildItem -Path dist-desktop -Filter *.exe -Recurse -File
+          $files = Get-ChildItem -Path dist-desktop -Filter *.exe -File
           if ($files.Count -eq 0) {
             Write-Error "No Windows installers (.exe) were produced under dist-desktop/."
           }
@@ -170,7 +170,7 @@ jobs:
           set -euo pipefail
           linux_count=$(find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage" | wc -l | tr -d ' ')
           deb_count=$(find release-artifacts/FunkHub-linux-deb -type f -name "*.deb" | wc -l | tr -d ' ')
-          windows_count=$(find release-artifacts/FunkHub-windows -type f -name "*.exe" | wc -l | tr -d ' ')
+          windows_count=$(find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe" | wc -l | tr -d ' ')
           mac_dmg_count=$(find release-artifacts/FunkHub-macos -type f -name "*.dmg" | wc -l | tr -d ' ')
           mac_zip_count=$(find release-artifacts/FunkHub-macos -type f -name "*.zip" | wc -l | tr -d ' ')
           if [[ "$linux_count" -eq 0 ]]; then
@@ -195,7 +195,7 @@ jobs:
           fi
           find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage" -print
           find release-artifacts/FunkHub-linux-deb -type f -name "*.deb" -print
-          find release-artifacts/FunkHub-windows -type f -name "*.exe" -print
+          find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe" -print
           find release-artifacts/FunkHub-macos -type f -name "*.dmg" -print
           find release-artifacts/FunkHub-macos -type f -name "*.zip" -print
 
@@ -209,6 +209,6 @@ jobs:
           files: |
             release-artifacts/FunkHub-linux-appimage/**/*.AppImage
             release-artifacts/FunkHub-linux-deb/**/*.deb
-            release-artifacts/FunkHub-windows/**/*.exe
+            release-artifacts/FunkHub-windows/*.exe
             release-artifacts/FunkHub-macos/**/*.dmg
             release-artifacts/FunkHub-macos/**/*.zip
