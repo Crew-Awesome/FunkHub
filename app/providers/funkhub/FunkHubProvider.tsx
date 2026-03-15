@@ -218,7 +218,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const selectedEngine = parsedDeepLink.engine
+      const selectedEngineFromLink = parsedDeepLink.engine
         ? installedEngines.find((engine) => (
           engine.id.toLowerCase() === parsedDeepLink.engine
           || engine.slug.toLowerCase() === parsedDeepLink.engine
@@ -226,7 +226,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         ))
         : undefined;
 
-      if (parsedDeepLink.engine && !selectedEngine) {
+      if (parsedDeepLink.engine && !selectedEngineFromLink) {
         throw new Error(`Engine '${parsedDeepLink.engine}' is not installed`);
       }
 
@@ -239,46 +239,6 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         throw new Error("No downloadable files found for this mod");
       }
 
-      let selectedEngineId = selectedEngine?.id;
-      if (!parsedDeepLink.engine && installedEngines.length > 1) {
-        const inferredEngineSlug = modInstallerService.detectRequiredEngine(profile);
-        const inferredEngines = inferredEngineSlug
-          ? installedEngines.filter((engine) => engine.slug === inferredEngineSlug)
-          : [];
-
-        const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
-        const suggestedEngine = inferredEngines[0] ?? defaultEngine;
-        const warningLine = inferredEngineSlug
-          ? `Detected engine hint: ${inferredEngineSlug}. Confirm target before installing.`
-          : "No engine hint detected. Choose a target engine before installing.";
-        const engineChoices = installedEngines
-          .map((engine, index) => `${index + 1}. ${engine.name} (${engine.slug})${engine.isDefault ? " [default]" : ""}`)
-          .join("\n");
-        const promptMessage = [
-          warningLine,
-          `Suggested: ${suggestedEngine.name} (${suggestedEngine.slug})`,
-          "",
-          engineChoices,
-          "",
-          "Enter engine number, leave blank for suggested, or press Cancel.",
-        ].join("\n");
-
-        const choice = window.prompt(promptMessage, "");
-        if (choice === null) {
-          return;
-        }
-
-        if (choice.trim().length === 0) {
-          selectedEngineId = suggestedEngine.id;
-        } else {
-          const index = Number(choice.trim());
-          if (!Number.isInteger(index) || index < 1 || index > installedEngines.length) {
-            throw new Error("Invalid engine selection. Install cancelled.");
-          }
-          selectedEngineId = installedEngines[index - 1].id;
-        }
-      }
-
       const fileIdFromUrl = parsedDeepLink.archiveUrl?.match(/\/dl\/(\d+)/i);
       const selectedFileId = parsedDeepLink.fileId
         || (fileIdFromUrl ? Number(fileIdFromUrl[1]) : profile.files[0].id);
@@ -289,6 +249,80 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
 
       if (!profile.files.some((file) => file.id === selectedFileId)) {
         throw new Error(`File ${selectedFileId} is not available for mod ${parsedDeepLink.modId}`);
+      }
+
+      const selectedFile = profile.files.find((file) => file.id === selectedFileId) ?? profile.files[0];
+      if (!selectedFile) {
+        throw new Error("No downloadable files found for this mod");
+      }
+
+      const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
+      const inferredEngineSlug = modInstallerService.detectRequiredEngine(profile);
+      const inferredEngines = inferredEngineSlug
+        ? installedEngines.filter((engine) => engine.slug === inferredEngineSlug)
+        : [];
+
+      let selectedEngineId = selectedEngineFromLink?.id;
+      const previewPlan = modInstallerService.createInstallPlan({
+        mod: profile,
+        file: selectedFile,
+        selectedEngine: selectedEngineFromLink,
+      });
+
+      if (previewPlan.type === "standard_mod") {
+        if (installedEngines.length === 0) {
+          throw new Error("No engine installed. Install an engine first.");
+        }
+
+        if (!selectedEngineId) {
+          if (inferredEngines.length === 1) {
+            selectedEngineId = inferredEngines[0].id;
+          } else if (installedEngines.length === 1 && defaultEngine) {
+            const continueWithDefault = window.confirm(
+              `Could not auto-detect a required engine for ${profile.name}. Use ${defaultEngine.name} (${defaultEngine.slug})?`,
+            );
+            if (!continueWithDefault) {
+              return;
+            }
+            selectedEngineId = defaultEngine.id;
+          } else {
+            const suggestedEngine = inferredEngines[0] ?? defaultEngine;
+            const warningLine = inferredEngineSlug
+              ? `Detected engine hint: ${inferredEngineSlug}. Confirm target before installing.`
+              : "Could not auto-detect required engine. Choose a target engine before installing.";
+            const engineChoices = installedEngines
+              .map((engine, index) => `${index + 1}. ${engine.name} (${engine.slug})${engine.isDefault ? " [default]" : ""}`)
+              .join("\n");
+            const promptMessage = [
+              warningLine,
+              suggestedEngine ? `Suggested: ${suggestedEngine.name} (${suggestedEngine.slug})` : "",
+              "",
+              engineChoices,
+              "",
+              "Enter engine number, leave blank for suggested, or press Cancel.",
+            ].join("\n");
+
+            const choice = window.prompt(promptMessage, "");
+            if (choice === null) {
+              return;
+            }
+
+            if (choice.trim().length === 0) {
+              if (!suggestedEngine) {
+                throw new Error("No target engine selected. Install cancelled.");
+              }
+              selectedEngineId = suggestedEngine.id;
+            } else {
+              const index = Number(choice.trim());
+              if (!Number.isInteger(index) || index < 1 || index > installedEngines.length) {
+                throw new Error("Invalid engine selection. Install cancelled.");
+              }
+              selectedEngineId = installedEngines[index - 1].id;
+            }
+          }
+        }
+      } else {
+        selectedEngineId = undefined;
       }
 
       funkHubService.queueProtocolInstall({
