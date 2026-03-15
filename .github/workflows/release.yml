@@ -18,9 +18,10 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact: FunkHub-linux
-            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never
+            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage deb --x64 --publish never
             artifact_glob: |
               dist-desktop/**/*.AppImage
+              dist-desktop/**/*.deb
               dist-desktop/**/builder-*.yml
               dist-desktop/**/*.blockmap
           - os: windows-latest
@@ -75,12 +76,18 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s globstar nullglob
-          files=(dist-desktop/**/*.AppImage)
-          if [[ ${#files[@]} -eq 0 ]]; then
+          appimages=(dist-desktop/**/*.AppImage)
+          debs=(dist-desktop/**/*.deb)
+          if [[ ${#appimages[@]} -eq 0 ]]; then
             echo "No Linux installer (.AppImage) was produced under dist-desktop/."
             exit 1
           fi
-          printf 'Found Linux installer: %s\n' "${files[@]}"
+          if [[ ${#debs[@]} -eq 0 ]]; then
+            echo "No Linux package (.deb) was produced under dist-desktop/."
+            exit 1
+          fi
+          printf 'Found Linux AppImage: %s\n' "${appimages[@]}"
+          printf 'Found Linux DEB: %s\n' "${debs[@]}"
 
       - name: Verify Windows installer output
         if: matrix.os == 'windows-latest'
@@ -145,6 +152,7 @@ jobs:
           set -euo pipefail
           shopt -s globstar nullglob
           linux=(release-artifacts/FunkHub-linux/**/*.AppImage)
+          debs=(release-artifacts/FunkHub-linux/**/*.deb)
           windows=(release-artifacts/FunkHub-windows/**/*.exe)
           macdmg=(release-artifacts/FunkHub-macos/**/*.dmg)
           maczip=(release-artifacts/FunkHub-macos/**/*.zip)
@@ -156,6 +164,10 @@ jobs:
             echo "Release payload missing Windows .exe installers."
             exit 1
           fi
+          if [[ ${#debs[@]} -eq 0 ]]; then
+            echo "Release payload missing Linux .deb package."
+            exit 1
+          fi
           if [[ ${#macdmg[@]} -eq 0 ]]; then
             echo "Release payload missing macOS .dmg installer."
             exit 1
@@ -165,6 +177,7 @@ jobs:
             exit 1
           fi
           printf 'Linux release files: %s\n' "${linux[@]}"
+          printf 'Linux DEB files: %s\n' "${debs[@]}"
           printf 'Windows release files: %s\n' "${windows[@]}"
           printf 'macOS DMG files: %s\n' "${macdmg[@]}"
           printf 'macOS ZIP files: %s\n' "${maczip[@]}"
@@ -178,6 +191,7 @@ jobs:
           prerelease: false
           files: |
             release-artifacts/FunkHub-linux/**/*.AppImage
+            release-artifacts/FunkHub-linux/**/*.deb
             release-artifacts/FunkHub-windows/**/*.exe
             release-artifacts/FunkHub-macos/**/*.dmg
             release-artifacts/FunkHub-macos/**/*.zip

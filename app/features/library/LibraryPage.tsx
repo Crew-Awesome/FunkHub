@@ -13,7 +13,9 @@ export function Library() {
     installMod,
     launchInstalledMod,
     browseFolder,
+    browseFile,
     addManualMod,
+    updateInstalledModLaunchOptions,
   } = useFunkHub();
   const [selectedModId, setSelectedModId] = useState(installedMods[0]?.id);
   const [deleteFilesOnRemove, setDeleteFilesOnRemove] = useState(true);
@@ -25,12 +27,26 @@ export function Library() {
   const [manualDescription, setManualDescription] = useState("");
   const [manualEngineId, setManualEngineId] = useState(installedEngines[0]?.id ?? "");
   const [manualSourcePath, setManualSourcePath] = useState("");
+  const [manualStandalone, setManualStandalone] = useState(false);
+  const [launchMode, setLaunchMode] = useState<"native" | "wine" | "wine64" | "proton">("native");
+  const [launchPath, setLaunchPath] = useState("");
+  const [launchExecutablePath, setLaunchExecutablePath] = useState("");
 
   const selectedMod = installedMods.find((mod) => mod.id === selectedModId) ?? installedMods[0];
   const selectedEngineInstall = useMemo(
     () => installedEngines.find((engine) => selectedMod && selectedMod.installPath.startsWith(engine.installPath)),
     [installedEngines, selectedMod],
   );
+  const isStandaloneMod = Boolean(selectedMod && (selectedMod.standalone || selectedMod.installPath.startsWith("executables/")));
+
+  useEffect(() => {
+    if (!selectedMod) {
+      return;
+    }
+    setLaunchMode(selectedMod.launcher ?? "native");
+    setLaunchPath(selectedMod.launcherPath ?? "");
+    setLaunchExecutablePath(selectedMod.executablePath ?? "");
+  }, [selectedMod?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -209,7 +225,7 @@ export function Library() {
             </div>
             <div className="bg-card border border-border rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-1">Required Engine</p>
-              <p className="text-lg font-semibold text-foreground">{selectedMod.requiredEngine ?? selectedMod.engine}</p>
+              <p className="text-lg font-semibold text-foreground">{isStandaloneMod ? "Standalone" : (selectedMod.requiredEngine ?? selectedMod.engine)}</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-1">Installed Date</p>
@@ -220,9 +236,9 @@ export function Library() {
           </div>
 
           <div className="bg-card border border-border rounded-lg p-4 mb-6">
-            <p className="text-sm text-muted-foreground mb-1">Installed In Engine</p>
+            <p className="text-sm text-muted-foreground mb-1">Installed Location</p>
             <p className="text-sm text-foreground font-medium">
-              {selectedMod.installPath.startsWith("executables/")
+              {isStandaloneMod
                 ? "Standalone executable package"
                 : (selectedEngineInstall
                   ? `${selectedEngineInstall.name} v${selectedEngineInstall.version}`
@@ -230,6 +246,82 @@ export function Library() {
             </p>
             <p className="text-xs text-muted-foreground mt-1 break-all">{selectedMod.installPath}</p>
           </div>
+
+          {isStandaloneMod && (
+            <div className="bg-card border border-border rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-foreground mb-3">Launch Settings</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Launcher</label>
+                  <select
+                    value={launchMode}
+                    onChange={(event) => setLaunchMode(event.target.value as "native" | "wine" | "wine64" | "proton")}
+                    className="w-full mt-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                  >
+                    <option value="native">Native</option>
+                    <option value="wine">Wine</option>
+                    <option value="wine64">Wine64</option>
+                    <option value="proton">Proton</option>
+                  </select>
+                </div>
+
+                {launchMode !== "native" && (
+                  <div className="flex gap-2">
+                    <input
+                      value={launchPath}
+                      onChange={(event) => setLaunchPath(event.target.value)}
+                      placeholder="Optional launcher path"
+                      className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                    />
+                    <button
+                      onClick={async () => {
+                        const selected = await browseFile({ title: "Select launcher binary", defaultPath: launchPath || undefined });
+                        if (selected) {
+                          setLaunchPath(selected);
+                        }
+                      }}
+                      className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                    >
+                      Browse
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <input
+                    value={launchExecutablePath}
+                    onChange={(event) => setLaunchExecutablePath(event.target.value)}
+                    placeholder="Optional executable path"
+                    className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                  />
+                  <button
+                    onClick={async () => {
+                      const selected = await browseFile({ title: "Select executable", defaultPath: launchExecutablePath || undefined });
+                      if (selected) {
+                        setLaunchExecutablePath(selected);
+                      }
+                    }}
+                    className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                  >
+                    Browse
+                  </button>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    await updateInstalledModLaunchOptions(selectedMod.id, {
+                      launcher: launchMode,
+                      launcherPath: launchPath,
+                      executablePath: launchExecutablePath,
+                    });
+                  }}
+                  className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm"
+                >
+                  Save Launch Settings
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div className="bg-card border border-border rounded-lg p-6 mb-6">
@@ -279,17 +371,23 @@ export function Library() {
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5">
             <h3 className="text-lg font-semibold text-foreground">Add Manual Mod</h3>
-            <p className="text-xs text-muted-foreground mt-1">Import a local mod folder into an installed engine.</p>
+            <p className="text-xs text-muted-foreground mt-1">Import a local mod folder into an installed engine or as standalone.</p>
             <div className="mt-4 space-y-3">
               <input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="Mod name" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
               <input value={manualAuthor} onChange={(e) => setManualAuthor(e.target.value)} placeholder="Author (optional)" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
               <input value={manualVersion} onChange={(e) => setManualVersion(e.target.value)} placeholder="Version (optional)" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
               <textarea value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} placeholder="Description (optional)" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm min-h-20" />
-              <select value={manualEngineId} onChange={(e) => setManualEngineId(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm">
-                {installedEngines.map((engine) => (
-                  <option key={engine.id} value={engine.id}>{engine.name} ({engine.version})</option>
-                ))}
-              </select>
+              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <input type="checkbox" checked={manualStandalone} onChange={(event) => setManualStandalone(event.target.checked)} />
+                Import as standalone executable package
+              </label>
+              {!manualStandalone && (
+                <select value={manualEngineId} onChange={(e) => setManualEngineId(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm">
+                  {installedEngines.map((engine) => (
+                    <option key={engine.id} value={engine.id}>{engine.name} ({engine.version})</option>
+                  ))}
+                </select>
+              )}
               <div className="flex gap-2">
                 <input value={manualSourcePath} onChange={(e) => setManualSourcePath(e.target.value)} placeholder="Mod folder path" className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
                 <button
@@ -312,11 +410,12 @@ export function Library() {
                   try {
                     await addManualMod({
                       modName: manualName,
-                      engineId: manualEngineId,
+                      engineId: manualStandalone ? undefined : manualEngineId,
                       sourcePath: manualSourcePath || undefined,
                       description: manualDescription,
                       version: manualVersion,
                       author: manualAuthor,
+                      standalone: manualStandalone,
                     });
                     setShowManualModal(false);
                     setManualName("");
@@ -324,6 +423,7 @@ export function Library() {
                     setManualVersion("");
                     setManualDescription("");
                     setManualSourcePath("");
+                    setManualStandalone(false);
                   } catch (error) {
                     window.alert(error instanceof Error ? error.message : "Failed to add manual mod");
                   }

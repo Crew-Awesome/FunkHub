@@ -27,7 +27,6 @@ Current route features:
 - `downloads`
 - `updates`
 - `engines`
-- `profile`
 - `settings`
 
 Shared domain feature:

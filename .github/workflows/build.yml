@@ -16,9 +16,10 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact: FunkHub-linux
-            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never
+            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage deb --x64 --publish never
             artifact_glob: |
               dist-desktop/**/*.AppImage
+              dist-desktop/**/*.deb
               dist-desktop/**/builder-*.yml
               dist-desktop/**/*.blockmap
           - os: windows-latest
@@ -73,12 +74,18 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s globstar nullglob
-          files=(dist-desktop/**/*.AppImage)
-          if [[ ${#files[@]} -eq 0 ]]; then
+          appimages=(dist-desktop/**/*.AppImage)
+          debs=(dist-desktop/**/*.deb)
+          if [[ ${#appimages[@]} -eq 0 ]]; then
             echo "No Linux installer (.AppImage) was produced under dist-desktop/."
             exit 1
           fi
-          printf 'Found Linux installer: %s\n' "${files[@]}"
+          if [[ ${#debs[@]} -eq 0 ]]; then
+            echo "No Linux package (.deb) was produced under dist-desktop/."
+            exit 1
+          fi
+          printf 'Found Linux AppImage: %s\n' "${appimages[@]}"
+          printf 'Found Linux DEB: %s\n' "${debs[@]}"
 
       - name: Verify Windows installer output
         if: matrix.os == 'windows-latest'

@@ -30,9 +30,18 @@ export function Discover() {
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
 
   useEffect(() => {
-    const defaultExpanded = categories
-      .filter((node) => node.id === 43771 || node.id === 43773)
-      .map((node) => node.id);
+    const defaultExpanded: number[] = [];
+    const collectDefaults = (nodes: CategoryNode[]) => {
+      for (const node of nodes) {
+        if (node.id === 43771 || node.id === 43773) {
+          defaultExpanded.push(node.id);
+        }
+        if (node.children.length > 0) {
+          collectDefaults(node.children);
+        }
+      }
+    };
+    collectDefaults(categories);
     setExpandedCategoryIds(defaultExpanded);
   }, [categories]);
 

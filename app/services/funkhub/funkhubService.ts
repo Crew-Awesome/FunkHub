@@ -718,12 +718,46 @@ export class FunkHubService {
       throw new Error("Desktop bridge unavailable for launching");
     }
 
-    if (installed.installPath.startsWith("executables/")) {
-      await window.funkhubDesktop.launchEngine({ installPath: installed.installPath });
+    if (installed.standalone || installed.installPath.startsWith("executables/")) {
+      await window.funkhubDesktop.launchEngine({
+        installPath: installed.installPath,
+        launcher: installed.launcher,
+        launcherPath: installed.launcherPath,
+        executablePath: installed.executablePath,
+      });
       return;
     }
 
     await window.funkhubDesktop.launchEngine({ installPath: engine.installPath });
+  }
+
+  async updateInstalledModLaunchOptions(
+    installedId: string,
+    options: {
+      launcher?: "native" | "wine" | "wine64" | "proton";
+      launcherPath?: string;
+      executablePath?: string;
+    },
+  ): Promise<void> {
+    const target = this.installedMods.find((mod) => mod.id === installedId);
+    if (!target) {
+      throw new Error("Installed mod not found");
+    }
+    if (!(target.standalone || target.installPath.startsWith("executables/"))) {
+      throw new Error("Launch options can only be set for standalone packages");
+    }
+
+    this.installedMods = this.installedMods.map((mod) => (
+      mod.id === installedId
+        ? {
+            ...mod,
+            launcher: options.launcher ?? mod.launcher ?? "native",
+            launcherPath: options.launcherPath?.trim() || undefined,
+            executablePath: options.executablePath?.trim() || undefined,
+          }
+        : mod
+    ));
+    funkHubStorageService.saveInstalledMods(this.installedMods);
   }
 
   async launchEngine(
@@ -815,19 +849,21 @@ export class FunkHubService {
 
   async addManualModFromFolder(input: {
     modName: string;
-    engineId: string;
+    engineId?: string;
     sourcePath?: string;
     description?: string;
     version?: string;
     author?: string;
+    standalone?: boolean;
   }): Promise<InstalledMod> {
     const modName = input.modName.trim();
     if (!modName) {
       throw new Error("Mod name is required");
     }
 
-    const engine = this.installedEngines.find((entry) => entry.id === input.engineId);
-    if (!engine) {
+    const standalone = Boolean(input.standalone);
+    const engine = standalone ? undefined : this.installedEngines.find((entry) => entry.id === input.engineId);
+    if (!standalone && !engine) {
       throw new Error("Select an installed engine");
     }
 
@@ -841,9 +877,10 @@ export class FunkHubService {
     }
 
     const installSubdir = sanitizePathSegment(`${modName}-${Date.now()}`);
+    const targetModsPath = standalone ? "executables/manual" : engine!.modsPath;
     const result = await window.funkhubDesktop.importModFolder({
       sourcePath,
-      targetModsPath: engine.modsPath,
+      targetModsPath,
       installSubdir,
     });
 
@@ -861,13 +898,14 @@ export class FunkHubService {
       gamebananaUrl: "",
       installedAt: Date.now(),
       installPath: result.installPath,
-      engine: engine.slug,
-      requiredEngine: engine.slug,
+      engine: standalone ? "basegame" : engine!.slug,
+      requiredEngine: standalone ? undefined : engine!.slug,
       sourceFileId: -1,
       description: input.description?.trim() || "Imported manually from local folder.",
       developers: input.author?.trim() ? [input.author.trim()] : ["Manual Import"],
-      categoryName: "Manual",
+      categoryName: standalone ? "Standalone" : "Manual",
       manual: true,
+      standalone,
     };
 
     this.installedMods = [record, ...this.installedMods];

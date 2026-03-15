@@ -57,6 +57,10 @@ interface FunkHubContextValue {
   getEngineHealth: (engineId: string) => { health: "ready" | "missing_binary" | "broken_install"; message?: string };
   refreshEngineHealth: (engineId?: string) => Promise<void>;
   launchInstalledMod: (installedId: string) => Promise<void>;
+  updateInstalledModLaunchOptions: (
+    installedId: string,
+    options: { launcher?: "native" | "wine" | "wine64" | "proton"; launcherPath?: string; executablePath?: string },
+  ) => Promise<void>;
   cancelDownload: (taskId: string) => void;
   retryDownload: (taskId: string) => void;
   clearDownloads: () => void;
@@ -66,7 +70,7 @@ interface FunkHubContextValue {
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
   browseFile: (options?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => Promise<string | undefined>;
   openFolderPath: (targetPath: string) => Promise<void>;
-  addManualMod: (input: { modName: string; engineId: string; sourcePath?: string; description?: string; version?: string; author?: string }) => Promise<void>;
+  addManualMod: (input: { modName: string; engineId?: string; sourcePath?: string; description?: string; version?: string; author?: string; standalone?: boolean }) => Promise<void>;
   reconcileDiskState: () => Promise<void>;
   connectItch: (clientId: string) => Promise<void>;
   disconnectItch: () => Promise<void>;
@@ -370,6 +374,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       },
       launchInstalledMod: async (installedId) => {
         await funkHubService.launchInstalledMod(installedId);
+      },
+      updateInstalledModLaunchOptions: async (installedId, options) => {
+        await funkHubService.updateInstalledModLaunchOptions(installedId, options);
+        setInstalledMods(funkHubService.getInstalledMods());
       },
       cancelDownload: (taskId) => {
         funkHubService.cancelDownload(taskId);

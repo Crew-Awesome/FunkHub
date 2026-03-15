@@ -83,6 +83,10 @@ export class ModInstallerService {
       return EXECUTABLE_HINTS.some((hint) => lowerFileName.includes(hint));
     }
 
+    if (categoryId && categoryId !== 43771) {
+      return true;
+    }
+
     return mod.rootCategory?.name.toLowerCase().includes("executables") === true;
   }
 
@@ -181,6 +185,7 @@ export class ModInstallerService {
       developers: this.extractDevelopers(input.mod),
       categoryName: input.mod.rootCategory?.name,
       screenshotUrls: input.mod.screenshotUrls,
+      standalone: input.request.installPath.startsWith("executables/"),
     };
   }
 
@@ -209,6 +214,7 @@ export class ModInstallerService {
       developers: this.extractDevelopers(input.mod),
       categoryName: input.mod.rootCategory?.name,
       screenshotUrls: input.mod.screenshotUrls,
+      standalone: input.plan.type === "executable",
     };
   }
 }

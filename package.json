@@ -2,7 +2,11 @@
   "name": "funkhub",
   "version": "0.1.0",
   "description": "A Friday Night Funkin Mod Launcher",
-  "author": "FunkHub Contributors",
+  "author": {
+    "name": "ImMalloy",
+    "email": "henrydraft.jpeg@gmail.com"
+  },
+  "homepage": "https://github.com/Crew-Awesome/FunkHub",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -14,7 +18,7 @@
     "electron:start": "electron ./electron/main.cjs",
     "typecheck": "tsc --noEmit -p tsconfig.ci.json",
     "build:renderer": "vite build",
-    "build:desktop:linux": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never",
+    "build:desktop:linux": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --linux AppImage deb --x64 --publish never",
     "build:desktop:win": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never",
     "build:desktop:mac": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never"
   },
@@ -66,10 +70,23 @@
     "npmRebuild": false,
     "linux": {
       "target": [
-        "AppImage"
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icons/icon.png",
-      "category": "Game"
+      "category": "Game",
+      "maintainer": "ImMalloy <henrydraft.jpeg@gmail.com>",
+      "synopsis": "A Friday Night Funkin Mod Launcher"
     },
     "mac": {
       "target": [
