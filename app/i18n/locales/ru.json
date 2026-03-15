@@ -48,7 +48,7 @@
     "downloads.failed": "Неудачные загрузки",
     "downloads.failedGeneric": "Ошибка загрузки",
     "downloads.noneActive": "",
-    "downloads.noneActiveDesc": "",
+    "downloads.noneActiveDesc": "Ваши загрузки будут отображаться здесь. Просматривайте моды и нажимайте «Установить», чтобы начать загрузку.",
     "downloads.progress": "",
     "downloads.recent": "",
     "downloads.retry": "",
