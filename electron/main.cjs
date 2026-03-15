@@ -110,6 +110,24 @@ app.whenReady().then(() => {
     };
   });
 
+  ipcMain.handle("funkhub:pickFile", async (_event, payload) => {
+    const result = await dialog.showOpenDialog({
+      title: payload?.title || "Select file",
+      defaultPath: payload?.defaultPath,
+      properties: ["openFile"],
+      filters: Array.isArray(payload?.filters) ? payload.filters : undefined,
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true };
+    }
+
+    return {
+      canceled: false,
+      path: result.filePaths[0],
+    };
+  });
+
   ipcMain.handle("funkhub:getSettings", async () => {
     return handleGetSettings();
   });

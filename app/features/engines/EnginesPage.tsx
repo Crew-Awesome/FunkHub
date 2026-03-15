@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Cpu, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
+import { Plus, Cpu, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldX, FolderSearch } from "lucide-react";
 import { EngineCard } from "./EngineCard";
+import { getEngineIcon } from "./engineIcons";
 import { useFunkHub } from "../../providers";
 import { detectClientPlatform, pickBestReleaseForPlatform, type EngineSlug } from "../../services/funkhub";
 
@@ -22,6 +23,8 @@ export function Engines() {
     openEngineModsFolder,
     getEngineHealth,
     refreshEngineHealth,
+    browseFolder,
+    browseFile,
   } = useFunkHub();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [installingSlug, setInstallingSlug] = useState<string | null>(null);
@@ -145,6 +148,38 @@ export function Engines() {
     setNotice("Engine launch settings saved.");
   };
 
+  const browseLauncherPath = async () => {
+    const selected = await browseFile({
+      title: "Select launcher binary",
+      defaultPath: manageLauncherPath || undefined,
+    });
+    if (selected) {
+      setManageLauncherPath(selected);
+    }
+  };
+
+  const browseExecutablePath = async () => {
+    const selected = await browseFile({
+      title: "Select engine executable",
+      defaultPath: manageExecutablePath || undefined,
+      filters: [
+        { name: "Executable", extensions: ["exe", "sh", "bin", "x86_64", "appimage", "app"] },
+      ],
+    });
+    if (selected) {
+      setManageExecutablePath(selected);
+    }
+  };
+
+  const browseExecutableFolder = async () => {
+    const selected = await browseFolder({
+      title: "Select folder containing engine executable",
+    });
+    if (selected) {
+      setManageExecutablePath(selected);
+    }
+  };
+
   const healthMeta = (engineId: string) => {
     const health = getEngineHealth(engineId);
     if (health.health === "ready") {
@@ -257,7 +292,7 @@ export function Engines() {
                   (() => {
                     const installedCount = installedEngines.filter((entry) => entry.slug === engine.slug).length;
                     return (
-                  <div key={engine.slug} className="w-full px-4 py-3 bg-secondary rounded-lg text-left font-medium">
+                  <div key={engine.slug} className="w-full min-w-0 px-4 py-3 bg-secondary rounded-lg text-left font-medium">
                     <div className="flex items-center gap-3 mb-2">
                       {installingSlug === engine.slug
                         ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
@@ -265,7 +300,7 @@ export function Engines() {
                       <span className="flex-1 text-foreground">{engine.name}</span>
                       <span className="text-xs text-muted-foreground">{installedCount > 0 ? `${installedCount} installed` : "new"}</span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 min-w-0">
                       <select
                         value={getSelectedRelease(engine.slug)?.downloadUrl ?? ""}
                         onChange={(event) => {
@@ -274,7 +309,7 @@ export function Engines() {
                             [engine.slug]: event.target.value,
                           }));
                         }}
-                        className="flex-1 px-2 py-1.5 bg-input-background border border-border rounded text-xs"
+                        className="min-w-0 flex-1 px-2 py-1.5 bg-input-background border border-border rounded text-xs"
                       >
                         {getInstallableReleases(engine.slug).map((release) => (
                           <option key={`${release.version}-${release.downloadUrl}`} value={release.downloadUrl}>
@@ -289,13 +324,13 @@ export function Engines() {
                             await installSelectedEngine(engine.slug, release.downloadUrl, release.version);
                           }
                         }}
-                        className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded text-xs"
+                        className="w-full sm:w-auto px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded text-xs"
                       >
                         Install
                       </button>
                       <button
                         onClick={() => handleImport(engine.slug)}
-                        className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded text-xs"
+                        className="w-full sm:w-auto px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded text-xs"
                       >
                         Import Folder
                       </button>
@@ -339,7 +374,7 @@ export function Engines() {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Game Engines</h1>
+        <h1 className="text-3xl font-bold text-foreground">Instances</h1>
         <button
           onClick={() => setShowAddDialog(!showAddDialog)}
           className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
@@ -357,12 +392,12 @@ export function Engines() {
           className="mb-6 bg-card border border-border rounded-xl p-6"
         >
           <h3 className="font-semibold text-foreground mb-4">Select an engine to install</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {availableEngines.map((engine) => (
               (() => {
                 const installedCount = installedEngines.filter((entry) => entry.slug === engine.slug).length;
                 return (
-              <div key={engine.slug} className="px-4 py-3 bg-secondary rounded-lg text-left font-medium">
+              <div key={engine.slug} className="min-w-0 px-4 py-3 bg-secondary rounded-lg text-left font-medium">
                 <div className="flex items-center gap-3 mb-2">
                   {installingSlug === engine.slug
                     ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
@@ -373,7 +408,7 @@ export function Engines() {
                     {installedCount > 0 ? ` • ${installedCount} installed` : ""}
                   </span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 min-w-0">
                   <select
                     value={getSelectedRelease(engine.slug)?.downloadUrl ?? ""}
                     onChange={(event) => {
@@ -382,7 +417,7 @@ export function Engines() {
                         [engine.slug]: event.target.value,
                       }));
                     }}
-                    className="flex-1 px-2 py-1.5 bg-input-background border border-border rounded text-xs"
+                    className="min-w-0 flex-1 px-2 py-1.5 bg-input-background border border-border rounded text-xs"
                   >
                     {getInstallableReleases(engine.slug).map((release) => (
                       <option key={`${release.version}-${release.downloadUrl}`} value={release.downloadUrl}>
@@ -397,13 +432,13 @@ export function Engines() {
                         await installSelectedEngine(engine.slug, release.downloadUrl, release.version);
                       }
                     }}
-                    className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded text-xs"
+                    className="w-full sm:w-auto px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded text-xs"
                   >
                     Install
                   </button>
                   <button
                     onClick={() => handleImport(engine.slug)}
-                    className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded text-xs"
+                    className="w-full sm:w-auto px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded text-xs"
                   >
                     Import Folder
                   </button>
@@ -447,7 +482,7 @@ export function Engines() {
         </motion.div>
       )}
 
-      {/* Engines Grid */}
+      {/* Instances Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {installedEngines.map((engine, index) => (
           <motion.div
@@ -477,6 +512,7 @@ export function Engines() {
               <EngineCard
                 name={engine.name}
                 version={formatVersionLabel(engine.version)}
+                iconSrc={getEngineIcon(engine.slug)}
                 isDefault={engine.isDefault}
                 onLaunch={() => {
                   if (!busyEngineId) {
@@ -493,6 +529,15 @@ export function Engines() {
                 <p className="mt-2 text-xs text-muted-foreground">
                   {getEngineHealth(engine.id).message}
                 </p>
+              )}
+              {getEngineHealth(engine.id).health === "missing_binary" && (
+                <button
+                  onClick={() => handleManage(engine.id)}
+                  className="mt-2 text-xs inline-flex items-center gap-1.5 px-2 py-1 rounded border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300"
+                >
+                  <FolderSearch className="w-3.5 h-3.5" />
+                  Locate executable
+                </button>
               )}
             </div>
           </motion.div>
@@ -545,19 +590,41 @@ export function Engines() {
                       <option value="proton">Proton</option>
                     </select>
                     {manageLauncher !== "native" && (
-                      <input
-                        value={manageLauncherPath}
-                        onChange={(event) => setManageLauncherPath(event.target.value)}
-                        placeholder="Optional launcher binary path (eg /usr/bin/wine)"
-                        className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          value={manageLauncherPath}
+                          onChange={(event) => setManageLauncherPath(event.target.value)}
+                          placeholder="Optional launcher binary path (eg /usr/bin/wine)"
+                          className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                        />
+                        <button
+                          onClick={browseLauncherPath}
+                          className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                        >
+                          Browse
+                        </button>
+                      </div>
                     )}
-                    <input
-                      value={manageExecutablePath}
-                      onChange={(event) => setManageExecutablePath(event.target.value)}
-                      placeholder="Optional executable path inside engine folder"
-                      className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        value={manageExecutablePath}
+                        onChange={(event) => setManageExecutablePath(event.target.value)}
+                        placeholder="Optional executable path (absolute or inside engine folder)"
+                        className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                      />
+                      <button
+                        onClick={browseExecutablePath}
+                        className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                      >
+                        Browse File
+                      </button>
+                      <button
+                        onClick={browseExecutableFolder}
+                        className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                      >
+                        Browse Folder
+                      </button>
+                    </div>
                     <p className="text-xs text-muted-foreground">Examples: `ALEPsych`, `bin/Funkin.sh`</p>
                   </div>
 

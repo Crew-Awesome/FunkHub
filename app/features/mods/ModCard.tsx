@@ -10,6 +10,7 @@ interface ModCardProps {
   downloads?: string | number;
   onView?: () => void;
   onAuthorClick?: () => void;
+  categoryLabel?: string;
   statusLabel?: string;
 }
 
@@ -44,7 +45,7 @@ function formatLikes(value: number | undefined): string {
   return String(value);
 }
 
-export function ModCard({ title, author, thumbnail, likes, downloads, onView, onAuthorClick, statusLabel }: ModCardProps) {
+export function ModCard({ title, author, thumbnail, likes, downloads, onView, onAuthorClick, categoryLabel, statusLabel }: ModCardProps) {
   return (
     <motion.div
       className="bg-card rounded-xl overflow-hidden border border-border group cursor-pointer"
@@ -80,6 +81,12 @@ export function ModCard({ title, author, thumbnail, likes, downloads, onView, on
           <UserCircle2 className="w-3.5 h-3.5" />
           by {author}
         </button>
+
+        {categoryLabel && (
+          <p className="mb-3 text-[11px] text-muted-foreground inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5">
+            {categoryLabel}
+          </p>
+        )}
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-1">

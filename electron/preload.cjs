@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld("funkhubDesktop", {
   inspectEngineInstall: (payload) => ipcRenderer.invoke("funkhub:inspectEngineInstall", payload),
   importEngineFolder: (payload) => ipcRenderer.invoke("funkhub:importEngineFolder", payload),
   pickFolder: (payload) => ipcRenderer.invoke("funkhub:pickFolder", payload),
+  pickFile: (payload) => ipcRenderer.invoke("funkhub:pickFile", payload),
   getSettings: () => ipcRenderer.invoke("funkhub:getSettings"),
   updateSettings: (payload) => ipcRenderer.invoke("funkhub:updateSettings", payload),
   onInstallProgress: (listener) => {

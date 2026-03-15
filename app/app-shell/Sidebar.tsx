@@ -16,9 +16,11 @@ export function Sidebar() {
   return (
     <aside className="w-[220px] bg-sidebar border-r border-sidebar-border flex flex-col h-full">
       <div className="p-6">
-        <h1 className="text-2xl font-bold font-bigstage bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-          FunkHub
-        </h1>
+        <Link to="/discover" className="inline-block">
+          <h1 className="text-2xl font-bold font-bigstage bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
+            FunkHub
+          </h1>
+        </Link>
       </div>
 
       <nav className="flex-1 px-3 space-y-1">

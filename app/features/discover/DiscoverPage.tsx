@@ -252,6 +252,7 @@ export function Discover() {
                       });
                     }
                   }}
+                  categoryLabel={selectedCategoryId === undefined ? (mod.rootCategory?.name ?? "Unknown") : undefined}
                   statusLabel={(() => {
                     const installed = installedMods.find((entry) => entry.modId === mod.id);
                     if (!installed) {

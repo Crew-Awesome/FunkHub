@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { Folder, Download, Palette, Sliders, Info } from "lucide-react";
+import { Folder, Download, Palette, Sliders, Info, Twitter, MessageCircle } from "lucide-react";
 import { useFunkHub, useTheme } from "../../providers";
 
 const ITCH_OAUTH_CLIENT_ID = "4f345ebf07699f30d702a69fd6dca358";
@@ -21,6 +21,10 @@ export function Settings() {
   const [downloadsDirectory, setDownloadsDirectory] = useState(settings.downloadsDirectory);
   const [dataRootDirectory, setDataRootDirectory] = useState(settings.dataRootDirectory);
   const [itchBusy, setItchBusy] = useState(false);
+  const appVersion = (__FUNKHUB_VERSION__ || "0.0.0").trim();
+  const buildChannel = (__FUNKHUB_CHANNEL__ || "release").toLowerCase();
+  const isInDevBuild = buildChannel !== "release" || /nightly|github|ci|dev|alpha|beta|rc/i.test(appVersion);
+  const displayVersion = isInDevBuild ? "InDev" : `v${appVersion}`;
 
   useEffect(() => {
     setGameDirectory(settings.gameDirectory);
@@ -208,13 +212,6 @@ export function Settings() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
-              <p className="text-sm font-medium text-amber-200">itch.io base game install</p>
-              <p className="mt-1 text-xs text-amber-100/90">
-                FunkHub may require an itch.io login/API session to resolve fresh download links for base game installers.
-                If not connected, manual browser fallback will be used.
-              </p>
-            </div>
         </motion.section>
 
         {/* Appearance Settings */}
@@ -270,10 +267,36 @@ export function Settings() {
               />
             </label>
 
+          </div>
+        </motion.section>
+
+        {/* Base Game Install & itch.io */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="bg-card border border-border rounded-xl p-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <Download className="w-5 h-5 text-amber-500" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground">Base Game Install</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-200">itch.io base game install</p>
+              <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-100/90">
+                FunkHub may require an itch.io login/API session to resolve fresh download links for base game installers.
+                If not connected, manual browser fallback will be used.
+              </p>
+            </div>
+
             <div className="rounded-lg border border-border p-4">
               <p className="font-medium text-foreground">itch.io Connection</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Required for automatic base game download resolution from itch.io.
+                Connect your itch.io account for automatic base game download resolution.
               </p>
               <div className="mt-3 flex gap-2">
                 {itchAuth.connected ? (
@@ -287,7 +310,7 @@ export function Settings() {
                         setItchBusy(false);
                       }
                     }}
-                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg text-sm"
+                    className="px-4 py-2 bg-destructive/15 hover:bg-destructive/25 text-destructive rounded-lg text-sm"
                   >
                     Disconnect
                   </button>
@@ -397,10 +420,33 @@ export function Settings() {
 
         {/* About */}
         <div className="bg-card border border-border rounded-xl p-6 text-center">
-          <h3 className="font-semibold text-foreground mb-2">FunkHub v1.0.0</h3>
+          <h3 className="font-semibold text-foreground mb-2">FunkHub {displayVersion}</h3>
           <p className="text-sm text-muted-foreground">
             A modern mod manager and launcher for Friday Night Funkin'
           </p>
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <a
+              href="https://x.com/immalloy"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Creator"
+              aria-label="Creator"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-secondary/50 hover:bg-secondary transition-colors"
+            >
+              <Twitter className="w-4.5 h-4.5" />
+            </a>
+            <a
+              href="https://discord.gg/cdP7JhDv4u"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Discord Server"
+              aria-label="Discord Server"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-secondary/50 hover:bg-secondary transition-colors"
+            >
+              <MessageCircle className="w-4.5 h-4.5" />
+            </a>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Hover icons to see labels.</p>
         </div>
       </div>
     </div>

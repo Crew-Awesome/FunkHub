@@ -4,12 +4,13 @@ import { Cpu, Play, Settings, Check } from "lucide-react";
 interface EngineCardProps {
   name: string;
   version: string;
+  iconSrc?: string;
   isDefault?: boolean;
   onLaunch?: () => void;
   onManage?: () => void;
 }
 
-export function EngineCard({ name, version, isDefault, onLaunch, onManage }: EngineCardProps) {
+export function EngineCard({ name, version, iconSrc, isDefault, onLaunch, onManage }: EngineCardProps) {
   return (
     <motion.div
       className="bg-card rounded-xl border border-border p-6 group cursor-pointer"
@@ -17,8 +18,10 @@ export function EngineCard({ name, version, isDefault, onLaunch, onManage }: Eng
       transition={{ duration: 0.2 }}
     >
       <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-chart-4 flex items-center justify-center flex-shrink-0">
-          <Cpu className="w-6 h-6 text-white" />
+        <div className="w-12 h-12 rounded-lg bg-secondary/70 border border-border flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {iconSrc
+            ? <img src={iconSrc} alt="" className="w-9 h-9 object-contain" loading="lazy" />
+            : <Cpu className="w-6 h-6 text-primary" />}
         </div>
 
         <div className="flex-1 min-w-0">

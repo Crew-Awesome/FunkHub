@@ -176,6 +176,19 @@ export class FunkHubService {
     return result.path;
   }
 
+  async pickFile(options?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }): Promise<string | undefined> {
+    if (!window.funkhubDesktop?.pickFile) {
+      return undefined;
+    }
+
+    const result = await window.funkhubDesktop.pickFile(options);
+    if (result.canceled) {
+      return undefined;
+    }
+
+    return result.path;
+  }
+
   async getItchAuthStatus(): Promise<{ connected: boolean; connectedAt?: number; scopes?: string[] }> {
     if (!window.funkhubDesktop?.getItchAuthStatus) {
       return { connected: false };

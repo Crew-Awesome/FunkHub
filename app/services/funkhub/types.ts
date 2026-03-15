@@ -234,6 +234,7 @@ export interface DesktopBridge {
     error?: string;
   }>;
   pickFolder: (payload?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>;
+  pickFile: (payload?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => Promise<{ canceled: boolean; path?: string }>;
   getSettings: () => Promise<Partial<FunkHubSettings>>;
   updateSettings: (payload: Partial<FunkHubSettings>) => Promise<Partial<FunkHubSettings>>;
 }

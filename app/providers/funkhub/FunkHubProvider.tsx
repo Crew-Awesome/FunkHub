@@ -64,6 +64,7 @@ interface FunkHubContextValue {
   removeInstalledMod: (installedId: string, options?: { deleteFiles?: boolean }) => Promise<void>;
   updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
+  browseFile: (options?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => Promise<string | undefined>;
   connectItch: (clientId: string) => Promise<void>;
   disconnectItch: () => Promise<void>;
   refreshItchAuth: () => Promise<void>;
@@ -277,6 +278,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         setSettings(next);
       },
       browseFolder: async (options) => funkHubService.pickFolder(options),
+      browseFile: async (options) => funkHubService.pickFile(options),
       connectItch: async (clientId) => {
         await funkHubService.connectItchOAuth(clientId);
         setItchAuth(await funkHubService.getItchAuthStatus());
