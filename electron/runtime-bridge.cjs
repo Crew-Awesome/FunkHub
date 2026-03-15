@@ -1020,6 +1020,10 @@ async function handleLaunchEngine(payload) {
 
   const startupGraceMs = 1200;
   const allowImmediateExit = launcher !== "native" || launchNeedsWrapper;
+  const shouldDetach = !(process.platform === "win32" && launcher === "native" && !launchNeedsWrapper);
+  const shouldHideWindow = process.platform === "win32"
+    ? (launcher !== "native" || launchNeedsWrapper)
+    : true;
 
   const child = await new Promise((resolve, reject) => {
     let resolved = false;
@@ -1028,9 +1032,9 @@ async function handleLaunchEngine(payload) {
     try {
       spawned = spawn(command, args, {
         cwd: launchCwd,
-        detached: true,
+        detached: shouldDetach,
         stdio: "ignore",
-        windowsHide: true,
+        windowsHide: shouldHideWindow,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "spawn failed";
@@ -1087,7 +1091,9 @@ async function handleLaunchEngine(payload) {
     });
   });
 
-  child.unref();
+  if (shouldDetach) {
+    child.unref();
+  }
 
   return { ok: true, launchedPath: launchable };
 }
