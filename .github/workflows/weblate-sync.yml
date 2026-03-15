@@ -1,0 +1,35 @@
+name: Weblate Sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/i18n/locales/**"
+      - "weblate.config.json"
+      - "scripts/configure-weblate.mjs"
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  configure-and-sync:
+    name: Configure existing Weblate project
+    runs-on: ubuntu-latest
+    environment: translations
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Configure and synchronize Weblate project
+        env:
+          WEBLATE_URL: https://funkhub-translations.duckdns.org
+          WEBLATE_API_TOKEN: ${{ secrets.WEBLATE_API_TOKEN }}
+          PROJECT_API_TOKEN: ${{ secrets.PROJECT_API_TOKEN }}
+          PROJECT_API_KEY: ${{ secrets.PROJECT_API_KEY }}
+        run: node ./scripts/configure-weblate.mjs

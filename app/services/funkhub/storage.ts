@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
 } as const;
 
 const DEFAULT_SETTINGS: FunkHubSettings = {
+  locale: "en",
   gameDirectory: "",
   downloadsDirectory: "",
   dataRootDirectory: "",

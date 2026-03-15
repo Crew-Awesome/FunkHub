@@ -23,7 +23,7 @@
     "build:desktop:linux:appimage": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never",
     "build:desktop:linux:deb": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --linux deb --x64 --publish never",
     "build:desktop:win": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never",
-    "build:desktop:mac": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never"
+    "build:desktop:mac": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --mac dmg --publish never"
   },
   "dependencies": {
     "7zip-bin": "^5.2.0",
@@ -75,12 +75,6 @@
       }
     ],
     "npmRebuild": false,
-    "download": {
-      "retry": {
-        "retries": 5,
-        "retryDelay": 2000
-      }
-    },
     "linux": {
       "target": [
         {

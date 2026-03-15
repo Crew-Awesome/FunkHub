@@ -27,10 +27,9 @@ jobs:
               dist-desktop/**/*.blockmap
           - os: macos-latest
             artifact: FunkHub-macos
-            package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never --config.extraMetadata.version=${BUILD_VERSION}
+            package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg --publish never --config.extraMetadata.version=${BUILD_VERSION}
             artifact_glob: |
               dist-desktop/**/*.dmg
-              dist-desktop/**/*.zip
               dist-desktop/**/builder-*.yml
 
     steps:
@@ -73,7 +72,24 @@ jobs:
 
       - name: Package desktop app
         shell: bash
-        run: ${{ matrix.package_cmd }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Packaging attempt ${attempt}/3"
+            if eval "${{ matrix.package_cmd }}"; then
+              echo "Packaging succeeded on attempt ${attempt}."
+              break
+            fi
+
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "Packaging failed after 3 attempts."
+              exit 1
+            fi
+
+            sleep_seconds=$((attempt * 15))
+            echo "Transient packaging failure. Retrying in ${sleep_seconds}s..."
+            sleep "$sleep_seconds"
+          done
 
       - name: Verify Linux output
         if: matrix.os == 'ubuntu-latest'
@@ -109,17 +125,11 @@ jobs:
         run: |
           set -euo pipefail
           dmg_count=$(find dist-desktop -type f -name "*.dmg" | wc -l | tr -d ' ')
-          zip_count=$(find dist-desktop -type f -name "*.zip" | wc -l | tr -d ' ')
           if [[ "$dmg_count" -eq 0 ]]; then
             echo "No macOS installer (.dmg) was produced under dist-desktop/."
             exit 1
           fi
-          if [[ "$zip_count" -eq 0 ]]; then
-            echo "No macOS archive (.zip) was produced under dist-desktop/."
-            exit 1
-          fi
           find dist-desktop -type f -name "*.dmg" -print
-          find dist-desktop -type f -name "*.zip" -print
 
       - name: Upload build artifacts
         if: matrix.os != 'ubuntu-latest'

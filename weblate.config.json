@@ -1,0 +1,28 @@
+{
+  "project": {
+    "slug": "funkhub",
+    "web": "https://github.com/Crew-Awesome/FunkHub",
+    "translationReview": true,
+    "sourceReview": false,
+    "enableHooks": true
+  },
+  "repository": {
+    "url": "git@github.com:Crew-Awesome/FunkHub.git",
+    "branch": "main"
+  },
+  "component": {
+    "slug": "app-i18n-json",
+    "name": "FunkHub UI (i18n JSON)",
+    "fileMask": "app/i18n/locales/*.json",
+    "template": "app/i18n/locales/en.json",
+    "newBase": "app/i18n/locales/en.json",
+    "newLanguageMode": "add",
+    "commitMessage": "Update translations via Weblate",
+    "commitAuthor": "Weblate <noreply@funkhub-translations>",
+    "enableSuggestions": "1",
+    "suggestionVoting": "1",
+    "suggestionAutoAccept": "1",
+    "pushOnCommit": "1",
+    "languageRegex": "^[a-z]{2}(-[A-Z]{2})?$"
+  }
+}

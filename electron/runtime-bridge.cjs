@@ -730,6 +730,19 @@ async function findLaunchableExecutable(dirPath, hints = []) {
   const queue = [dirPath];
   const normalizedHints = hints.map((hint) => hint.toLowerCase());
   let hintedCandidate = null;
+  const windowsCandidates = [];
+  const blockedWindowsTokens = [
+    "crashpad",
+    "updater",
+    "unins",
+    "uninstall",
+    "helper",
+    "cef",
+    "ffmpeg",
+    "setup",
+    "vc_redist",
+    "dxwebsetup",
+  ];
 
   while (queue.length > 0) {
     const current = queue.shift();
@@ -743,7 +756,8 @@ async function findLaunchableExecutable(dirPath, hints = []) {
 
       const lower = entry.name.toLowerCase();
       if (process.platform === "win32" && lower.endsWith(".exe")) {
-        return fullPath;
+        windowsCandidates.push(fullPath);
+        continue;
       }
       if (process.platform === "darwin" && lower.endsWith(".app")) {
         return fullPath;
@@ -770,6 +784,37 @@ async function findLaunchableExecutable(dirPath, hints = []) {
         }
       }
     }
+  }
+
+  if (process.platform === "win32" && windowsCandidates.length > 0) {
+    const ranked = windowsCandidates
+      .map((candidate) => {
+        const base = path.basename(candidate).toLowerCase().replace(/\.exe$/i, "");
+        const relativeDepth = path.relative(dirPath, candidate).split(path.sep).length;
+
+        let score = 0;
+
+        if (normalizedHints.some((hint) => hint.length > 0 && base === hint)) {
+          score += 300;
+        } else if (normalizedHints.some((hint) => hint.length > 0 && base.includes(hint))) {
+          score += 180;
+        }
+
+        if (base.includes("funkin") || base.includes("engine")) {
+          score += 120;
+        }
+
+        if (blockedWindowsTokens.some((token) => base.includes(token))) {
+          score -= 350;
+        }
+
+        score -= Math.max(0, relativeDepth - 1) * 5;
+
+        return { candidate, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    return ranked[0].candidate;
   }
 
   return hintedCandidate;

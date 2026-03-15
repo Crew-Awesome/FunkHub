@@ -1,16 +1,18 @@
 import { Link, useLocation } from "react-router";
 import { Search, Library, Download, RefreshCw, Settings as SettingsIcon, Cpu } from "lucide-react";
+import { useI18n } from "../providers";
 
 const navItems = [
-  { icon: Search, label: "Discover Mods", path: "/" },
-  { icon: Library, label: "Library", path: "/library" },
-  { icon: Download, label: "Downloads", path: "/downloads" },
-  { icon: RefreshCw, label: "Updates", path: "/updates" },
-  { icon: Cpu, label: "Engines", path: "/engines" },
+  { icon: Search, labelKey: "nav.discover", path: "/" },
+  { icon: Library, labelKey: "nav.library", path: "/library" },
+  { icon: Download, labelKey: "nav.downloads", path: "/downloads" },
+  { icon: RefreshCw, labelKey: "nav.updates", path: "/updates" },
+  { icon: Cpu, labelKey: "nav.engines", path: "/engines" },
 ];
 
 export function Sidebar() {
   const location = useLocation();
+  const { t } = useI18n();
 
   return (
     <aside className="w-full md:w-[220px] bg-sidebar border-b md:border-b-0 md:border-r border-sidebar-border flex md:flex-col h-auto md:h-full">
@@ -43,7 +45,7 @@ export function Sidebar() {
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full hidden md:block" />
                 )}
                 <Icon className="w-5 h-5" />
-                <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+                 <span className="text-sm font-medium whitespace-nowrap">{t(item.labelKey)}</span>
               </div>
             </Link>
           );
@@ -56,7 +58,7 @@ export function Sidebar() {
           className="px-3 py-2 hover:bg-sidebar-accent rounded-lg transition-colors flex items-center justify-center gap-2 text-sidebar-foreground/80 min-h-11"
         >
           <SettingsIcon className="w-5 h-5" />
-          <span className="text-sm font-medium whitespace-nowrap">Settings</span>
+          <span className="text-sm font-medium whitespace-nowrap">{t("nav.settings")}</span>
         </Link>
       </div>
     </aside>

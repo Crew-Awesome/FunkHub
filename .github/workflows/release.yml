@@ -30,10 +30,9 @@ jobs:
               dist-desktop/**/*.blockmap
           - os: macos-latest
             artifact: FunkHub-macos
-            package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never --config.extraMetadata.version=${BUILD_VERSION}
+            package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg --publish never --config.extraMetadata.version=${BUILD_VERSION}
             artifact_glob: |
               dist-desktop/**/*.dmg
-              dist-desktop/**/*.zip
               dist-desktop/**/builder-*.yml
 
     steps:
@@ -79,7 +78,24 @@ jobs:
 
       - name: Package desktop app
         shell: bash
-        run: ${{ matrix.package_cmd }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Packaging attempt ${attempt}/3"
+            if eval "${{ matrix.package_cmd }}"; then
+              echo "Packaging succeeded on attempt ${attempt}."
+              break
+            fi
+
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "Packaging failed after 3 attempts."
+              exit 1
+            fi
+
+            sleep_seconds=$((attempt * 15))
+            echo "Transient packaging failure. Retrying in ${sleep_seconds}s..."
+            sleep "$sleep_seconds"
+          done
 
       - name: Verify Linux output
         if: matrix.os == 'ubuntu-latest'
@@ -189,7 +205,6 @@ jobs:
           deb_count=$(find release-artifacts/FunkHub-linux-deb -type f -name "*.deb" | wc -l | tr -d ' ')
           windows_count=$(find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe" | wc -l | tr -d ' ')
           mac_dmg_count=$(find release-artifacts/FunkHub-macos -type f -name "*.dmg" | wc -l | tr -d ' ')
-          mac_zip_count=$(find release-artifacts/FunkHub-macos -type f -name "*.zip" | wc -l | tr -d ' ')
           if [[ "$linux_count" -eq 0 ]]; then
             echo "Release payload missing Linux AppImage installer."
             exit 1
@@ -206,15 +221,10 @@ jobs:
             echo "Release payload missing macOS .dmg installer."
             exit 1
           fi
-          if [[ "$mac_zip_count" -eq 0 ]]; then
-            echo "Release payload missing macOS .zip archive."
-            exit 1
-          fi
           find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage" -print
           find release-artifacts/FunkHub-linux-deb -type f -name "*.deb" -print
           find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe" -print
           find release-artifacts/FunkHub-macos -type f -name "*.dmg" -print
-          find release-artifacts/FunkHub-macos -type f -name "*.zip" -print
 
       - name: Build release asset manifest
         id: assets
@@ -228,7 +238,6 @@ jobs:
               find release-artifacts/FunkHub-linux-deb -type f -name "*.deb"
               find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe"
               find release-artifacts/FunkHub-macos -type f -name "*.dmg"
-              find release-artifacts/FunkHub-macos -type f -name "*.zip"
             } | sort
           )
 

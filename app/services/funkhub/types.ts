@@ -171,6 +171,7 @@ export interface DesktopInstallResult {
 }
 
 export interface FunkHubSettings {
+  locale: string;
   gameDirectory: string;
   downloadsDirectory: string;
   dataRootDirectory: string;

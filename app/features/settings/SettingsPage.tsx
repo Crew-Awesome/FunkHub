@@ -1,12 +1,13 @@
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Folder, Download, Palette, Sliders, Info, Twitter, MessageCircle, FolderOpen, Link2, Copy } from "lucide-react";
-import { useFunkHub, useTheme } from "../../providers";
+import { useFunkHub, useI18n, useTheme } from "../../providers";
 
 const ITCH_OAUTH_CLIENT_ID = "4f345ebf07699f30d702a69fd6dca358";
 
 export function Settings() {
   const { theme, toggleTheme } = useTheme();
+  const { locale, locales, setLocale, t } = useI18n();
   const {
     settings,
     itchAuth,
@@ -27,7 +28,7 @@ export function Settings() {
   const appVersion = (__FUNKHUB_VERSION__ || "0.0.0").trim().replace(/^v/i, "");
   const buildChannel = (__FUNKHUB_CHANNEL__ || "release").toLowerCase();
   const isInDevBuild = buildChannel !== "release";
-  const displayVersion = isInDevBuild ? "InDev" : `v${appVersion}`;
+  const displayVersion = isInDevBuild ? t("settings.version.indev", "InDev") : `v${appVersion}`;
 
   useEffect(() => {
     setGameDirectory(settings.gameDirectory);
@@ -92,21 +93,21 @@ export function Settings() {
     try {
       await openFolderPath(targetPath);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Failed to open folder");
+      window.alert(error instanceof Error ? error.message : t("settings.failedOpenFolder", "Failed to open folder"));
     }
   };
 
   return (
     <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8">
-      <h1 className="mb-6 text-3xl font-bold text-foreground">Settings</h1>
+      <h1 className="mb-6 text-3xl font-bold text-foreground">{t("settings.title", "Settings")}</h1>
 
       <div className="mb-6 flex flex-wrap gap-2">
         {[
-          { id: "setup", label: "Setup" },
-          { id: "integrations", label: "Integrations" },
-          { id: "appearance", label: "Appearance" },
-          { id: "advanced", label: "Advanced" },
-          { id: "about", label: "About" },
+          { id: "setup", label: t("settings.tabs.setup", "Setup") },
+          { id: "integrations", label: t("settings.tabs.integrations", "Integrations") },
+          { id: "appearance", label: t("settings.tabs.appearance", "Appearance") },
+          { id: "advanced", label: t("settings.tabs.advanced", "Advanced") },
+          { id: "about", label: t("settings.tabs.about", "About") },
         ].map((section) => (
           <button
             key={section.id}
@@ -135,13 +136,13 @@ export function Settings() {
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <Sliders className="w-5 h-5 text-primary" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground">General</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t("settings.general", "General")}</h2>
           </div>
 
           <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Game Directory
+                  {t("settings.gameDirectory", "Game Directory")}
                 </label>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
@@ -152,18 +153,18 @@ export function Settings() {
                     className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                   <button
-                    onClick={() => browseForSetting("gameDirectory", "Choose your FNF game folder", gameDirectory)}
+                    onClick={() => browseForSetting("gameDirectory", t("settings.chooseGameFolder", "Choose your FNF game folder"), gameDirectory)}
                     className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
                   >
                     <Folder className="w-4 h-4" />
-                    Browse
+                    {t("settings.browse", "Browse")}
                   </button>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Default Engine
+                {t("settings.defaultEngine", "Default Engine")}
               </label>
               <select
                 value={defaultEngineId}
@@ -175,7 +176,9 @@ export function Settings() {
                 className="w-full px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="" disabled={installedEngines.length > 0}>
-                  {installedEngines.length > 0 ? "Select default engine" : "No installed engines"}
+                  {installedEngines.length > 0
+                    ? t("settings.selectDefaultEngine", "Select default engine")
+                    : t("settings.noInstalledEngines", "No installed engines")}
                 </option>
                 {installedEngines.map((engine) => (
                   <option key={engine.id} value={engine.id}>
@@ -197,20 +200,20 @@ export function Settings() {
             <div className="w-10 h-10 rounded-lg bg-sky-500/10 flex items-center justify-center">
               <FolderOpen className="w-5 h-5 text-sky-500" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground">Quick Folder Access</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t("settings.quickFolderAccess", "Quick Folder Access")}</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <button onClick={() => openFolderSafe(dataRootDirectory || ".")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">Open Data Root</button>
-            <button onClick={() => openFolderSafe("engines")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">Open Engines Folder</button>
-            <button onClick={() => openFolderSafe(downloadsDirectory || "downloads")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">Open Downloads Folder</button>
-            <button onClick={() => openFolderSafe(defaultEngine?.modsPath || "engines")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">Open Mods Folder</button>
+            <button onClick={() => openFolderSafe(dataRootDirectory || ".")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">{t("settings.openDataRoot", "Open Data Root")}</button>
+            <button onClick={() => openFolderSafe("engines")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">{t("settings.openEnginesFolder", "Open Engines Folder")}</button>
+            <button onClick={() => openFolderSafe(downloadsDirectory || "downloads")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">{t("settings.openDownloadsFolder", "Open Downloads Folder")}</button>
+            <button onClick={() => openFolderSafe(defaultEngine?.modsPath || "engines")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">{t("settings.openModsFolder", "Open Mods Folder")}</button>
             <button
               onClick={() => gameDirectory.trim() && openFolderSafe(gameDirectory)}
               disabled={!gameDirectory.trim()}
               className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Open Game Folder
+              {t("settings.openGameFolder", "Open Game Folder")}
             </button>
           </div>
         </motion.section>
@@ -225,40 +228,40 @@ export function Settings() {
             <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
               <Link2 className="w-5 h-5 text-indigo-500" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground">GameBanana One-Click</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t("settings.integration.oneClick", "GameBanana One-Click")}</h2>
           </div>
 
           <div className="space-y-4 text-sm">
             <div className="rounded-lg border border-border p-4">
-              <p className="font-medium text-foreground">Pair URL format</p>
+              <p className="font-medium text-foreground">{t("settings.integration.pairUrlFormat", "Pair URL format")}</p>
               <p className="mt-2 font-mono text-xs text-muted-foreground break-all">{pairFormat}</p>
               <button
                 onClick={() => navigator.clipboard.writeText(pairFormat)}
                 className="mt-2 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs hover:bg-secondary"
               >
                 <Copy className="h-3.5 w-3.5" />
-                Copy Pair Format
+                {t("settings.integration.copyPairFormat", "Copy Pair Format")}
               </button>
             </div>
 
             <div className="rounded-lg border border-border p-4">
-              <p className="font-medium text-foreground">Install URL format</p>
+              <p className="font-medium text-foreground">{t("settings.integration.installUrlFormat", "Install URL format")}</p>
               <p className="mt-2 font-mono text-xs text-muted-foreground break-all">{installFormat}</p>
               <button
                 onClick={() => navigator.clipboard.writeText(installFormat)}
                 className="mt-2 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs hover:bg-secondary"
               >
                 <Copy className="h-3.5 w-3.5" />
-                Copy Install Format
+                {t("settings.integration.copyInstallFormat", "Copy Install Format")}
               </button>
             </div>
 
             <div className="rounded-lg border border-border p-4">
-              <p className="font-medium text-foreground">Current pairing status</p>
+              <p className="font-medium text-foreground">{t("settings.integration.currentPairingStatus", "Current pairing status")}</p>
               <p className="mt-1 text-muted-foreground">
                 {settings.gameBananaIntegration.memberId
-                  ? `Paired as member ${settings.gameBananaIntegration.memberId}`
-                  : "Not paired yet"}
+                  ? t("settings.integration.pairedAsMember", "Paired as member {{memberId}}", { memberId: settings.gameBananaIntegration.memberId })
+                  : t("settings.integration.notPaired", "Not paired")}
               </p>
               {settings.gameBananaIntegration.pairedAt && (
                 <p className="mt-1 text-xs text-muted-foreground">Last pair: {new Date(settings.gameBananaIntegration.pairedAt).toLocaleString()}</p>
@@ -388,7 +391,7 @@ export function Settings() {
             <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
               <Palette className="w-5 h-5 text-purple-500" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground">Appearance</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t("settings.tabs.appearance", "Appearance")}</h2>
           </div>
 
           <div className="space-y-4">
@@ -410,6 +413,26 @@ export function Settings() {
                          checked:after:translate-x-5"
               />
             </label>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                {t("settings.language", "Language")}
+              </label>
+              <select
+                value={locale}
+                onChange={(event) => {
+                  void setLocale(event.target.value as "en" | "es");
+                }}
+                className="w-full px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                {locales.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {t(item.labelKey)}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">{t("settings.language.help", "UI language used by FunkHub")}</p>
+            </div>
 
             <label className="flex items-center justify-between cursor-pointer">
               <div>

@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "resolveJsonModule": true
   },
   "include": ["app", "main.tsx", "vite.config.ts"]
 }
