@@ -21,8 +21,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: weblate-sync
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'workflow_dispatch' && format('weblate-sync-manual-{0}', github.run_id) || 'weblate-sync-auto' }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   configure-and-sync:
