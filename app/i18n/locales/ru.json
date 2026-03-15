@@ -93,7 +93,7 @@
     "engines.proton": "",
     "engines.ready": "",
     "engines.remove": "",
-    "engines.save": "",
+    "engines.save": "Сохранить",
     "engines.selectExecutable": "",
     "engines.selectExecutableFolder": "",
     "engines.selectLauncherBinary": "",
