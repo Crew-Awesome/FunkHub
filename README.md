@@ -6,8 +6,10 @@
 
 **A Friday Night Funkin Mod Launcher**
 
-FunkHub is a simple desktop app for finding, installing, and launching Friday Night Funkin' content.
+FunkHub is a simple desktop app for finding, installing, and launching Friday Night Funkin' mods.
 It is made to be easy to use, fast to navigate, and fun to mess around with.
+
+made using the Gamebanana API.
 
 ## What it does
 
