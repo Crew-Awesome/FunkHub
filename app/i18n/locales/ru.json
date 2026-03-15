@@ -1,10 +1,10 @@
 {
     "app.loading": "Загрузка…",
     "app.name": "FunkHub",
-    "discover.all": "",
+    "discover.all": "Все",
     "discover.browseCategories": "",
     "discover.browseCategoriesDesc": "Фильтровать результаты поиска по категории.",
-    "discover.categories": "",
+    "discover.categories": "Категории",
     "discover.chooseDataRoot": "Выберите папку данных",
     "discover.chooseEngineRoot": "Выберите папку установки движка",
     "discover.chooseGameFolder": "Выберите папку с игрой FNF",
