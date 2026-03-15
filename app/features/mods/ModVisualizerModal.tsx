@@ -60,6 +60,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
   const [profile, setProfile] = useState<GameBananaModProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedEngineId, setSelectedEngineId] = useState<string>("");
+  const [installMode, setInstallMode] = useState<"executable" | "mod_folder">("mod_folder");
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
 
   useEffect(() => {
@@ -78,6 +79,8 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
           setActiveMediaIndex(0);
           const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
           setSelectedEngineId(defaultEngine?.id ?? "");
+          const defaultExecutable = next.rootCategory?.id === 3827 || next.files.some((file) => modInstallerService.isExecutableMod(next, file));
+          setInstallMode(defaultExecutable ? "executable" : "mod_folder");
         }
       })
       .catch((err) => {
@@ -108,6 +111,9 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
   const categoryLabel = profile?.rootCategory?.name ?? profile?.category?.name ?? profile?.superCategory?.name;
   const selectedEngine = installedEngines.find((engine) => engine.id === selectedEngineId);
   const isExecutableMod = Boolean(profile && profile.files.some((file) => modInstallerService.isExecutableMod(profile, file)));
+  const executableCategoryDefault = profile?.rootCategory?.id === 3827;
+  const supportsExecutableInstall = Boolean(executableCategoryDefault || isExecutableMod);
+  const installAsExecutable = supportsExecutableInstall && installMode === "executable";
   const hasDependencyWarning = Boolean(!isExecutableMod && profile?.requiredEngine && selectedEngine && selectedEngine.slug !== profile.requiredEngine);
 
   useEffect(() => {
@@ -278,7 +284,21 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                   </div>
 
                   <div className="mt-4 space-y-2">
-                    {!isExecutableMod && (
+                    {supportsExecutableInstall && (
+                      <div>
+                        <label className="mb-1 block text-xs text-muted-foreground">Install mode</label>
+                        <select
+                          value={installMode}
+                          onChange={(event) => setInstallMode(event.target.value as "executable" | "mod_folder")}
+                          className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground"
+                        >
+                          <option value="executable">Executable package (default)</option>
+                          <option value="mod_folder">Mod folder</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {!installAsExecutable && (
                       <div>
                         <label className="mb-1 block text-xs text-muted-foreground">Install target engine</label>
                         <select
@@ -304,9 +324,15 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                     </button>
                   </div>
 
-                  {hasDependencyWarning && (
+                  {hasDependencyWarning && !installAsExecutable && (
                     <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
                       This mod targets <span className="font-medium">{profile?.requiredEngine}</span>, but selected engine is <span className="font-medium">{selectedEngine?.slug}</span>.
+                    </p>
+                  )}
+
+                  {!installAsExecutable && installedEngines.length === 0 && (
+                    <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
+                      No engines installed. Install an engine first or switch install mode to executable package.
                     </p>
                   )}
                 </div>
@@ -326,8 +352,15 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                           <span>{formatBytes(file.fileSize)}</span>
                         </div>
                         <button
-                          onClick={() => installMod(profile.id, file.id, selectedEngineId || undefined)}
-                          className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary"
+                          onClick={() => installMod(
+                            profile.id,
+                            file.id,
+                            installAsExecutable ? undefined : (selectedEngineId || undefined),
+                            0,
+                            { forceInstallType: installAsExecutable ? "executable" : "standard_mod" },
+                          )}
+                          disabled={!installAsExecutable && installedEngines.length === 0}
+                          className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <Download className="h-4 w-4" />
                           Install

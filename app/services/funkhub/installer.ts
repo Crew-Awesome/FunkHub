@@ -72,9 +72,12 @@ export class ModInstallerService {
     mod: Pick<GameBananaModProfile, "requiredEngine" | "rootCategory" | "name" | "text">;
     file: Pick<GameBananaFile, "fileName">;
     selectedEngine?: InstalledEngine;
+    forceInstallType?: "executable" | "standard_mod";
   }): InstallPlan {
     const requiredEngine = this.detectRequiredEngine(input.mod);
-    const executable = this.isExecutableMod(input.mod, input.file);
+    const executable = input.forceInstallType
+      ? input.forceInstallType === "executable"
+      : this.isExecutableMod(input.mod, input.file);
 
     if (executable) {
       return {

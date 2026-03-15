@@ -1,5 +1,6 @@
 import {
   CategoryNode,
+  FNF_CATEGORY_IDS,
   FNF_GAME_ID,
   GameBananaCategory,
   GameBananaFile,
@@ -312,12 +313,47 @@ export class GameBananaApiService {
   }
 
   async searchMods({ query, page = 1, perPage = 15 }: SearchModsParams): Promise<GameBananaModSummary[]> {
-    if (query.trim().length < 2) {
+    const normalizedQuery = query.trim();
+    if (normalizedQuery.length < 2) {
       return [];
     }
 
+    const directModIdMatch = normalizedQuery.match(/gamebanana\.com\/mods\/(\d+)/i);
+    if (directModIdMatch) {
+      const modId = Number(directModIdMatch[1]);
+      if (Number.isFinite(modId) && modId > 0) {
+        try {
+          const profile = await this.getModProfile(modId);
+          return [{
+            id: profile.id,
+            modelName: profile.modelName,
+            name: profile.name,
+            profileUrl: profile.profileUrl,
+            version: profile.version,
+            description: profile.description,
+            imageUrl: profile.imageUrl,
+            thumbnailUrl: profile.thumbnailUrl,
+            screenshotUrls: profile.screenshotUrls,
+            dateAdded: profile.dateAdded,
+            dateModified: profile.dateModified,
+            dateUpdated: profile.dateUpdated,
+            likeCount: profile.likeCount,
+            postCount: profile.postCount,
+            viewCount: profile.viewCount,
+            downloadCount: profile.downloadCount,
+            isObsolete: profile.isObsolete,
+            submitter: profile.submitter,
+            game: profile.game,
+            rootCategory: profile.rootCategory,
+          }];
+        } catch {
+          // Fall through to API search for graceful recovery.
+        }
+      }
+    }
+
     const url = new URL(`${APIV11_BASE}/Util/Search/Results`);
-    url.searchParams.set("_sSearchString", query.trim());
+    url.searchParams.set("_sSearchString", normalizedQuery);
     url.searchParams.set("_nPage", String(page));
     url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
 
@@ -330,9 +366,19 @@ export class GameBananaApiService {
     });
     const records = payload._aRecords ?? [];
 
+    const queryLower = normalizedQuery.toLowerCase();
     const normalized = records
       .map(normalizeSummary)
-      .filter((mod) => mod.modelName === "Mod" && mod.game?.id === FNF_GAME_ID);
+      .filter((mod) => mod.modelName === "Mod")
+      .filter((mod) => {
+        if (mod.game?.id === FNF_GAME_ID) {
+          return true;
+        }
+        if (mod.rootCategory?.id && FNF_CATEGORY_IDS.includes(mod.rootCategory.id as (typeof FNF_CATEGORY_IDS)[number])) {
+          return true;
+        }
+        return mod.name.toLowerCase().includes(queryLower);
+      });
     this.prefetchThumbnails(normalized);
     return normalized;
   }

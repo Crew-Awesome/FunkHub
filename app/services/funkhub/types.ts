@@ -321,6 +321,10 @@ export interface InstallPlan {
   requiredEngine?: EngineSlug;
 }
 
+export interface InstallOptions {
+  forceInstallType?: "executable" | "standard_mod";
+}
+
 export interface CategoryNode extends GameBananaCategory {
   children: CategoryNode[];
 }

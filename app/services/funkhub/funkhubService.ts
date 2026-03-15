@@ -15,6 +15,7 @@ import {
   FunkHubSettings,
   GameBananaModProfile,
   GameBananaModSummary,
+  InstallOptions,
   InstalledEngine,
   InstalledMod,
   ListModsParams,
@@ -1010,6 +1011,7 @@ export class FunkHubService {
     selectedEngineId?: string;
     priority?: number;
     downloadUrlOverride?: string;
+    forceInstallType?: "executable" | "standard_mod";
   }): DownloadTask {
     const abortController = new AbortController();
     const taskId = `${input.modId}-${input.fileId}-${Date.now()}`;
@@ -1054,6 +1056,7 @@ export class FunkHubService {
           mod: profile,
           file: selectedFile,
           selectedEngine,
+          forceInstallType: input.forceInstallType,
         });
 
         if (plan.type === "standard_mod" && this.installedEngines.length === 0) {
@@ -1173,6 +1176,7 @@ export class FunkHubService {
     priority?: number;
     fileId?: number;
     downloadUrl?: string;
+    options?: InstallOptions;
   }): DownloadTask {
     const fromUrl = input.downloadUrl?.match(/\/dl\/(\d+)/i);
     const resolvedFileId = input.fileId ?? (fromUrl ? Number(fromUrl[1]) : 0);
@@ -1182,15 +1186,17 @@ export class FunkHubService {
       selectedEngineId: input.selectedEngineId,
       priority: input.priority ?? 20,
       downloadUrlOverride: input.downloadUrl,
+      forceInstallType: input.options?.forceInstallType,
     });
   }
 
-  queueInstall(modId: number, fileId: number, selectedEngineId?: string, priority = 0): DownloadTask {
+  queueInstall(modId: number, fileId: number, selectedEngineId?: string, priority = 0, options?: InstallOptions): DownloadTask {
     return this.queueInstallTask({
       modId,
       fileId,
       selectedEngineId,
       priority,
+      forceInstallType: options?.forceInstallType,
     });
   }
 }

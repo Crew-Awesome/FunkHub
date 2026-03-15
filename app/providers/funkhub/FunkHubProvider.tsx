@@ -8,6 +8,7 @@ import {
   FunkHubSettings,
   GameBananaModProfile,
   GameBananaModSummary,
+  InstallOptions,
   InstalledEngine,
   InstalledMod,
   ModUpdateInfo,
@@ -42,7 +43,7 @@ interface FunkHubContextValue {
   refreshModUpdates: () => Promise<void>;
   getModProfile: (modId: number) => Promise<GameBananaModProfile>;
   listModsBySubmitter: (input: { submitterId: number; categoryId?: number; page?: number; perPage?: number }) => Promise<GameBananaModSummary[]>;
-  installMod: (modId: number, fileId: number, selectedEngineId?: string, priority?: number) => void;
+  installMod: (modId: number, fileId: number, selectedEngineId?: string, priority?: number, options?: InstallOptions) => void;
   installEngine: (slug: InstalledEngine["slug"], downloadUrl: string, version: string, options?: { allowMissingExecutable?: boolean }) => Promise<void>;
   importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string) => Promise<void>;
   updateEngine: (engineId: string) => Promise<void>;
@@ -487,9 +488,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       refreshModUpdates,
       getModProfile,
       listModsBySubmitter,
-      installMod: (modId, fileId, selectedEngineId, priority = 0) => {
+      installMod: (modId, fileId, selectedEngineId, priority = 0, options) => {
         try {
-          funkHubService.queueInstall(modId, fileId, selectedEngineId, priority);
+          funkHubService.queueInstall(modId, fileId, selectedEngineId, priority, options);
         } catch (error) {
           window.alert(error instanceof Error ? error.message : "Unable to queue install");
         }
