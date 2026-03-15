@@ -311,7 +311,7 @@
     "updates.new": "",
     "updates.newVersion": "",
     "updates.noCheckYet": "",
-    "updates.noneAvailable": "",
+    "updates.noneAvailable": "В данный момент обновления для установленных модов отсутствуют.",
     "updates.openUpdateError": "",
     "updates.settings": "",
     "updates.title": "",
