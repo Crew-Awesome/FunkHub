@@ -65,7 +65,7 @@
     "engines.crossPlatformWarning": "",
     "engines.crossPlatformWarningDesc": "",
     "engines.default": "",
-    "engines.executableExamples": "",
+    "engines.executableExamples": "Например: `ALEPsych`, `bin/Funkin.sh`",
     "engines.executableLauncher": "",
     "engines.executableNotDetected": "",
     "engines.importFailed": "",
