@@ -17,10 +17,16 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact: FunkHub-linux
-            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage deb --x64 --publish never
+            artifact: FunkHub-linux-appimage
+            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never
             artifact_glob: |
               dist-desktop/**/*.AppImage
+              dist-desktop/**/builder-*.yml
+              dist-desktop/**/*.blockmap
+          - os: ubuntu-latest
+            artifact: FunkHub-linux-deb
+            package_cmd: node ./node_modules/electron-builder/cli.js --linux deb --x64 --publish never
+            artifact_glob: |
               dist-desktop/**/*.deb
               dist-desktop/**/builder-*.yml
               dist-desktop/**/*.blockmap
@@ -70,24 +76,29 @@ jobs:
       - name: Package desktop app
         run: ${{ matrix.package_cmd }}
 
-      - name: Verify Linux installer output
-        if: matrix.os == 'ubuntu-latest'
+      - name: Verify Linux AppImage output
+        if: matrix.artifact == 'FunkHub-linux-appimage'
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s globstar nullglob
-          appimages=(dist-desktop/**/*.AppImage)
-          debs=(dist-desktop/**/*.deb)
-          if [[ ${#appimages[@]} -eq 0 ]]; then
+          appimage_count=$(find dist-desktop -type f -name "*.AppImage" | wc -l | tr -d ' ')
+          if [[ "$appimage_count" -eq 0 ]]; then
             echo "No Linux installer (.AppImage) was produced under dist-desktop/."
             exit 1
           fi
-          if [[ ${#debs[@]} -eq 0 ]]; then
+          find dist-desktop -type f -name "*.AppImage" -print
+
+      - name: Verify Linux DEB output
+        if: matrix.artifact == 'FunkHub-linux-deb'
+        shell: bash
+        run: |
+          set -euo pipefail
+          deb_count=$(find dist-desktop -type f -name "*.deb" | wc -l | tr -d ' ')
+          if [[ "$deb_count" -eq 0 ]]; then
             echo "No Linux package (.deb) was produced under dist-desktop/."
             exit 1
           fi
-          printf 'Found Linux AppImage: %s\n' "${appimages[@]}"
-          printf 'Found Linux DEB: %s\n' "${debs[@]}"
+          find dist-desktop -type f -name "*.deb" -print
 
       - name: Verify Windows installer output
         if: matrix.os == 'windows-latest'
@@ -116,11 +127,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Linux artifact
+      - name: Download Linux AppImage artifact
         uses: actions/download-artifact@v4
         with:
-          name: FunkHub-linux
-          path: release-artifacts/FunkHub-linux
+          name: FunkHub-linux-appimage
+          path: release-artifacts/FunkHub-linux-appimage
+
+      - name: Download Linux DEB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: FunkHub-linux-deb
+          path: release-artifacts/FunkHub-linux-deb
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
@@ -150,37 +167,36 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s globstar nullglob
-          linux=(release-artifacts/FunkHub-linux/**/*.AppImage)
-          debs=(release-artifacts/FunkHub-linux/**/*.deb)
-          windows=(release-artifacts/FunkHub-windows/**/*.exe)
-          macdmg=(release-artifacts/FunkHub-macos/**/*.dmg)
-          maczip=(release-artifacts/FunkHub-macos/**/*.zip)
-          if [[ ${#linux[@]} -eq 0 ]]; then
+          linux_count=$(find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage" | wc -l | tr -d ' ')
+          deb_count=$(find release-artifacts/FunkHub-linux-deb -type f -name "*.deb" | wc -l | tr -d ' ')
+          windows_count=$(find release-artifacts/FunkHub-windows -type f -name "*.exe" | wc -l | tr -d ' ')
+          mac_dmg_count=$(find release-artifacts/FunkHub-macos -type f -name "*.dmg" | wc -l | tr -d ' ')
+          mac_zip_count=$(find release-artifacts/FunkHub-macos -type f -name "*.zip" | wc -l | tr -d ' ')
+          if [[ "$linux_count" -eq 0 ]]; then
             echo "Release payload missing Linux AppImage installer."
             exit 1
           fi
-          if [[ ${#windows[@]} -eq 0 ]]; then
+          if [[ "$windows_count" -eq 0 ]]; then
             echo "Release payload missing Windows .exe installers."
             exit 1
           fi
-          if [[ ${#debs[@]} -eq 0 ]]; then
+          if [[ "$deb_count" -eq 0 ]]; then
             echo "Release payload missing Linux .deb package."
             exit 1
           fi
-          if [[ ${#macdmg[@]} -eq 0 ]]; then
+          if [[ "$mac_dmg_count" -eq 0 ]]; then
             echo "Release payload missing macOS .dmg installer."
             exit 1
           fi
-          if [[ ${#maczip[@]} -eq 0 ]]; then
+          if [[ "$mac_zip_count" -eq 0 ]]; then
             echo "Release payload missing macOS .zip archive."
             exit 1
           fi
-          printf 'Linux release files: %s\n' "${linux[@]}"
-          printf 'Linux DEB files: %s\n' "${debs[@]}"
-          printf 'Windows release files: %s\n' "${windows[@]}"
-          printf 'macOS DMG files: %s\n' "${macdmg[@]}"
-          printf 'macOS ZIP files: %s\n' "${maczip[@]}"
+          find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage" -print
+          find release-artifacts/FunkHub-linux-deb -type f -name "*.deb" -print
+          find release-artifacts/FunkHub-windows -type f -name "*.exe" -print
+          find release-artifacts/FunkHub-macos -type f -name "*.dmg" -print
+          find release-artifacts/FunkHub-macos -type f -name "*.zip" -print
 
       - name: Create GitHub Release and upload binaries
         uses: softprops/action-gh-release@v2
@@ -190,8 +206,8 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            release-artifacts/FunkHub-linux/**/*.AppImage
-            release-artifacts/FunkHub-linux/**/*.deb
+            release-artifacts/FunkHub-linux-appimage/**/*.AppImage
+            release-artifacts/FunkHub-linux-deb/**/*.deb
             release-artifacts/FunkHub-windows/**/*.exe
             release-artifacts/FunkHub-macos/**/*.dmg
             release-artifacts/FunkHub-macos/**/*.zip

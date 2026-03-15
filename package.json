@@ -19,6 +19,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.ci.json",
     "build:renderer": "vite build",
     "build:desktop:linux": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --linux AppImage deb --x64 --publish never",
+    "build:desktop:linux:appimage": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never",
+    "build:desktop:linux:deb": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --linux deb --x64 --publish never",
     "build:desktop:win": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never",
     "build:desktop:mac": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never"
   },
