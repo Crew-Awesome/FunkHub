@@ -80,7 +80,7 @@ app.on("open-url", (event, url) => {
 });
 
 function createWindow() {
-  const iconPath = path.join(__dirname, "../build/icons/icon.png");
+  const iconPath = path.join(__dirname, "assets/icon.png");
   const win = new BrowserWindow({
     width: 1440,
     height: 900,

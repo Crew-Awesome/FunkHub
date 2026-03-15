@@ -17,19 +17,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact: FunkHub-linux-appimage
-            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never
-            artifact_glob: |
-              dist-desktop/**/*.AppImage
-              dist-desktop/**/builder-*.yml
-              dist-desktop/**/*.blockmap
-          - os: ubuntu-latest
-            artifact: FunkHub-linux-deb
-            package_cmd: node ./node_modules/electron-builder/cli.js --linux deb --x64 --publish never
-            artifact_glob: |
-              dist-desktop/**/*.deb
-              dist-desktop/**/builder-*.yml
-              dist-desktop/**/*.blockmap
+            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never && node ./node_modules/electron-builder/cli.js --linux deb --x64 --publish never
           - os: windows-latest
             artifact: FunkHub-windows
             package_cmd: node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never
@@ -76,28 +64,22 @@ jobs:
       - name: Package desktop app
         run: ${{ matrix.package_cmd }}
 
-      - name: Verify Linux AppImage output
-        if: matrix.artifact == 'FunkHub-linux-appimage'
+      - name: Verify Linux output
+        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           set -euo pipefail
           appimage_count=$(find dist-desktop -type f -name "*.AppImage" | wc -l | tr -d ' ')
+          deb_count=$(find dist-desktop -type f -name "*.deb" | wc -l | tr -d ' ')
           if [[ "$appimage_count" -eq 0 ]]; then
             echo "No Linux installer (.AppImage) was produced under dist-desktop/."
             exit 1
           fi
-          find dist-desktop -type f -name "*.AppImage" -print
-
-      - name: Verify Linux DEB output
-        if: matrix.artifact == 'FunkHub-linux-deb'
-        shell: bash
-        run: |
-          set -euo pipefail
-          deb_count=$(find dist-desktop -type f -name "*.deb" | wc -l | tr -d ' ')
           if [[ "$deb_count" -eq 0 ]]; then
             echo "No Linux package (.deb) was produced under dist-desktop/."
             exit 1
           fi
+          find dist-desktop -type f -name "*.AppImage" -print
           find dist-desktop -type f -name "*.deb" -print
 
       - name: Verify Windows installer output
@@ -111,10 +93,29 @@ jobs:
           $files | ForEach-Object { Write-Host "Found Windows installer: $($_.FullName)" }
 
       - name: Upload build artifacts
+        if: matrix.os != 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact_glob }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Linux AppImage artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: FunkHub-linux-appimage
+          path: dist-desktop/**/*.AppImage
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Linux DEB artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: FunkHub-linux-deb
+          path: dist-desktop/**/*.deb
           if-no-files-found: error
           retention-days: 30
 

@@ -49,6 +49,7 @@
   "build": {
     "appId": "com.funkhub.desktop",
     "productName": "FunkHub",
+    "executableName": "funkhub",
     "directories": {
       "output": "dist-desktop"
     },
@@ -86,7 +87,7 @@
           ]
         }
       ],
-      "icon": "build/icons/icon.png",
+      "icon": "build/icons/linux",
       "category": "Game",
       "maintainer": "ImMalloy <henrydraft.jpeg@gmail.com>",
       "synopsis": "A Friday Night Funkin' mod launcher and manager.",
@@ -94,8 +95,10 @@
       "desktop": {
         "Name": "FunkHub",
         "Comment": "A Friday Night Funkin' mod launcher and manager.",
+        "Icon": "funkhub",
         "Categories": "Game;",
-        "Keywords": "fnf;friday-night-funkin;mods;mod-manager;launcher;gamebanana;"
+        "Keywords": "fnf;friday-night-funkin;mods;mod-manager;launcher;gamebanana;",
+        "StartupWMClass": "FunkHub"
       },
       "extraFiles": [
         {
