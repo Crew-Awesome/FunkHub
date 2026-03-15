@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { Cpu, Play, Settings, Check } from "lucide-react";
+import { useI18n } from "../../providers";
 
 interface EngineCardProps {
   name: string;
@@ -11,6 +12,8 @@ interface EngineCardProps {
 }
 
 export function EngineCard({ name, version, iconSrc, isDefault, onLaunch, onManage }: EngineCardProps) {
+  const { t } = useI18n();
+
   return (
     <motion.div
       className="bg-card rounded-xl border border-border p-6 group cursor-pointer"
@@ -30,11 +33,11 @@ export function EngineCard({ name, version, iconSrc, isDefault, onLaunch, onMana
             {isDefault && (
               <span className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
                 <Check className="w-3 h-3" />
-                Default
+                {t("engines.default", "Default")}
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground mb-4">Version {version}</p>
+          <p className="text-sm text-muted-foreground mb-4">{t("engines.version", "Version")} {version}</p>
 
           <div className="flex gap-2">
             <button
@@ -45,7 +48,7 @@ export function EngineCard({ name, version, iconSrc, isDefault, onLaunch, onMana
               className="flex-1 px-3 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Play className="w-4 h-4" />
-              Launch
+              {t("engines.launch", "Launch")}
             </button>
             <button
               onClick={(event) => {
@@ -55,7 +58,7 @@ export function EngineCard({ name, version, iconSrc, isDefault, onLaunch, onMana
               className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Settings className="w-4 h-4" />
-              Manage
+              {t("engines.manage", "Manage")}
             </button>
           </div>
 
