@@ -8,6 +8,7 @@
   },
   "repository": {
     "url": "git@github.com:Crew-Awesome/FunkHub.git",
+    "httpsUrl": "https://github.com/Crew-Awesome/FunkHub.git",
     "branch": "main"
   },
   "component": {

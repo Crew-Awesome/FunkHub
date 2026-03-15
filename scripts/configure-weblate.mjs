@@ -11,6 +11,13 @@ const configRaw = await fs.readFile(new URL("../weblate.config.json", import.met
 const config = JSON.parse(configRaw);
 
 const projectSlug = config.project.slug;
+const strictSync = String(process.env.WEBLATE_STRICT_SYNC || "false").toLowerCase() === "true";
+
+function isGithubHostKeyError(message) {
+  const normalized = message.toLowerCase();
+  return normalized.includes("host key verification failed")
+    || normalized.includes("no ed25519 host key is known for github.com");
+}
 
 async function api(pathname, { method = "GET", body } = {}) {
   const response = await fetch(`${WEBLATE_URL}${pathname}`, {
@@ -61,12 +68,12 @@ await api(`/api/projects/${projectSlug}/`, {
 const componentsResponse = await api(`/api/projects/${projectSlug}/components/?page_size=1000`);
 const existingComponent = (componentsResponse.results || []).find((item) => item.slug === config.component.slug);
 
-const componentPayload = {
+const buildComponentPayload = (repoUrl, pushUrl = repoUrl) => ({
   name: config.component.name,
   slug: config.component.slug,
   vcs: "git",
-  repo: config.repository.url,
-  push: config.repository.url,
+  repo: repoUrl,
+  push: pushUrl,
   branch: config.repository.branch,
   push_branch: config.repository.branch,
   filemask: config.component.fileMask,
@@ -79,7 +86,14 @@ const componentPayload = {
   suggestion_autoaccept: config.component.suggestionAutoAccept,
   push_on_commit: config.component.pushOnCommit,
   language_regex: config.component.languageRegex,
-};
+});
+
+const primaryRepoUrl = config.repository.url;
+const fallbackRepoUrl = config.repository.httpsUrl;
+const primaryPayload = buildComponentPayload(primaryRepoUrl, primaryRepoUrl);
+const fallbackPayload = fallbackRepoUrl
+  ? buildComponentPayload(fallbackRepoUrl, primaryRepoUrl)
+  : null;
 
 if (!existingComponent) {
   const fileFormats = ["i18next", "json", "json-nested"];
@@ -89,7 +103,7 @@ if (!existingComponent) {
       await api(`/api/projects/${projectSlug}/components/`, {
         method: "POST",
         body: {
-          ...componentPayload,
+          ...primaryPayload,
           file_format: fileFormat,
         },
       });
@@ -100,6 +114,26 @@ if (!existingComponent) {
       lastError = error;
       const message = error instanceof Error ? error.message : String(error);
       console.warn(`[warn] create with file_format='${fileFormat}' failed: ${message}`);
+
+      if (fallbackPayload && isGithubHostKeyError(message)) {
+        console.warn("[warn] SSH host key validation failed in Weblate; retrying component creation with HTTPS clone URL.");
+        try {
+          await api(`/api/projects/${projectSlug}/components/`, {
+            method: "POST",
+            body: {
+              ...fallbackPayload,
+              file_format: fileFormat,
+            },
+          });
+          console.log(`[info] Created component '${config.component.slug}' using fallback HTTPS repo and file_format='${fileFormat}'`);
+          lastError = undefined;
+          break;
+        } catch (fallbackError) {
+          lastError = fallbackError;
+          const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+          console.warn(`[warn] fallback create with HTTPS clone failed: ${fallbackMessage}`);
+        }
+      }
     }
   }
 
@@ -107,23 +141,48 @@ if (!existingComponent) {
     throw lastError;
   }
 } else {
-  await api(`/api/components/${projectSlug}/${config.component.slug}/`, {
-    method: "PATCH",
-    body: componentPayload,
-  });
-  console.log(`[info] Updated component '${config.component.slug}'`);
+  try {
+    await api(`/api/components/${projectSlug}/${config.component.slug}/`, {
+      method: "PATCH",
+      body: primaryPayload,
+    });
+    console.log(`[info] Updated component '${config.component.slug}'`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (fallbackPayload && isGithubHostKeyError(message)) {
+      console.warn("[warn] SSH host key validation failed in Weblate; retrying component update with HTTPS clone URL.");
+      await api(`/api/components/${projectSlug}/${config.component.slug}/`, {
+        method: "PATCH",
+        body: fallbackPayload,
+      });
+      console.log(`[info] Updated component '${config.component.slug}' using fallback HTTPS clone URL`);
+    } else {
+      throw error;
+    }
+  }
 }
 
 await tryPatchComponent(projectSlug, config.component.slug, {
   commit_author: config.component.commitAuthor,
 });
 
+const repositoryOperationFailures = [];
 for (const operation of ["pull", "file-scan", "commit", "push"]) {
-  await api(`/api/projects/${projectSlug}/repository/`, {
-    method: "POST",
-    body: { operation },
-  });
-  console.log(`[info] repository operation: ${operation}`);
+  try {
+    await api(`/api/projects/${projectSlug}/repository/`, {
+      method: "POST",
+      body: { operation },
+    });
+    console.log(`[info] repository operation: ${operation}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    repositoryOperationFailures.push({ operation, message });
+    if (isGithubHostKeyError(message)) {
+      console.warn(`[warn] repository operation '${operation}' failed due to GitHub SSH host key trust on Weblate.`);
+    } else {
+      console.warn(`[warn] repository operation '${operation}' failed: ${message}`);
+    }
+  }
 }
 
 const projectRepositoryStatus = await api(`/api/projects/${projectSlug}/repository/`);
@@ -131,4 +190,18 @@ const componentRepositoryStatus = await api(`/api/components/${projectSlug}/${co
 
 console.log("[info] project repository status", projectRepositoryStatus);
 console.log("[info] component repository status", componentRepositoryStatus);
-console.log("[done] Weblate synchronization verified.");
+
+if (repositoryOperationFailures.length > 0) {
+  const details = repositoryOperationFailures.map((item) => `- ${item.operation}: ${item.message}`).join("\n");
+  const hostKeyFailure = repositoryOperationFailures.some((item) => isGithubHostKeyError(item.message));
+  if (strictSync) {
+    throw new Error(`Repository synchronization failed:\n${details}`);
+  }
+  if (hostKeyFailure) {
+    console.warn("[warn] Action required in Weblate server: trust GitHub ED25519 host key and ensure SSH key 'Webtable FunkHub' is assigned to project/repository access.");
+  }
+  console.warn(`[warn] Non-strict mode enabled; continuing despite repository sync failures:\n${details}`);
+  console.log("[done] Weblate configuration applied with warnings.");
+} else {
+  console.log("[done] Weblate synchronization verified.");
+}
