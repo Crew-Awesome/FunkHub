@@ -429,10 +429,11 @@ async function detectArchiveSignature(filePath) {
 async function installRawModPackage({ resolvedInstallPath, installSubdir, archiveName, tempArchivePath, jobId }) {
   const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
   const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
+  const safeArchiveName = path.basename(archiveName || `package-${jobId}.bin`).replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `package-${jobId}.bin`;
   const destinationDir = path.join(resolvedInstallPath, safeFolderName);
   await removePath(destinationDir);
   await ensureDir(destinationDir);
-  await fs.copyFile(tempArchivePath, path.join(destinationDir, archiveName));
+  await fs.copyFile(tempArchivePath, path.join(destinationDir, safeArchiveName));
   return destinationDir;
 }
 
