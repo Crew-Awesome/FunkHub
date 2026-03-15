@@ -30,6 +30,13 @@ jobs:
               dist-desktop/**/*.exe
               dist-desktop/**/builder-*.yml
               dist-desktop/**/*.blockmap
+          - os: macos-latest
+            artifact: FunkHub-macos
+            package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never
+            artifact_glob: |
+              dist-desktop/**/*.dmg
+              dist-desktop/**/*.zip
+              dist-desktop/**/builder-*.yml
 
     steps:
       - name: Checkout
@@ -114,6 +121,12 @@ jobs:
           name: FunkHub-windows
           path: release-artifacts/FunkHub-windows
 
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: FunkHub-macos
+          path: release-artifacts/FunkHub-macos
+
       - name: Resolve release version
         id: version
         shell: bash
@@ -133,6 +146,8 @@ jobs:
           shopt -s globstar nullglob
           linux=(release-artifacts/FunkHub-linux/**/*.AppImage)
           windows=(release-artifacts/FunkHub-windows/**/*.exe)
+          macdmg=(release-artifacts/FunkHub-macos/**/*.dmg)
+          maczip=(release-artifacts/FunkHub-macos/**/*.zip)
           if [[ ${#linux[@]} -eq 0 ]]; then
             echo "Release payload missing Linux AppImage installer."
             exit 1
@@ -141,8 +156,18 @@ jobs:
             echo "Release payload missing Windows .exe installers."
             exit 1
           fi
+          if [[ ${#macdmg[@]} -eq 0 ]]; then
+            echo "Release payload missing macOS .dmg installer."
+            exit 1
+          fi
+          if [[ ${#maczip[@]} -eq 0 ]]; then
+            echo "Release payload missing macOS .zip archive."
+            exit 1
+          fi
           printf 'Linux release files: %s\n' "${linux[@]}"
           printf 'Windows release files: %s\n' "${windows[@]}"
+          printf 'macOS DMG files: %s\n' "${macdmg[@]}"
+          printf 'macOS ZIP files: %s\n' "${maczip[@]}"
 
       - name: Create GitHub Release and upload binaries
         uses: softprops/action-gh-release@v2
@@ -154,3 +179,5 @@ jobs:
           files: |
             release-artifacts/FunkHub-linux/**/*.AppImage
             release-artifacts/FunkHub-windows/**/*.exe
+            release-artifacts/FunkHub-macos/**/*.dmg
+            release-artifacts/FunkHub-macos/**/*.zip

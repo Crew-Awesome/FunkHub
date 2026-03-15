@@ -30,16 +30,10 @@ export function Discover() {
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
 
   useEffect(() => {
-    const collectExpandableIds = (nodes: CategoryNode[], acc: number[] = []): number[] => {
-      for (const node of nodes) {
-        if (node.children.length > 0) {
-          acc.push(node.id);
-          collectExpandableIds(node.children, acc);
-        }
-      }
-      return acc;
-    };
-    setExpandedCategoryIds(collectExpandableIds(categories));
+    const defaultExpanded = categories
+      .filter((node) => node.id === 43771 || node.id === 43773)
+      .map((node) => node.id);
+    setExpandedCategoryIds(defaultExpanded);
   }, [categories]);
 
   const usernameFilter = useMemo(() => {
@@ -76,33 +70,6 @@ export function Discover() {
 
     return filterNodes(categories);
   }, [categories, categorySearch]);
-
-  useEffect(() => {
-    if (!selectedCategoryId) {
-      return;
-    }
-
-    const findPath = (nodes: CategoryNode[], target: number, path: number[] = []): number[] | null => {
-      for (const node of nodes) {
-        const nextPath = [...path, node.id];
-        if (node.id === target) {
-          return nextPath;
-        }
-        const nested = findPath(node.children, target, nextPath);
-        if (nested) {
-          return nested;
-        }
-      }
-      return null;
-    };
-
-    const path = findPath(categories, selectedCategoryId);
-    if (!path || path.length <= 1) {
-      return;
-    }
-
-    setExpandedCategoryIds((current) => Array.from(new Set([...current, ...path.slice(0, -1)])));
-  }, [categories, selectedCategoryId]);
 
   const toggleExpanded = (categoryId: number) => {
     setExpandedCategoryIds((current) => (

@@ -28,6 +28,13 @@ jobs:
               dist-desktop/**/*.exe
               dist-desktop/**/builder-*.yml
               dist-desktop/**/*.blockmap
+          - os: macos-latest
+            artifact: FunkHub-macos
+            package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never
+            artifact_glob: |
+              dist-desktop/**/*.dmg
+              dist-desktop/**/*.zip
+              dist-desktop/**/builder-*.yml
 
     steps:
       - name: Checkout
@@ -82,6 +89,25 @@ jobs:
             Write-Error "No Windows installers (.exe) were produced under dist-desktop/."
           }
           $files | ForEach-Object { Write-Host "Found Windows installer: $($_.FullName)" }
+
+      - name: Verify macOS installer output
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          dmg=(dist-desktop/**/*.dmg)
+          zip=(dist-desktop/**/*.zip)
+          if [[ ${#dmg[@]} -eq 0 ]]; then
+            echo "No macOS installer (.dmg) was produced under dist-desktop/."
+            exit 1
+          fi
+          if [[ ${#zip[@]} -eq 0 ]]; then
+            echo "No macOS archive (.zip) was produced under dist-desktop/."
+            exit 1
+          fi
+          printf 'Found macOS DMG: %s\n' "${dmg[@]}"
+          printf 'Found macOS ZIP: %s\n' "${zip[@]}"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

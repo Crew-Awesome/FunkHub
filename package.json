@@ -1,7 +1,7 @@
 {
   "name": "funkhub",
   "version": "0.1.0",
-  "description": "Desktop mod manager and launcher for Friday Night Funkin'.",
+  "description": "A Friday Night Funkin Mod Launcher",
   "author": "FunkHub Contributors",
   "private": true,
   "type": "module",
@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.ci.json",
     "build:renderer": "vite build",
     "build:desktop:linux": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never",
-    "build:desktop:win": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never"
+    "build:desktop:win": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never",
+    "build:desktop:mac": "bun run build:renderer && node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never"
   },
   "dependencies": {
     "7zip-bin": "^5.2.0",
@@ -50,6 +51,7 @@
       "package.json"
     ],
     "asar": true,
+    "icon": "build/icons/icon.png",
     "asarUnpack": [
       "node_modules/7zip-bin/**"
     ],
@@ -66,9 +68,18 @@
       "target": [
         "AppImage"
       ],
+      "icon": "build/icons/icon.png",
       "category": "Game"
     },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icons/icon.icns"
+    },
     "win": {
+      "icon": "build/icons/icon.ico",
       "target": [
         "nsis",
         "portable"

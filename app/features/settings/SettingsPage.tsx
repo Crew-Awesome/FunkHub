@@ -460,7 +460,7 @@ export function Settings() {
         <div className="bg-card border border-border rounded-xl p-6 text-center">
           <h3 className="font-semibold text-foreground mb-2">FunkHub {displayVersion}</h3>
           <p className="text-sm text-muted-foreground">
-            A modern mod manager and launcher for Friday Night Funkin'
+            A Friday Night Funkin Mod Launcher
           </p>
           <div className="mt-4 flex items-center justify-center gap-3">
             <a

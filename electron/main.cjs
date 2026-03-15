@@ -80,12 +80,14 @@ app.on("open-url", (event, url) => {
 });
 
 function createWindow() {
+  const iconPath = path.join(__dirname, "../build/icons/icon.png");
   const win = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1100,
     minHeight: 700,
     autoHideMenuBar: true,
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
