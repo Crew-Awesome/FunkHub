@@ -43,7 +43,7 @@ interface FunkHubContextValue {
   getModProfile: (modId: number) => Promise<GameBananaModProfile>;
   listModsBySubmitter: (input: { submitterId: number; categoryId?: number; page?: number; perPage?: number }) => Promise<GameBananaModSummary[]>;
   installMod: (modId: number, fileId: number, selectedEngineId?: string, priority?: number) => void;
-  installEngine: (slug: InstalledEngine["slug"], downloadUrl: string, version: string) => Promise<void>;
+  installEngine: (slug: InstalledEngine["slug"], downloadUrl: string, version: string, options?: { allowMissingExecutable?: boolean }) => Promise<void>;
   importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string) => Promise<void>;
   updateEngine: (engineId: string) => Promise<void>;
   uninstallEngine: (engineId: string) => Promise<void>;
@@ -460,8 +460,13 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
           window.alert(error instanceof Error ? error.message : "Unable to queue install");
         }
       },
-      installEngine: async (slug, downloadUrl, version) => {
-        await funkHubService.installEngineFromRelease({ slug, releaseUrl: downloadUrl, releaseVersion: version });
+      installEngine: async (slug, downloadUrl, version, options) => {
+        await funkHubService.installEngineFromRelease({
+          slug,
+          releaseUrl: downloadUrl,
+          releaseVersion: version,
+          allowMissingExecutable: options?.allowMissingExecutable,
+        });
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
       importEngineFromFolder: async (slug, versionHint) => {

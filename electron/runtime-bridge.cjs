@@ -474,6 +474,7 @@ async function installArchiveInternal(webContents, payload) {
     archiveBase64,
     downloadUrl,
     installSubdir,
+    allowMissingExecutable,
   } = payload;
 
   if (!jobId) {
@@ -599,7 +600,17 @@ async function installArchiveInternal(webContents, payload) {
 
           const launchable = await findLaunchableExecutable(resolvedInstallPath, [path.basename(resolvedInstallPath), "funkin", "engine"]);
           if (!launchable) {
-            throw new Error("Installed engine does not contain a launchable executable for this platform");
+            if (allowMissingExecutable) {
+              emitProgress(webContents, {
+                jobId,
+                phase: "validate",
+                progress: 0.95,
+                message: "No native executable detected for this platform; keeping install for manual launcher setup",
+                timestamp: now(),
+              });
+            } else {
+              throw new Error("Installed engine does not contain a launchable executable for this platform");
+            }
           }
         }
       }

@@ -451,6 +451,7 @@ export class FunkHubService {
     slug: EngineSlug;
     releaseUrl: string;
     releaseVersion: string;
+    allowMissingExecutable?: boolean;
   }): Promise<InstalledEngine> {
     let resolvedDownloadUrl = input.releaseUrl;
     let resolvedVersion = input.releaseVersion;
@@ -519,6 +520,7 @@ export class FunkHubService {
                 fileName: taskName,
                 downloadUrl: resolvedDownloadUrl,
                 installPath,
+                allowMissingExecutable: input.allowMissingExecutable,
               });
             }
 

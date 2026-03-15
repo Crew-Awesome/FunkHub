@@ -39,6 +39,12 @@ export function Engines() {
   const [manageLauncherPath, setManageLauncherPath] = useState("");
   const [manageExecutablePath, setManageExecutablePath] = useState("");
   const [selectedReleaseBySlug, setSelectedReleaseBySlug] = useState<Record<string, string>>({});
+  const [platformWarning, setPlatformWarning] = useState<{
+    slug: EngineSlug;
+    releaseUrl: string;
+    releaseVersion: string;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     refreshEngineHealth().catch(() => undefined);
@@ -53,15 +59,31 @@ export function Engines() {
 
   const getLaunchOverride = (engineId: string) => settings.engineLaunchOverrides[engineId] ?? { launcher: "native" as const };
 
-  const installSelectedEngine = async (engineSlug: EngineSlug, releaseUrl: string, releaseVersion: string) => {
+  const installSelectedEngine = async (
+    engineSlug: EngineSlug,
+    releaseUrl: string,
+    releaseVersion: string,
+    options?: { allowMissingExecutable?: boolean },
+  ) => {
     setInstallError(null);
+    setPlatformWarning(null);
     setInstallingSlug(engineSlug);
     try {
-      await installEngine(engineSlug, releaseUrl, releaseVersion);
+      await installEngine(engineSlug, releaseUrl, releaseVersion, options);
       await refreshEngineHealth();
       setNotice(`${engineSlug} install queued.`);
     } catch (error) {
-      setInstallError(error instanceof Error ? error.message : "Engine install failed");
+      const message = error instanceof Error ? error.message : "Engine install failed";
+      if (/launchable executable for this platform/i.test(message) && !options?.allowMissingExecutable) {
+        setPlatformWarning({
+          slug: engineSlug,
+          releaseUrl,
+          releaseVersion,
+          message,
+        });
+      } else {
+        setInstallError(message);
+      }
     } finally {
       setInstallingSlug(null);
     }
@@ -351,6 +373,34 @@ export function Engines() {
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2">
             <AlertCircle className="h-4 w-4" />
             {installError}
+          </div>
+        )}
+
+        {platformWarning && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-200 space-y-2">
+            <p className="font-medium">Cross-platform executable warning</p>
+            <p>{platformWarning.message}</p>
+            <p className="text-xs opacity-90">
+              This engine may still work with a custom launcher (Wine/Proton) after install. Continue anyway?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  const pending = platformWarning;
+                  setPlatformWarning(null);
+                  installSelectedEngine(pending.slug, pending.releaseUrl, pending.releaseVersion, { allowMissingExecutable: true }).catch(() => undefined);
+                }}
+                className="rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90"
+              >
+                Keep Downloading
+              </button>
+              <button
+                onClick={() => setPlatformWarning(null)}
+                className="rounded bg-secondary px-3 py-1.5 text-xs text-foreground hover:bg-secondary/80"
+              >
+                Stop
+              </button>
+            </div>
           </div>
         )}
 

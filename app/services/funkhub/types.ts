@@ -150,6 +150,7 @@ export interface DesktopInstallRequest {
   installSubdir?: string;
   downloadUrl?: string;
   archiveBase64?: string;
+  allowMissingExecutable?: boolean;
 }
 
 export interface DesktopInstallProgress {
