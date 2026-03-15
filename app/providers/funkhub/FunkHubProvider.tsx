@@ -15,6 +15,7 @@ import {
 } from "../../services/funkhub";
 import { parseFunkHubDeepLink } from "../../services/funkhub/deepLink";
 import { modInstallerService } from "../../services/funkhub/installer";
+import { normalizeLocale, translate } from "../../i18n";
 
 interface FunkHubContextValue {
   loading: boolean;
@@ -113,6 +114,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [appUpdateChecking, setAppUpdateChecking] = useState(false);
   const [appUpdateError, setAppUpdateError] = useState<string | undefined>(undefined);
   const startupUpdateCheckedRef = useRef(false);
+  const t = useCallback((key: string, fallback: string, vars?: Record<string, string | number>) => {
+    return translate(normalizeLocale(settings.locale), key, fallback, vars);
+  }, [settings.locale]);
 
   const refreshDiscover = useCallback(async () => {
     try {
@@ -215,7 +219,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         });
         setSettings(nextSettings);
         processedDeepLinksRef.current.set(normalizedUrl, Date.now());
-        window.alert("GameBanana pairing link received. Remote installs are now linked to this profile.");
+        window.alert(t("provider.pairingReceived", "GameBanana pairing link received. Remote installs are now linked to this profile."));
         return;
       }
 
@@ -321,7 +325,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       });
       processedDeepLinksRef.current.set(normalizedUrl, Date.now());
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Failed to process deep link");
+      window.alert(error instanceof Error ? error.message : t("provider.failedProcessDeepLink", "Failed to process deep link"));
     } finally {
       processingDeepLinksRef.current.delete(normalizedUrl);
     }
@@ -478,7 +482,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         try {
           funkHubService.queueInstall(modId, fileId, selectedEngineId, priority, options);
         } catch (error) {
-          window.alert(error instanceof Error ? error.message : "Unable to queue install");
+          window.alert(error instanceof Error ? error.message : t("provider.unableQueueInstall", "Unable to queue install"));
         }
       },
       installEngine: async (slug, downloadUrl, version, options) => {

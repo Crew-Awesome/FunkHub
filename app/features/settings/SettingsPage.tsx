@@ -7,7 +7,7 @@ const ITCH_OAUTH_CLIENT_ID = "4f345ebf07699f30d702a69fd6dca358";
 
 export function Settings() {
   const { theme, toggleTheme } = useTheme();
-  const { locale, locales, setLocale, t } = useI18n();
+  const { t } = useI18n();
   const {
     settings,
     itchAuth,
@@ -285,7 +285,7 @@ export function Settings() {
                 }}
                 className="w-full px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
-              <p className="mt-1 text-xs text-muted-foreground">Recommended: 300 seconds (5 minutes).</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("settings.recommendedPolling", "Recommended: 300 seconds (5 minutes).")}</p>
             </div>
 
             <div>
@@ -310,7 +310,7 @@ export function Settings() {
             <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
               <Download className="w-5 h-5 text-green-500" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground">Downloads</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t("settings.downloads", "Downloads")}</h2>
           </div>
 
           <div className="space-y-4">
@@ -331,14 +331,14 @@ export function Settings() {
                     className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
                   >
                     <Folder className="w-4 h-4" />
-                    Browse
+                    {t("settings.browse", "Browse")}
                   </button>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Engine Data Root
+                  {t("settings.engineDataRoot", "Engine Data Root")}
                 </label>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
@@ -347,21 +347,21 @@ export function Settings() {
                     onChange={(event) => setDataRootDirectory(event.target.value)}
                     onBlur={() => saveStringSetting("dataRootDirectory", dataRootDirectory)}
                     className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder="Defaults to app data directory"
+                    placeholder={t("settings.dataRootPlaceholder", "Defaults to app data directory")}
                   />
                   <button
-                    onClick={() => browseForSetting("dataRootDirectory", "Choose engine install root", dataRootDirectory)}
+                    onClick={() => browseForSetting("dataRootDirectory", t("settings.chooseEngineInstallRoot", "Choose engine install root"), dataRootDirectory)}
                     className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
                   >
                     <Folder className="w-4 h-4" />
-                    Browse
+                    {t("settings.browse", "Browse")}
                   </button>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Max Concurrent Downloads
+                  {t("settings.maxConcurrentDownloads", "Max Concurrent Downloads")}
                 </label>
                 <select
                   value={String(settings.maxConcurrentDownloads)}
@@ -397,9 +397,11 @@ export function Settings() {
           <div className="space-y-4">
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-foreground">Dark Theme</p>
+                <p className="font-medium text-foreground">{t("settings.darkTheme", "Dark Theme")}</p>
                 <p className="text-sm text-muted-foreground">
-                  {theme === "dark" ? "Dark mode is enabled" : "Light mode is enabled"}
+                  {theme === "dark"
+                    ? t("settings.darkModeEnabled", "Dark mode is enabled")
+                    : t("settings.lightModeEnabled", "Light mode is enabled")}
                 </p>
               </div>
               <input
@@ -414,30 +416,10 @@ export function Settings() {
               />
             </label>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                {t("settings.language", "Language")}
-              </label>
-              <select
-                value={locale}
-                onChange={(event) => {
-                  void setLocale(event.target.value as "en" | "es");
-                }}
-                className="w-full px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                {locales.map((item) => (
-                  <option key={item.code} value={item.code}>
-                    {t(item.labelKey)}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-muted-foreground">{t("settings.language.help", "UI language used by FunkHub")}</p>
-            </div>
-
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-foreground">Show animations</p>
-                <p className="text-sm text-muted-foreground">Enable smooth transitions and effects</p>
+                <p className="font-medium text-foreground">{t("settings.showAnimations", "Show animations")}</p>
+                <p className="text-sm text-muted-foreground">{t("settings.showAnimationsDesc", "Enable smooth transitions and effects")}</p>
               </div>
               <input
                 type="checkbox"
@@ -467,12 +449,12 @@ export function Settings() {
             <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
               <Download className="w-5 h-5 text-amber-500" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground">Base Game Install</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t("settings.baseGameInstall", "Base Game Install")}</h2>
           </div>
 
           <div className="space-y-4">
             <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-200">itch.io base game install</p>
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-200">{t("settings.itchBaseInstall", "itch.io base game install")}</p>
               <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-100/90">
                 FunkHub may require an itch.io login/API session to resolve fresh download links for base game installers.
                 If not connected, manual browser fallback will be used.
@@ -480,7 +462,7 @@ export function Settings() {
             </div>
 
             <div className="rounded-lg border border-border p-4">
-              <p className="font-medium text-foreground">itch.io Connection</p>
+              <p className="font-medium text-foreground">{t("settings.itchConnection", "itch.io Connection")}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Connect your itch.io account for automatic base game download resolution.
               </p>
@@ -518,7 +500,9 @@ export function Settings() {
                 )}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Status: {itchAuth.connected ? "Connected" : "Not connected"}
+                {t("settings.status", "Status")}: {itchAuth.connected
+                  ? t("settings.connected", "Connected")
+                  : t("settings.notConnected", "Not connected")}
               </p>
             </div>
           </div>
@@ -535,13 +519,13 @@ export function Settings() {
             <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
               <Info className="w-5 h-5 text-orange-500" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground">Advanced</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t("settings.tabs.advanced", "Advanced")}</h2>
           </div>
 
           <div className="space-y-4">
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-foreground">Enable compatibility checks</p>
+                <p className="font-medium text-foreground">{t("settings.compatibilityChecks", "Enable compatibility checks")}</p>
                 <p className="text-sm text-muted-foreground">
                   Verify mod compatibility before installation
                 </p>
@@ -562,7 +546,7 @@ export function Settings() {
 
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-foreground">Auto-update mods</p>
+                <p className="font-medium text-foreground">{t("settings.autoUpdateMods", "Auto-update mods")}</p>
                 <p className="text-sm text-muted-foreground">
                   Automatically download updates for installed mods
                 </p>
@@ -583,7 +567,7 @@ export function Settings() {
 
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-foreground">Send analytics</p>
+                <p className="font-medium text-foreground">{t("settings.sendAnalytics", "Send analytics")}</p>
                 <p className="text-sm text-muted-foreground">
                   Help improve FunkHub by sharing usage data
                 </p>

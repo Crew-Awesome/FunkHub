@@ -1,8 +1,9 @@
 import { motion } from "motion/react";
 import { RefreshCw, Download } from "lucide-react";
-import { useFunkHub } from "../../providers";
+import { useFunkHub, useI18n } from "../../providers";
 
 export function Updates() {
+  const { t } = useI18n();
   const {
     modUpdates,
     refreshModUpdates,
@@ -19,7 +20,7 @@ export function Updates() {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Updates</h1>
+        <h1 className="text-3xl font-bold text-foreground">{t("updates.title", "Updates")}</h1>
         <button
           onClick={async () => {
             await refreshModUpdates();
@@ -28,24 +29,24 @@ export function Updates() {
           className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <RefreshCw className={`w-4 h-4 ${appUpdateChecking ? "animate-spin" : ""}`} />
-          Check for Updates
+          {t("updates.check", "Check for Updates")}
         </button>
       </div>
 
       <div className="mb-6 bg-card border border-border rounded-xl p-6">
-        <h3 className="font-semibold text-foreground mb-2">FunkHub App Update</h3>
+        <h3 className="font-semibold text-foreground mb-2">{t("updates.appUpdate", "FunkHub App Update")}</h3>
         {appUpdate?.available ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              New version available: <span className="text-foreground font-medium">v{appUpdate.latestVersion}</span>
+              {t("updates.newVersion", "New version available")}: <span className="text-foreground font-medium">v{appUpdate.latestVersion}</span>
               {" "}(current: v{appUpdate.currentVersion})
             </p>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => openAppUpdateDownload().catch((error) => window.alert(error instanceof Error ? error.message : "Unable to open update"))}
+                 onClick={() => openAppUpdateDownload().catch((error) => window.alert(error instanceof Error ? error.message : t("updates.openUpdateError", "Unable to open update")))}
                 className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium"
               >
-                Download Update
+                {t("updates.downloadUpdate", "Download Update")}
               </button>
             </div>
           </div>
@@ -53,10 +54,10 @@ export function Updates() {
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">
               {appUpdateChecking
-                ? "Checking for app updates..."
+                ? t("updates.checkingAppUpdates", "Checking for app updates...")
                 : appUpdate
-                  ? `You're on the latest version (v${appUpdate.currentVersion}).`
-                  : "No app update check has been run yet."}
+                  ? t("updates.latestVersion", `You're on the latest version (v${appUpdate.currentVersion}).`)
+                  : t("updates.noCheckYet", "No app update check has been run yet.")}
             </p>
           </div>
         )}
@@ -78,14 +79,14 @@ export function Updates() {
                   <h3 className="font-semibold text-foreground mb-2">{update.modName}</h3>
                   <div className="flex items-center gap-4 text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Current:</span>
+                       <span className="text-muted-foreground">{t("updates.current", "Current")}:</span>
                       <span className="px-2 py-1 bg-secondary rounded text-foreground">
                         v{update.currentVersion}
                       </span>
                     </div>
                     <span className="text-muted-foreground">→</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">New:</span>
+                       <span className="text-muted-foreground">{t("updates.new", "New")}:</span>
                       <span className="px-2 py-1 bg-primary/10 text-primary rounded font-medium">
                         v{update.latestVersion}
                       </span>
@@ -97,7 +98,7 @@ export function Updates() {
                   className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  Update
+                   {t("updates.update", "Update")}
                 </button>
               </div>
             </motion.div>
@@ -110,7 +111,7 @@ export function Updates() {
               }}
               className="w-full px-6 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg font-medium transition-colors"
             >
-              Update All ({modUpdates.length})
+               {t("updates.updateAll", "Update All")} ({modUpdates.length})
             </button>
           </div>
         </div>
@@ -119,22 +120,22 @@ export function Updates() {
           <div className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
             <RefreshCw className="w-10 h-10 text-muted-foreground" />
           </div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">All mods are up to date!</h3>
+          <h3 className="text-xl font-semibold text-foreground mb-2">{t("updates.allUpToDate", "All mods are up to date!")}</h3>
           <p className="text-muted-foreground text-center max-w-md">
-            There are no updates available for your installed mods at this time.
+            {t("updates.noneAvailable", "There are no updates available for your installed mods at this time.")}
           </p>
         </div>
       )}
 
       {/* Update Settings */}
       <div className="mt-8 bg-card border border-border rounded-xl p-6">
-        <h3 className="font-semibold text-foreground mb-4">Update Settings</h3>
+        <h3 className="font-semibold text-foreground mb-4">{t("updates.settings", "Update Settings")}</h3>
         <div className="space-y-3">
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-foreground">Auto-update mods</p>
+                <p className="font-medium text-foreground">{t("updates.autoUpdateMods", "Auto-update mods")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Automatically download and install mod updates
+                  {t("updates.autoUpdateModsDesc", "Automatically download and install mod updates")}
                 </p>
               </div>
               <input
@@ -152,9 +153,9 @@ export function Updates() {
             </label>
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-foreground">Check for updates on startup</p>
+                <p className="font-medium text-foreground">{t("updates.checkOnStartup", "Check for updates on startup")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Scan for available updates when FunkHub launches
+                  {t("updates.checkOnStartupDesc", "Scan for available updates when FunkHub launches")}
                 </p>
               </div>
               <input
@@ -173,9 +174,9 @@ export function Updates() {
 
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-foreground">Auto-open app update when found</p>
+                <p className="font-medium text-foreground">{t("updates.autoOpenUpdate", "Auto-open app update when found")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Opens your platform download link after startup update check
+                  {t("updates.autoOpenUpdateDesc", "Opens your platform download link after startup update check")}
                 </p>
               </div>
               <input

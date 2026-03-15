@@ -2,9 +2,10 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { Play, Eye, Gamepad2 } from "lucide-react";
 import { ModCard, ModVisualizerModal } from "../mods";
-import { useFunkHub } from "../../providers";
+import { useFunkHub, useI18n } from "../../providers";
 
 export function Home() {
+  const { t } = useI18n();
   const { loading, trendingMods, installedMods, installMod } = useFunkHub();
   const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
 
@@ -22,18 +23,18 @@ export function Home() {
       >
         <img
           src={featuredMod?.imageUrl ?? "https://images.unsplash.com/photo-1617507171089-6cb9aa5add36?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"}
-          alt={featuredMod?.name ?? "Featured Mod"}
+          alt={featuredMod?.name ?? t("home.featuredMod", "Featured Mod")}
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
 
         <div className="relative h-full flex flex-col justify-end p-10 max-w-3xl">
           <div className="inline-block px-4 py-1.5 bg-primary/90 backdrop-blur-sm text-white text-sm font-semibold rounded-full mb-5 w-fit shadow-lg">
-            Featured This Week
+            {t("home.featuredThisWeek", "Featured This Week")}
           </div>
-          <h2 className="text-5xl font-bold text-white mb-4 leading-tight">{featuredMod?.name ?? "Loading..."}</h2>
+          <h2 className="text-5xl font-bold text-white mb-4 leading-tight">{featuredMod?.name ?? t("home.loading", "Loading...")}</h2>
           <p className="text-gray-200 mb-8 text-lg leading-relaxed max-w-2xl">
-            {featuredMod?.description ?? "Top trending Friday Night Funkin' mod from GameBanana."}
+            {featuredMod?.description ?? t("home.featuredFallback", "Top trending Friday Night Funkin' mod from GameBanana.")}
           </p>
           <div className="flex gap-4">
             <button
@@ -45,7 +46,7 @@ export function Home() {
               className="px-8 py-3.5 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold transition-all flex items-center gap-2.5 shadow-lg hover:shadow-xl"
             >
               <Play className="w-5 h-5" fill="currentColor" />
-              Install Now
+              {t("home.installNow", "Install Now")}
             </button>
             <button
               onClick={() => {
@@ -56,7 +57,7 @@ export function Home() {
               className="px-8 py-3.5 bg-white/15 hover:bg-white/25 backdrop-blur-md text-white rounded-xl font-semibold transition-all flex items-center gap-2.5"
             >
               <Eye className="w-5 h-5" />
-              View Details
+              {t("home.viewDetails", "View Details")}
             </button>
           </div>
         </div>
@@ -67,10 +68,10 @@ export function Home() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Gamepad2 className="w-6 h-6 text-primary" />
-            <h3 className="text-2xl font-bold text-foreground">My Library</h3>
+            <h3 className="text-2xl font-bold text-foreground">{t("home.myLibrary", "My Library")}</h3>
           </div>
           <button className="text-sm text-primary hover:text-primary/80 transition-colors font-medium">
-            View All →
+            {t("home.viewAll", "View All")} →
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -95,7 +96,7 @@ export function Home() {
                 </div>
                 <div className="p-4">
                   <h4 className="font-bold text-foreground mb-1">{mod.modName}</h4>
-                  <p className="text-sm text-muted-foreground mb-3">by {mod.author ?? "Unknown"}</p>
+                  <p className="text-sm text-muted-foreground mb-3">{t("home.by", "by")} {mod.author ?? t("home.unknown", "Unknown")}</p>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">{mod.engine}</span>
                     <span className="text-muted-foreground">v{mod.version}</span>
@@ -110,9 +111,9 @@ export function Home() {
       {/* Recommended Mods */}
       <section>
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-bold text-foreground">Recommended for You</h3>
+          <h3 className="text-2xl font-bold text-foreground">{t("home.recommendedForYou", "Recommended for You")}</h3>
           <button className="text-sm text-primary hover:text-primary/80 transition-colors font-medium">
-            See More →
+            {t("home.seeMore", "See More")} →
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -126,7 +127,7 @@ export function Home() {
               <ModCard
                 id={mod.id}
                 title={mod.name}
-                author={mod.submitter?.name ?? "Unknown"}
+                author={mod.submitter?.name ?? t("home.unknown", "Unknown")}
                 thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
                 downloads={mod.downloadCount}
                 likes={mod.likeCount}

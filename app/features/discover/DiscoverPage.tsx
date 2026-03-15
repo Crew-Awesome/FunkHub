@@ -3,12 +3,13 @@ import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRigh
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { ModCard, ModVisualizerModal, UserProfileModal } from "../mods";
-import { useFunkHub } from "../../providers";
+import { useFunkHub, useI18n } from "../../providers";
 import type { CategoryNode, GameBananaMember } from "../../services/funkhub";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../shared/ui/sheet";
 
 export function Discover() {
+  const { t } = useI18n();
   const {
     loading,
     discoverMods,
@@ -132,7 +133,7 @@ export function Discover() {
                 type="button"
                 onClick={() => toggleExpanded(category.id)}
                 className="inline-flex items-center justify-center w-5 h-5 text-muted-foreground hover:text-foreground rounded"
-                aria-label={expanded ? "Collapse category" : "Expand category"}
+                aria-label={expanded ? t("discover.collapseCategory", "Collapse category") : t("discover.expandCategory", "Expand category")}
               >
                 {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRightSmall className="w-3.5 h-3.5" />}
               </button>
@@ -175,7 +176,7 @@ export function Discover() {
         <input
           value={categorySearch}
           onChange={(event) => setCategorySearch(event.target.value)}
-          placeholder="Search categories"
+          placeholder={t("discover.searchCategories", "Search categories")}
           className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
       </div>
@@ -193,7 +194,7 @@ export function Discover() {
           ].join(" ")}
         >
           <Layers className="w-4 h-4" />
-          <span>All</span>
+          <span>{t("discover.all", "All")}</span>
         </button>
         {renderCategoryTree(filteredCategoryTree)}
       </div>
@@ -203,15 +204,15 @@ export function Discover() {
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground mb-6">Discover Mods</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-6">{t("discover.title", "Discover Mods")}</h1>
 
         {needsOnboarding && (
           <div className="mb-6 rounded-xl border border-primary/25 bg-primary/5 p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-base font-semibold text-foreground">Quick Start Setup</h2>
+                 <h2 className="text-base font-semibold text-foreground">{t("discover.quickStart", "Quick Start Setup")}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Set your folders, install an engine, and test one-click installs before browsing mods.
+                   {t("discover.quickStartDesc", "Set your folders, install an engine, and test one-click installs before browsing mods.")}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -219,13 +220,13 @@ export function Discover() {
                   onClick={() => setOnboardingOpen(true)}
                   className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
-                  Open Wizard
+                   {t("discover.openWizard", "Open Wizard")}
                 </button>
                 <button
                   onClick={completeOnboarding}
                   className="rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-secondary"
                 >
-                  Dismiss
+                   {t("discover.dismiss", "Dismiss")}
                 </button>
               </div>
             </div>
@@ -238,7 +239,7 @@ export function Discover() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search for mods..."
+              placeholder={t("discover.searchMods", "Search for mods...")}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full bg-input-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
@@ -250,7 +251,7 @@ export function Discover() {
             className="inline-flex xl:hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm hover:bg-secondary"
           >
             <SlidersHorizontal className="h-4 w-4" />
-            Filters
+            {t("discover.filters", "Filters")}
           </button>
         </div>
 
@@ -278,12 +279,12 @@ export function Discover() {
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
         <section>
           <div className="mb-4 text-sm text-muted-foreground">
-            {loading ? "Loading mods..." : `Showing ${visibleMods.length} mods`}
+            {loading ? t("discover.loadingMods", "Loading mods...") : t("discover.showingMods", `Showing ${visibleMods.length} mods`)}
           </div>
           {usernameFilter && (
             <div className="mb-4 text-sm text-muted-foreground inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5">
               <UserCircle2 className="w-4 h-4" />
-              Filtered by user: <span className="text-foreground">{usernameFilter}</span>
+              {t("discover.filteredByUser", "Filtered by user")}: <span className="text-foreground">{usernameFilter}</span>
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
@@ -297,7 +298,7 @@ export function Discover() {
                 <ModCard
                   id={mod.id}
                   title={mod.name}
-                  author={mod.submitter?.name ?? "Community uploader"}
+                  author={mod.submitter?.name ?? t("discover.communityUploader", "Community uploader")}
                   thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
                   likes={mod.likeCount}
                   downloads={mod.downloadCount}
@@ -311,15 +312,15 @@ export function Discover() {
                       });
                     }
                   }}
-                  categoryLabel={selectedCategoryId === undefined ? (mod.rootCategory?.name ?? "Uncategorized") : undefined}
+                  categoryLabel={selectedCategoryId === undefined ? (mod.rootCategory?.name ?? t("discover.uncategorized", "Uncategorized")) : undefined}
                   statusLabel={(() => {
                     const installed = installedMods.find((entry) => entry.modId === mod.id);
                     if (!installed) {
                       return undefined;
                     }
                     return modUpdates.some((update) => update.installedId === installed.id)
-                      ? "Update"
-                      : "Installed";
+                      ? t("discover.update", "Update")
+                      : t("discover.installed", "Installed");
                   })()}
                 />
               </motion.div>
@@ -329,7 +330,7 @@ export function Discover() {
 
         <aside className="hidden xl:block bg-card border border-border rounded-xl p-4 xl:sticky xl:top-4">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <h2 className="text-sm font-semibold text-foreground">Categories</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t("discover.categories", "Categories")}</h2>
           </div>
           {categoryPanel}
         </aside>
@@ -342,15 +343,15 @@ export function Discover() {
           className="px-4 py-2 rounded-lg border border-border bg-card hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2"
         >
           <ChevronLeft className="w-4 h-4" />
-          Previous
+          {t("discover.previous", "Previous")}
         </button>
-        <span className="text-sm text-muted-foreground">Page {discoverPage}</span>
+        <span className="text-sm text-muted-foreground">{t("discover.page", "Page")} {discoverPage}</span>
         <button
           onClick={() => setDiscoverPage(discoverPage + 1)}
           disabled={!hasMoreDiscover}
           className="px-4 py-2 rounded-lg border border-border bg-card hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2"
         >
-          Next
+          {t("discover.next", "Next")}
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -375,20 +376,20 @@ export function Discover() {
       <Dialog open={onboardingOpen} onOpenChange={setOnboardingOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Welcome to FunkHub</DialogTitle>
+            <DialogTitle>{t("discover.welcome", "Welcome to FunkHub")}</DialogTitle>
             <DialogDescription>
-              Finish these setup steps so installs and launches work correctly.
+              {t("discover.welcomeDesc", "Finish these setup steps so installs and launches work correctly.")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 text-sm">
             <div className="rounded-lg border border-border p-3">
-              <p className="font-medium text-foreground">1) Choose your game folder</p>
-              <p className="mt-1 text-muted-foreground">Pick your Friday Night Funkin' directory so FunkHub can open and reference local files.</p>
+              <p className="font-medium text-foreground">{t("discover.step1", "1) Choose your game folder")}</p>
+              <p className="mt-1 text-muted-foreground">{t("discover.step1Desc", "Pick your Friday Night Funkin' directory so FunkHub can open and reference local files.")}</p>
               <button
                 onClick={async () => {
                   const selected = await browseFolder({
-                    title: "Choose your FNF game folder",
+                    title: t("discover.chooseGameFolder", "Choose your FNF game folder"),
                     defaultPath: settings.gameDirectory || undefined,
                   });
                   if (selected) {
@@ -397,18 +398,18 @@ export function Discover() {
                 }}
                 className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
               >
-                Choose Game Folder
+                {t("discover.chooseGameFolderBtn", "Choose Game Folder")}
               </button>
-              <p className="mt-2 text-xs text-muted-foreground break-all">Current: {settings.gameDirectory || "Not set"}</p>
+              <p className="mt-2 text-xs text-muted-foreground break-all">{t("discover.current", "Current")}: {settings.gameDirectory || t("discover.notSet", "Not set")}</p>
             </div>
 
             <div className="rounded-lg border border-border p-3">
-              <p className="font-medium text-foreground">2) Choose data root (engine installs)</p>
-              <p className="mt-1 text-muted-foreground">This is where FunkHub stores engine installs and imported content.</p>
+              <p className="font-medium text-foreground">{t("discover.step2", "2) Choose data root (engine installs)")}</p>
+              <p className="mt-1 text-muted-foreground">{t("discover.step2Desc", "This is where FunkHub stores engine installs and imported content.")}</p>
               <button
                 onClick={async () => {
                   const selected = await browseFolder({
-                    title: "Choose engine install root",
+                    title: t("discover.chooseEngineRoot", "Choose engine install root"),
                     defaultPath: settings.dataRootDirectory || undefined,
                   });
                   if (selected) {
@@ -417,27 +418,27 @@ export function Discover() {
                 }}
                 className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
               >
-                Choose Data Root
+                {t("discover.chooseDataRoot", "Choose Data Root")}
               </button>
-              <p className="mt-2 text-xs text-muted-foreground break-all">Current: {settings.dataRootDirectory || "Not set (app default)"}</p>
+              <p className="mt-2 text-xs text-muted-foreground break-all">{t("discover.current", "Current")}: {settings.dataRootDirectory || t("discover.notSetDefault", "Not set (app default)")}</p>
             </div>
 
             <div className="rounded-lg border border-border p-3">
-              <p className="font-medium text-foreground">3) Install an engine and test one-click</p>
-              <p className="mt-1 text-muted-foreground">After installing an engine, test with a URL like:</p>
-              <p className="mt-1 font-mono text-xs text-muted-foreground">funkhub://mod/install/&lt;ModId&gt;/&lt;FileId&gt;</p>
+              <p className="font-medium text-foreground">{t("discover.step3", "3) Install an engine and test one-click")}</p>
+              <p className="mt-1 text-muted-foreground">{t("discover.step3Desc", "After installing an engine, test with a URL like:")}</p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">{t("discover.exampleDeepLink", "funkhub://mod/install/<ModId>/<FileId>")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   onClick={() => navigate("/engines")}
                   className="rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
                 >
-                  Open Engines
+                  {t("discover.openEngines", "Open Engines")}
                 </button>
                 <button
                   onClick={() => navigate("/settings")}
                   className="rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
                 >
-                  Open Settings
+                  {t("discover.openSettings", "Open Settings")}
                 </button>
               </div>
             </div>
@@ -448,7 +449,7 @@ export function Discover() {
               onClick={completeOnboarding}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              Mark Setup Complete
+               {t("discover.markSetupComplete", "Mark Setup Complete")}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -460,14 +461,14 @@ export function Discover() {
         className="fixed bottom-20 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-sm shadow-sm xl:hidden"
       >
         <SlidersHorizontal className="h-4 w-4" />
-        Categories
+        {t("discover.categories", "Categories")}
       </button>
 
       <Sheet open={showCategoryPanel} onOpenChange={setShowCategoryPanel}>
         <SheetContent side="right" className="w-[88vw] p-0 sm:max-w-md">
           <SheetHeader className="border-b border-border">
-            <SheetTitle>Browse Categories</SheetTitle>
-            <SheetDescription>Filter discover results by category.</SheetDescription>
+            <SheetTitle>{t("discover.browseCategories", "Browse Categories")}</SheetTitle>
+            <SheetDescription>{t("discover.browseCategoriesDesc", "Filter discover results by category.")}</SheetDescription>
           </SheetHeader>
           <div className="p-4">{categoryPanel}</div>
         </SheetContent>

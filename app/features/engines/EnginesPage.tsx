@@ -3,11 +3,12 @@ import { motion } from "motion/react";
 import { Plus, Cpu, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldX, FolderSearch } from "lucide-react";
 import { EngineCard } from "./EngineCard";
 import { getEngineIcon } from "./engineIcons";
-import { useFunkHub } from "../../providers";
+import { useFunkHub, useI18n } from "../../providers";
 import { detectClientPlatform, pickBestReleaseForPlatform, type EngineSlug } from "../../services/funkhub";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
 export function Engines() {
+  const { t } = useI18n();
   const {
     installedEngines,
     enginesCatalog,
@@ -71,9 +72,9 @@ export function Engines() {
     try {
       await installEngine(engineSlug, releaseUrl, releaseVersion, options);
       await refreshEngineHealth();
-      setNotice(`${engineSlug} install queued.`);
+      setNotice(t("engines.installQueued", `${engineSlug} install queued.`));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Engine install failed";
+      const message = error instanceof Error ? error.message : t("engines.installFailed", "Engine install failed");
       if (/launchable executable for this platform/i.test(message) && !options?.allowMissingExecutable) {
         setPlatformWarning({
           slug: engineSlug,
@@ -101,9 +102,9 @@ export function Engines() {
           : undefined,
         executablePath: override.executablePath,
       });
-      setNotice("Engine launch command sent.");
+      setNotice(t("engines.launchCommandSent", "Engine launch command sent."));
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Failed to launch engine");
+      setActionError(error instanceof Error ? error.message : t("engines.launchFailed", "Failed to launch engine"));
     }
   };
 
@@ -122,7 +123,7 @@ export function Engines() {
       await updateEngine(engineId);
       await refreshEngineHealth();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Failed to update engine");
+      setActionError(error instanceof Error ? error.message : t("engines.updateFailed", "Failed to update engine"));
     } finally {
       setBusyEngineId(null);
     }
@@ -134,7 +135,7 @@ export function Engines() {
     try {
       await uninstallEngine(engineId);
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Failed to uninstall engine");
+      setActionError(error instanceof Error ? error.message : t("engines.uninstallFailed", "Failed to uninstall engine"));
     } finally {
       setBusyEngineId(null);
     }
@@ -148,7 +149,7 @@ export function Engines() {
       await refreshEngineHealth();
       setShowAddDialog(false);
     } catch (error) {
-      setInstallError(error instanceof Error ? error.message : "Engine import failed");
+      setInstallError(error instanceof Error ? error.message : t("engines.importFailed", "Engine import failed"));
     } finally {
       setInstallingSlug(null);
     }
@@ -168,12 +169,12 @@ export function Engines() {
         },
       },
     });
-    setNotice("Engine launch settings saved.");
+    setNotice(t("engines.launchSettingsSaved", "Engine launch settings saved."));
   };
 
   const browseLauncherPath = async () => {
     const selected = await browseFile({
-      title: "Select launcher binary",
+      title: t("engines.selectLauncherBinary", "Select launcher binary"),
       defaultPath: manageLauncherPath || undefined,
     });
     if (selected) {
@@ -183,7 +184,7 @@ export function Engines() {
 
   const browseExecutablePath = async () => {
     const selected = await browseFile({
-      title: "Select engine executable",
+      title: t("engines.selectExecutable", "Select engine executable"),
       defaultPath: manageExecutablePath || undefined,
       filters: [
         { name: "Executable", extensions: ["exe", "sh", "bin", "x86_64", "appimage", "app"] },
@@ -196,7 +197,7 @@ export function Engines() {
 
   const browseExecutableFolder = async () => {
     const selected = await browseFolder({
-      title: "Select folder containing engine executable",
+      title: t("engines.selectExecutableFolder", "Select folder containing engine executable"),
     });
     if (selected) {
       setManageExecutablePath(selected);
@@ -206,12 +207,12 @@ export function Engines() {
   const healthMeta = (engineId: string) => {
     const health = getEngineHealth(engineId);
     if (health.health === "ready") {
-      return { label: "Ready", tone: "text-foreground/85 bg-primary/10 border-primary/20", icon: ShieldCheck };
+      return { label: t("engines.ready", "Ready"), tone: "text-foreground/85 bg-primary/10 border-primary/20", icon: ShieldCheck };
     }
     if (health.health === "missing_binary") {
-      return { label: "Executable Not Detected", tone: "text-amber-500 dark:text-amber-300 bg-amber-500/10 border-amber-500/20", icon: ShieldAlert };
+      return { label: t("engines.executableNotDetected", "Executable Not Detected"), tone: "text-amber-500 dark:text-amber-300 bg-amber-500/10 border-amber-500/20", icon: ShieldAlert };
     }
-    return { label: "Engine Install Broken", tone: "text-destructive bg-destructive/10 border-destructive/20", icon: ShieldX };
+    return { label: t("engines.installBroken", "Engine Install Broken"), tone: "text-destructive bg-destructive/10 border-destructive/20", icon: ShieldX };
   };
 
   const formatVersionLabel = (version: string) => {
@@ -280,8 +281,8 @@ export function Engines() {
   const addEnginePanel = (
     <>
       <DialogHeader>
-        <DialogTitle>Add Engine</DialogTitle>
-        <DialogDescription>Install from official releases or import an existing folder.</DialogDescription>
+        <DialogTitle>{t("engines.addEngine", "Add Engine")}</DialogTitle>
+        <DialogDescription>{t("engines.addEngineDesc", "Install from official releases or import an existing folder.")}</DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3">
@@ -333,13 +334,13 @@ export function Engines() {
                         }}
                         className="w-full rounded bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
                       >
-                        Install
+                         {t("engines.install", "Install")}
                       </button>
                       <button
                         onClick={() => handleImport(engine.slug)}
                         className="w-full rounded bg-secondary px-3 py-2 text-sm text-foreground hover:bg-secondary/80"
                       >
-                        Import Folder
+                         {t("engines.importFolder", "Import Folder")}
                       </button>
                     </div>
                   </div>
@@ -378,10 +379,10 @@ export function Engines() {
 
         {platformWarning && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-200 space-y-2">
-            <p className="font-medium">Cross-platform executable warning</p>
+            <p className="font-medium">{t("engines.crossPlatformWarning", "Cross-platform executable warning")}</p>
             <p>{platformWarning.message}</p>
             <p className="text-xs opacity-90">
-              This engine may still work with a custom launcher (Wine/Proton) after install. Continue anyway?
+               {t("engines.crossPlatformWarningDesc", "This engine may still work with a custom launcher (Wine/Proton) after install. Continue anyway?")}
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -392,13 +393,13 @@ export function Engines() {
                 }}
                 className="rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90"
               >
-                Keep Downloading
+                 {t("engines.keepDownloading", "Keep Downloading")}
               </button>
               <button
                 onClick={() => setPlatformWarning(null)}
                 className="rounded bg-secondary px-3 py-1.5 text-xs text-foreground hover:bg-secondary/80"
               >
-                Stop
+                 {t("engines.stop", "Stop")}
               </button>
             </div>
           </div>
@@ -426,16 +427,16 @@ export function Engines() {
             <div className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-6">
               <Plus className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-3">No engines installed</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-3">{t("engines.noneInstalled", "No engines installed")}</h2>
             <p className="text-muted-foreground mb-6">
-              Install or import an engine to start playing mods.
+              {t("engines.noneInstalledDesc", "Install or import an engine to start playing mods.")}
             </p>
             <button
               onClick={() => setShowAddDialog(true)}
               className="w-full px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Plus className="w-5 h-5" />
-              Add Engine
+              {t("engines.addEngine", "Add Engine")}
             </button>
           </div>
         </motion.div>
@@ -452,13 +453,13 @@ export function Engines() {
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold text-foreground">Instances</h1>
+        <h1 className="text-3xl font-bold text-foreground">{t("engines.instances", "Instances")}</h1>
         <button
           onClick={() => setShowAddDialog(!showAddDialog)}
           className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
-          Add Engine
+          {t("engines.addEngine", "Add Engine")}
         </button>
       </div>
 
@@ -485,7 +486,7 @@ export function Engines() {
                 })()}
                 {hasUpdateForEngine(engine.slug, engine.version) && (
                   <span className="inline-flex items-center px-2 py-1 text-xs rounded border border-primary/20 bg-primary/10 text-primary">
-                    Update available
+                    {t("engines.updateAvailable", "Update available")}
                   </span>
                 )}
                 {!engine.isDefault && (
@@ -494,7 +495,7 @@ export function Engines() {
                     onClick={() => setDefaultEngine(engine.id)}
                     className="inline-flex items-center rounded border border-border px-2 py-1 text-xs text-foreground hover:bg-secondary"
                   >
-                    Set default
+                    {t("engines.setDefault", "Set default")}
                   </button>
                 )}
               </div>
@@ -525,7 +526,7 @@ export function Engines() {
                   className="mt-2 text-xs inline-flex items-center gap-1.5 px-2 py-1 rounded border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300"
                 >
                   <FolderSearch className="w-3.5 h-3.5" />
-                  Locate executable
+                  {t("engines.locateExecutable", "Locate executable")}
                 </button>
               )}
             </div>
@@ -562,42 +563,42 @@ export function Engines() {
             return (
               <>
                 <DialogHeader>
-                  <DialogTitle>Manage {engine.name}</DialogTitle>
+                  <DialogTitle>{t("engines.manage", "Manage")} {engine.name}</DialogTitle>
                   <DialogDescription>{formatVersionLabel(engine.version)}</DialogDescription>
                 </DialogHeader>
 
                 <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <button onClick={() => setDefaultEngine(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Set Default</button>
-                  <button onClick={() => openEngineFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : "Failed to open folder"))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Open Folder</button>
-                  <button onClick={() => openEngineModsFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : "Failed to open mods folder"))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Open Mods Folder</button>
-                  <button onClick={() => handleUpdate(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Update</button>
+                   <button onClick={() => setDefaultEngine(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("engines.setDefault", "Set Default")}</button>
+                   <button onClick={() => openEngineFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : t("engines.openFolderFailed", "Failed to open folder")))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("engines.openFolder", "Open Folder")}</button>
+                   <button onClick={() => openEngineModsFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : t("engines.openModsFolderFailed", "Failed to open mods folder")))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("engines.openModsFolder", "Open Mods Folder")}</button>
+                   <button onClick={() => handleUpdate(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("engines.update", "Update")}</button>
                 </div>
 
                 <div className="mt-4 space-y-2">
-                  <label className="text-xs text-muted-foreground">Executable launcher</label>
+                  <label className="text-xs text-muted-foreground">{t("engines.executableLauncher", "Executable launcher")}</label>
                   <select
                     value={manageLauncher}
                     onChange={(event) => setManageLauncher(event.target.value as "native" | "wine" | "wine64" | "proton")}
                     className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
                   >
-                    <option value="native">Native</option>
-                    <option value="wine">Wine</option>
-                    <option value="wine64">Wine64</option>
-                    <option value="proton">Proton</option>
+                    <option value="native">{t("engines.native", "Native")}</option>
+                    <option value="wine">{t("engines.wine", "Wine")}</option>
+                    <option value="wine64">{t("engines.wine64", "Wine64")}</option>
+                    <option value="proton">{t("engines.proton", "Proton")}</option>
                   </select>
                   {manageLauncher !== "native" && (
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <input
                         value={manageLauncherPath}
                         onChange={(event) => setManageLauncherPath(event.target.value)}
-                        placeholder="Optional launcher binary path (eg /usr/bin/wine)"
+                        placeholder={t("engines.optionalLauncherPath", "Optional launcher binary path (eg /usr/bin/wine)")}
                         className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
                       />
                       <button
                         onClick={browseLauncherPath}
                         className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
                       >
-                        Browse
+                        {t("engines.browse", "Browse")}
                       </button>
                     </div>
                   )}
@@ -605,23 +606,23 @@ export function Engines() {
                     <input
                       value={manageExecutablePath}
                       onChange={(event) => setManageExecutablePath(event.target.value)}
-                      placeholder="Optional executable path (absolute or inside engine folder)"
+                      placeholder={t("engines.optionalExecutablePath", "Optional executable path (absolute or inside engine folder)")}
                       className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
                     />
                     <button
                       onClick={browseExecutablePath}
                       className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
                     >
-                      Browse File
+                      {t("engines.browseFile", "Browse File")}
                     </button>
                     <button
                       onClick={browseExecutableFolder}
                       className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
                     >
-                      Browse Folder
+                      {t("engines.browseFolder", "Browse Folder")}
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground">Examples: `ALEPsych`, `bin/Funkin.sh`</p>
+                  <p className="text-xs text-muted-foreground">{t("engines.executableExamples", "Examples: `ALEPsych`, `bin/Funkin.sh`")}</p>
                 </div>
 
                 <div className="mt-5 flex justify-between gap-2">
@@ -629,11 +630,11 @@ export function Engines() {
                     onClick={() => setConfirmUninstall({ id: engine.id, name: engine.name, version: engine.version, path: engine.installPath })}
                     className="px-3 py-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive text-sm"
                   >
-                    Uninstall
+                    {t("engines.uninstall", "Uninstall")}
                   </button>
                   <div className="flex gap-2">
-                    <button onClick={() => setManageEngineId(null)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Close</button>
-                    <button onClick={saveManageOverrides} className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Save</button>
+                     <button onClick={() => setManageEngineId(null)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("engines.close", "Close")}</button>
+                     <button onClick={saveManageOverrides} className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm">{t("engines.save", "Save")}</button>
                   </div>
                 </div>
               </>
@@ -645,7 +646,7 @@ export function Engines() {
       <Dialog open={Boolean(confirmUninstall)} onOpenChange={(next) => { if (!next) setConfirmUninstall(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Confirm engine uninstall</DialogTitle>
+            <DialogTitle>{t("engines.confirmUninstall", "Confirm engine uninstall")}</DialogTitle>
             <DialogDescription>
               Remove <span className="text-foreground font-medium">{confirmUninstall?.name}</span>{" "}
               {confirmUninstall ? formatVersionLabel(confirmUninstall.version) : ""}?
@@ -657,7 +658,7 @@ export function Engines() {
               onClick={() => setConfirmUninstall(null)}
               className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-sm"
             >
-              Cancel
+              {t("engines.cancel", "Cancel")}
             </button>
             <button
               onClick={async () => {
@@ -671,7 +672,7 @@ export function Engines() {
               }}
               className="px-3 py-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive text-sm"
             >
-              Uninstall
+              {t("engines.uninstall", "Uninstall")}
             </button>
           </div>
         </DialogContent>

@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { RotateCcw, X, FolderOpen, Download } from "lucide-react";
-import { useFunkHub } from "../../providers";
+import { useFunkHub, useI18n } from "../../providers";
 
 function formatBytes(bytes: number | undefined): string {
   if (!bytes || bytes <= 0) {
@@ -20,6 +20,7 @@ function formatBytes(bytes: number | undefined): string {
 }
 
 export function Downloads() {
+  const { t } = useI18n();
   const { downloads, cancelDownload, retryDownload, clearDownloads } = useFunkHub();
   const activeDownloads = downloads.filter((task) => task.status === "queued" || task.status === "downloading" || task.status === "installing");
   const completedDownloads = downloads.filter((task) => task.status === "completed").slice(0, 5);
@@ -28,12 +29,12 @@ export function Downloads() {
   return (
     <div className="p-8">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold text-foreground">Downloads</h1>
+        <h1 className="text-3xl font-bold text-foreground">{t("downloads.title", "Downloads")}</h1>
         <button
           onClick={clearDownloads}
           className="px-3 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-sm text-foreground"
         >
-          Clear Downloads
+          {t("downloads.clear", "Clear Downloads")}
         </button>
       </div>
 
@@ -54,7 +55,7 @@ export function Downloads() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-foreground mb-1">{download.fileName}</h3>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{download.speedBytesPerSecond ? `${formatBytes(download.speedBytesPerSecond)}/s` : "Waiting..."}</span>
+                    <span>{download.speedBytesPerSecond ? `${formatBytes(download.speedBytesPerSecond)}/s` : t("downloads.waiting", "Waiting...")}</span>
                     <span>•</span>
                     <span>{formatBytes(download.totalBytes)}</span>
                     {download.phase && (
@@ -82,7 +83,7 @@ export function Downloads() {
               {/* Progress Bar */}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Progress</span>
+                  <span className="text-muted-foreground">{t("downloads.progress", "Progress")}</span>
                   <span className="font-medium text-primary">{Math.round(download.progress * 100)}%</span>
                 </div>
                 <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -102,9 +103,9 @@ export function Downloads() {
           <div className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
             <Download className="w-10 h-10 text-muted-foreground" />
           </div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">No active downloads</h3>
+          <h3 className="text-xl font-semibold text-foreground mb-2">{t("downloads.noneActive", "No active downloads")}</h3>
           <p className="text-muted-foreground text-center max-w-md">
-            Your downloads will appear here. Browse mods and click install to start downloading.
+            {t("downloads.noneActiveDesc", "Your downloads will appear here. Browse mods and click install to start downloading.")}
           </p>
         </div>
       )}
@@ -112,7 +113,7 @@ export function Downloads() {
       {/* Download History */}
       {completedDownloads.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Recent Downloads</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">{t("downloads.recent", "Recent Downloads")}</h2>
           <div className="bg-card border border-border rounded-xl p-4">
             {completedDownloads.map((download) => (
               <div key={download.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
@@ -122,7 +123,7 @@ export function Downloads() {
                   </div>
                   <div>
                     <h4 className="font-medium text-foreground">{download.fileName}</h4>
-                    <p className="text-xs text-muted-foreground">Completed</p>
+                    <p className="text-xs text-muted-foreground">{t("downloads.completed", "Completed")}</p>
                   </div>
                 </div>
                 <span className="text-sm text-muted-foreground">{formatBytes(download.totalBytes)}</span>
@@ -134,21 +135,21 @@ export function Downloads() {
 
       {failedDownloads.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Failed Downloads</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">{t("downloads.failed", "Failed Downloads")}</h2>
           <div className="space-y-3">
             {failedDownloads.map((download) => (
               <div key={download.id} className="bg-card border border-red-500/20 rounded-xl p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h4 className="font-medium text-foreground">{download.fileName}</h4>
-                    <p className="text-xs text-red-300 mt-1">{download.error || download.message || "Download failed"}</p>
+                    <p className="text-xs text-red-300 mt-1">{download.error || download.message || t("downloads.failedGeneric", "Download failed")}</p>
                   </div>
                   <button
                     onClick={() => retryDownload(download.id)}
                     className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm inline-flex items-center gap-2"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    Retry
+                    {t("downloads.retry", "Retry")}
                   </button>
                 </div>
               </div>

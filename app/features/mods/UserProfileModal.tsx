@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Heart, Download, UserCircle2, FolderTree } from "lucide-react";
-import { useFunkHub } from "../../providers";
+import { useFunkHub, useI18n } from "../../providers";
 import type { GameBananaMember, GameBananaModSummary } from "../../services/funkhub";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
@@ -25,6 +25,7 @@ function formatCompact(value?: number): string {
 }
 
 export function UserProfileModal({ open, submitter, onClose, onOpenMod }: UserProfileModalProps) {
+  const { t } = useI18n();
   const { listModsBySubmitter } = useFunkHub();
   const [mods, setMods] = useState<GameBananaModSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,7 +49,7 @@ export function UserProfileModal({ open, submitter, onClose, onOpenMod }: UserPr
       .catch((nextError) => {
         if (!cancelled) {
           setMods([]);
-          setError(nextError instanceof Error ? nextError.message : "Failed to load user submissions");
+          setError(nextError instanceof Error ? nextError.message : t("user.failedLoadSubmissions", "Failed to load user submissions"));
         }
       })
       .finally(() => {
@@ -65,7 +66,7 @@ export function UserProfileModal({ open, submitter, onClose, onOpenMod }: UserPr
   const grouped = useMemo(() => {
     const groups = new Map<string, GameBananaModSummary[]>();
     for (const mod of mods) {
-      const key = mod.rootCategory?.name || "Other";
+      const key = mod.rootCategory?.name || t("user.other", "Other");
       const current = groups.get(key) ?? [];
       current.push(mod);
       groups.set(key, current);
@@ -91,16 +92,16 @@ export function UserProfileModal({ open, submitter, onClose, onOpenMod }: UserPr
             )}
             <div>
               <DialogTitle className="text-lg">{submitter.name}</DialogTitle>
-              <p className="text-xs text-muted-foreground">Submissions by category</p>
+              <p className="text-xs text-muted-foreground">{t("user.submissionsByCategory", "Submissions by category")}</p>
             </div>
           </div>
         </DialogHeader>
 
         <div className="p-5 space-y-4">
-          {loading && <p className="text-sm text-muted-foreground">Loading submissions...</p>}
+          {loading && <p className="text-sm text-muted-foreground">{t("user.loadingSubmissions", "Loading submissions...")}</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
           {!loading && !error && mods.length === 0 && (
-            <p className="text-sm text-muted-foreground">No submissions were found for this creator.</p>
+            <p className="text-sm text-muted-foreground">{t("user.noSubmissions", "No submissions were found for this creator.")}</p>
           )}
 
           {!loading && !error && grouped.map(([category, items]) => (

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Play, RefreshCw, Trash2, FolderPlus, ChevronLeft, ChevronRight } from "lucide-react";
-import { useFunkHub } from "../../providers";
+import { useFunkHub, useI18n } from "../../providers";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
 export function Library() {
+  const { t } = useI18n();
   const {
     installedMods,
     installedEngines,
@@ -96,7 +97,7 @@ export function Library() {
   if (!selectedMod) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">No installed mods yet. Install one from Discover.</p>
+        <p className="text-muted-foreground">{t("library.empty", "No installed mods yet. Install one from Discover.")}</p>
       </div>
     );
   }
@@ -107,13 +108,13 @@ export function Library() {
       <div className="w-full lg:w-80 bg-card border-b lg:border-b-0 lg:border-r border-border overflow-y-auto">
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-semibold text-foreground">Installed Mods ({installedMods.length})</h2>
+            <h2 className="font-semibold text-foreground">{t("library.installedMods", "Installed Mods")} ({installedMods.length})</h2>
             <button
               onClick={() => setShowManualModal(true)}
               className="px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-xs inline-flex items-center gap-1"
             >
               <FolderPlus className="w-3.5 h-3.5" />
-              Add Manual
+              {t("library.addManual", "Add Manual")}
             </button>
           </div>
         </div>
@@ -141,11 +142,11 @@ export function Library() {
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-medium text-foreground text-sm truncate">{mod.modName}</h3>
                     {mod.updateAvailable && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary">Update</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary">{t("library.update", "Update")}</span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">{mod.version ? `v${mod.version}` : "Version unknown"}</p>
-                  <p className="text-xs text-muted-foreground">{mod.categoryName ?? mod.engine ?? "Uncategorized"}</p>
+                  <p className="text-xs text-muted-foreground">{mod.version ? `v${mod.version}` : t("library.versionUnknown", "Version unknown")}</p>
+                  <p className="text-xs text-muted-foreground">{mod.categoryName ?? mod.engine ?? t("library.uncategorized", "Uncategorized")}</p>
                 </div>
               </div>
             </button>
@@ -172,7 +173,7 @@ export function Library() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
               <div className="absolute bottom-6 left-6 right-6">
                 <h1 className="text-3xl font-bold text-foreground mb-2">{selectedMod.modName}</h1>
-                <p className="text-muted-foreground">by {selectedMod.author ?? "Unknown"}</p>
+                <p className="text-muted-foreground">{t("library.by", "by")} {selectedMod.author ?? t("library.unknown", "Unknown")}</p>
               </div>
             </div>
 
@@ -183,11 +184,11 @@ export function Library() {
               className="flex-1 max-w-xs px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Play className="w-5 h-5" />
-              Launch Mod
+              {t("library.launchMod", "Launch Mod")}
             </button>
             <button className="px-6 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg font-medium transition-colors flex items-center gap-2">
               <RefreshCw className="w-5 h-5" />
-              {selectedMod.updateAvailable ? "Update Available" : "Check Update"}
+              {selectedMod.updateAvailable ? t("library.updateAvailable", "Update Available") : t("library.checkUpdate", "Check Update")}
             </button>
             {selectedMod.updateAvailable && (
               <button
@@ -195,7 +196,7 @@ export function Library() {
                 className="px-6 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-medium transition-colors flex items-center gap-2"
               >
                 <RefreshCw className="w-5 h-5" />
-                Install Update
+                {t("library.installUpdate", "Install Update")}
               </button>
             )}
             <button
@@ -203,7 +204,7 @@ export function Library() {
               className="px-6 py-3 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg font-medium transition-colors flex items-center gap-2"
             >
               <Trash2 className="w-5 h-5" />
-              Remove
+              {t("library.remove", "Remove")}
             </button>
           </div>
 
@@ -213,24 +214,24 @@ export function Library() {
               checked={deleteFilesOnRemove}
               onChange={(event) => setDeleteFilesOnRemove(event.target.checked)}
             />
-            Delete mod files from disk when removing
+            {t("library.deleteFilesOnRemove", "Delete mod files from disk when removing")}
           </label>
 
           {/* Info Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             <div className="bg-card border border-border rounded-lg p-4">
-                <p className="text-sm text-muted-foreground mb-1">Version</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("library.version", "Version")}</p>
                 <p className="text-lg font-semibold text-foreground">
-                 {selectedMod.version ? `v${selectedMod.version}` : "Version unknown"}
+                 {selectedMod.version ? `v${selectedMod.version}` : t("library.versionUnknown", "Version unknown")}
                  {selectedMod.latestVersion ? ` -> v${selectedMod.latestVersion}` : ""}
                 </p>
             </div>
             <div className="bg-card border border-border rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">Required Engine</p>
-              <p className="text-lg font-semibold text-foreground">{isStandaloneMod ? "Standalone" : (selectedMod.requiredEngine ?? selectedMod.engine)}</p>
+              <p className="text-sm text-muted-foreground mb-1">{t("library.requiredEngine", "Required Engine")}</p>
+              <p className="text-lg font-semibold text-foreground">{isStandaloneMod ? t("library.standalone", "Standalone") : (selectedMod.requiredEngine ?? selectedMod.engine)}</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">Installed Date</p>
+              <p className="text-sm text-muted-foreground mb-1">{t("library.installedDate", "Installed Date")}</p>
               <p className="text-lg font-semibold text-foreground">
                 {new Date(selectedMod.installedAt).toLocaleDateString()}
               </p>
@@ -238,32 +239,32 @@ export function Library() {
           </div>
 
           <div className="bg-card border border-border rounded-lg p-4 mb-6">
-            <p className="text-sm text-muted-foreground mb-1">Installed Location</p>
+            <p className="text-sm text-muted-foreground mb-1">{t("library.installedLocation", "Installed Location")}</p>
             <p className="text-sm text-foreground font-medium">
               {isStandaloneMod
-                ? "Standalone executable package"
+                ? t("library.standalonePackage", "Standalone executable package")
                 : (selectedEngineInstall
                   ? `${selectedEngineInstall.name} v${selectedEngineInstall.version}`
-                  : "Unknown engine installation")}
+                  : t("library.unknownEngineInstall", "Unknown engine installation"))}
             </p>
             <p className="text-xs text-muted-foreground mt-1 break-all">{selectedMod.installPath}</p>
           </div>
 
           {isStandaloneMod && (
             <div className="bg-card border border-border rounded-lg p-4 mb-6">
-              <h3 className="font-semibold text-foreground mb-3">Launch Settings</h3>
+              <h3 className="font-semibold text-foreground mb-3">{t("library.launchSettings", "Launch Settings")}</h3>
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs text-muted-foreground">Launcher</label>
+                  <label className="text-xs text-muted-foreground">{t("library.launcher", "Launcher")}</label>
                   <select
                     value={launchMode}
                     onChange={(event) => setLaunchMode(event.target.value as "native" | "wine" | "wine64" | "proton")}
                     className="w-full mt-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
                   >
-                    <option value="native">Native</option>
-                    <option value="wine">Wine</option>
-                    <option value="wine64">Wine64</option>
-                    <option value="proton">Proton</option>
+                    <option value="native">{t("library.native", "Native")}</option>
+                    <option value="wine">{t("library.wine", "Wine")}</option>
+                    <option value="wine64">{t("library.wine64", "Wine64")}</option>
+                    <option value="proton">{t("library.proton", "Proton")}</option>
                   </select>
                 </div>
 
@@ -272,19 +273,19 @@ export function Library() {
                     <input
                       value={launchPath}
                       onChange={(event) => setLaunchPath(event.target.value)}
-                      placeholder="Optional launcher path"
+                      placeholder={t("library.optionalLauncherPath", "Optional launcher path")}
                       className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
                     />
                     <button
                       onClick={async () => {
-                        const selected = await browseFile({ title: "Select launcher binary", defaultPath: launchPath || undefined });
+                        const selected = await browseFile({ title: t("library.selectLauncherBinary", "Select launcher binary"), defaultPath: launchPath || undefined });
                         if (selected) {
                           setLaunchPath(selected);
                         }
                       }}
                       className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
                     >
-                      Browse
+                      {t("library.browse", "Browse")}
                     </button>
                   </div>
                 )}
@@ -293,19 +294,19 @@ export function Library() {
                   <input
                     value={launchExecutablePath}
                     onChange={(event) => setLaunchExecutablePath(event.target.value)}
-                    placeholder="Optional executable path"
+                    placeholder={t("library.optionalExecutablePath", "Optional executable path")}
                     className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
                   />
                   <button
                     onClick={async () => {
-                      const selected = await browseFile({ title: "Select executable", defaultPath: launchExecutablePath || undefined });
+                        const selected = await browseFile({ title: t("library.selectExecutable", "Select executable"), defaultPath: launchExecutablePath || undefined });
                       if (selected) {
                         setLaunchExecutablePath(selected);
                       }
                     }}
                     className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
                   >
-                    Browse
+                      {t("library.browse", "Browse")}
                   </button>
                 </div>
 
@@ -319,7 +320,7 @@ export function Library() {
                   }}
                   className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
                 >
-                  Save Launch Settings
+                  {t("library.saveLaunchSettings", "Save Launch Settings")}
                 </button>
               </div>
             </div>
@@ -327,7 +328,7 @@ export function Library() {
 
           {/* Description */}
           <div className="bg-card border border-border rounded-lg p-6 mb-6">
-            <h3 className="font-semibold text-foreground mb-3">About this mod</h3>
+            <h3 className="font-semibold text-foreground mb-3">{t("library.aboutMod", "About this mod")}</h3>
             <p className="text-muted-foreground leading-relaxed">
               {selectedMod.description
                 ? selectedMod.description
@@ -335,7 +336,7 @@ export function Library() {
             </p>
             {selectedMod.developers && selectedMod.developers.length > 0 && (
               <div className="mt-3">
-                <p className="text-sm text-muted-foreground mb-1">Developers</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("library.developers", "Developers")}</p>
                 <p className="text-sm text-foreground">{selectedMod.developers.join(", ")}</p>
               </div>
             )}
@@ -344,7 +345,7 @@ export function Library() {
           {/* Screenshots */}
           {selectedProfileShots.length > 1 && (
             <div>
-              <h3 className="font-semibold text-foreground mb-4">Screenshots</h3>
+              <h3 className="font-semibold text-foreground mb-4">{t("library.screenshots", "Screenshots")}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {selectedProfileShots.map((shot, index) => (
                   <button
@@ -371,7 +372,7 @@ export function Library() {
         onClick={() => refreshModUpdates()}
         className="fixed bottom-4 right-4 md:bottom-6 md:right-6 px-4 py-2 rounded-lg bg-card border border-border hover:bg-secondary text-sm"
       >
-        Refresh Update Status
+        {t("library.refreshUpdateStatus", "Refresh Update Status")}
       </button>
 
       <Dialog open={previewIndex !== null} onOpenChange={(next) => { if (!next) setPreviewIndex(null); }}>
@@ -419,34 +420,34 @@ export function Library() {
       <Dialog open={showManualModal} onOpenChange={setShowManualModal}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add Manual Mod</DialogTitle>
-            <DialogDescription>Import a local mod folder into an installed engine or as standalone.</DialogDescription>
+            <DialogTitle>{t("library.addManualMod", "Add Manual Mod")}</DialogTitle>
+            <DialogDescription>{t("library.addManualModDesc", "Import a local mod folder into an installed engine or as standalone.")}</DialogDescription>
           </DialogHeader>
 
           <div className="mt-2 space-y-3">
             <div>
-              <label htmlFor="manual-mod-name" className="mb-1 block text-xs text-muted-foreground">Mod name</label>
+              <label htmlFor="manual-mod-name" className="mb-1 block text-xs text-muted-foreground">{t("library.modName", "Mod name")}</label>
               <input id="manual-mod-name" value={manualName} onChange={(e) => setManualName(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
             </div>
             <div>
-              <label htmlFor="manual-mod-author" className="mb-1 block text-xs text-muted-foreground">Author (optional)</label>
+              <label htmlFor="manual-mod-author" className="mb-1 block text-xs text-muted-foreground">{t("library.authorOptional", "Author (optional)")}</label>
               <input id="manual-mod-author" value={manualAuthor} onChange={(e) => setManualAuthor(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
             </div>
             <div>
-              <label htmlFor="manual-mod-version" className="mb-1 block text-xs text-muted-foreground">Version (optional)</label>
+              <label htmlFor="manual-mod-version" className="mb-1 block text-xs text-muted-foreground">{t("library.versionOptional", "Version (optional)")}</label>
               <input id="manual-mod-version" value={manualVersion} onChange={(e) => setManualVersion(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
             </div>
             <div>
-              <label htmlFor="manual-mod-description" className="mb-1 block text-xs text-muted-foreground">Description (optional)</label>
+              <label htmlFor="manual-mod-description" className="mb-1 block text-xs text-muted-foreground">{t("library.descriptionOptional", "Description (optional)")}</label>
               <textarea id="manual-mod-description" value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm min-h-20" />
             </div>
             <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <input type="checkbox" checked={manualStandalone} onChange={(event) => setManualStandalone(event.target.checked)} />
-              Import as standalone executable package
+              {t("library.importStandalone", "Import as standalone executable package")}
             </label>
             {!manualStandalone && (
               <div>
-                <label htmlFor="manual-mod-engine" className="mb-1 block text-xs text-muted-foreground">Target engine</label>
+                <label htmlFor="manual-mod-engine" className="mb-1 block text-xs text-muted-foreground">{t("library.targetEngine", "Target engine")}</label>
                 <select id="manual-mod-engine" value={manualEngineId} onChange={(e) => setManualEngineId(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm">
                   {installedEngines.map((engine) => (
                     <option key={engine.id} value={engine.id}>{engine.name} ({engine.version})</option>
@@ -455,26 +456,26 @@ export function Library() {
               </div>
             )}
             <div>
-              <label htmlFor="manual-mod-source" className="mb-1 block text-xs text-muted-foreground">Mod folder path</label>
+              <label htmlFor="manual-mod-source" className="mb-1 block text-xs text-muted-foreground">{t("library.modFolderPath", "Mod folder path")}</label>
               <div className="flex gap-2">
                 <input id="manual-mod-source" value={manualSourcePath} onChange={(e) => setManualSourcePath(e.target.value)} className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
                 <button
                   onClick={async () => {
-                    const selected = await browseFolder({ title: "Select mod folder" });
+                    const selected = await browseFolder({ title: t("library.selectModFolder", "Select mod folder") });
                     if (selected) {
                       setManualSourcePath(selected);
                     }
                   }}
                   className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
                 >
-                  Browse
+                  {t("library.browse", "Browse")}
                 </button>
               </div>
             </div>
           </div>
 
           <div className="mt-5 flex justify-end gap-2">
-            <button onClick={() => setShowManualModal(false)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">Cancel</button>
+            <button onClick={() => setShowManualModal(false)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("library.cancel", "Cancel")}</button>
             <button
               onClick={async () => {
                 try {
@@ -495,12 +496,12 @@ export function Library() {
                   setManualSourcePath("");
                   setManualStandalone(false);
                 } catch (error) {
-                  window.alert(error instanceof Error ? error.message : "Failed to add manual mod");
+                  window.alert(error instanceof Error ? error.message : t("library.addManualError", "Failed to add manual mod"));
                 }
               }}
               className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
             >
-              Import Mod
+              {t("library.importMod", "Import Mod")}
             </button>
           </div>
         </DialogContent>

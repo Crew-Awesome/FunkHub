@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, Clock3, User, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
-import { useFunkHub } from "../../providers";
+import { useFunkHub, useI18n } from "../../providers";
 import { modInstallerService } from "../../services/funkhub";
 import type { GameBananaMember, GameBananaModProfile } from "../../services/funkhub";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
@@ -54,6 +54,7 @@ function plainText(value?: string): string {
 }
 
 export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: ModVisualizerModalProps) {
+  const { t } = useI18n();
   const { getModProfile, installMod, installedEngines } = useFunkHub();
   const [loading, setLoading] = useState(false);
   const [showLoadingState, setShowLoadingState] = useState(false);
@@ -85,7 +86,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load mod profile");
+          setError(err instanceof Error ? err.message : t("mod.failedLoadProfile", "Failed to load mod profile"));
           setProfile(null);
         }
       })
@@ -135,11 +136,11 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="h-[90vh] w-[min(96vw,1700px)] max-w-none overflow-hidden p-0 sm:max-w-none">
         <DialogHeader className="sticky top-0 z-10 bg-card border-b border-border px-5 py-4">
-          <DialogTitle>Mod Visualizer</DialogTitle>
+          <DialogTitle>{t("mod.visualizer", "Mod Visualizer")}</DialogTitle>
         </DialogHeader>
 
         {loading && showLoadingState && (
-          <div className="p-8 text-sm text-muted-foreground">Loading mod details...</div>
+          <div className="p-8 text-sm text-muted-foreground">{t("mod.loadingDetails", "Loading mod details...")}</div>
         )}
 
         {error && (
@@ -169,14 +170,14 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                             <button
                               onClick={() => setActiveMediaIndex((current) => (current - 1 + mediaGallery.length) % mediaGallery.length)}
                               className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
-                              aria-label="Previous image"
+                               aria-label={t("mod.previousImage", "Previous image")}
                             >
                               <ChevronLeft className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => setActiveMediaIndex((current) => (current + 1) % mediaGallery.length)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
-                              aria-label="Next image"
+                               aria-label={t("mod.nextImage", "Next image")}
                             >
                               <ChevronRight className="h-4 w-4" />
                             </button>
@@ -193,7 +194,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                                 "h-16 w-24 shrink-0 overflow-hidden rounded border",
                                 index === activeMediaIndex ? "border-primary" : "border-border",
                               ].join(" ")}
-                              aria-label={`Preview ${index + 1}`}
+                               aria-label={t("mod.preview", `Preview ${index + 1}`)}
                             >
                               <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
                             </button>
@@ -203,19 +204,19 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                     </>
                   ) : (
                     <div className="flex min-h-[360px] items-center justify-center text-sm text-muted-foreground">
-                      No preview image
+                      {t("mod.noPreviewImage", "No preview image")}
                     </div>
                   )}
                 </div>
 
                 <div className="mt-4 rounded-xl border border-border bg-card p-4">
-                  <h4 className="mb-2 text-sm font-semibold text-foreground">Description</h4>
+                  <h4 className="mb-2 text-sm font-semibold text-foreground">{t("mod.description", "Description")}</h4>
                   <p className="text-sm leading-relaxed text-muted-foreground">{plainText(profile.description ?? profile.text)}</p>
                 </div>
 
                 {profile.credits.length > 0 && (
                   <div className="mt-4 rounded-xl border border-border bg-card p-4">
-                    <h4 className="mb-3 text-sm font-semibold text-foreground">Credits</h4>
+                    <h4 className="mb-3 text-sm font-semibold text-foreground">{t("mod.credits", "Credits")}</h4>
                     <div className="space-y-2">
                       {profile.credits.map((group) => (
                         <div key={group.groupName} className="rounded-lg border border-border p-3">
@@ -250,15 +251,15 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                 <div className="rounded-xl border border-border bg-card p-4">
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="rounded-lg bg-secondary/60 p-3">
-                      <p className="text-xs text-muted-foreground">Downloads</p>
+                      <p className="text-xs text-muted-foreground">{t("mod.downloads", "Downloads")}</p>
                       <p className="font-semibold text-foreground">{formatDownloads(profile.downloadCount)}</p>
                     </div>
                     <div className="rounded-lg bg-secondary/60 p-3">
-                      <p className="text-xs text-muted-foreground">Version</p>
-                      <p className="font-semibold text-foreground">{profile.version ?? "Unknown"}</p>
+                      <p className="text-xs text-muted-foreground">{t("mod.version", "Version")}</p>
+                      <p className="font-semibold text-foreground">{profile.version ?? t("mod.unknown", "Unknown")}</p>
                     </div>
                     <div className="rounded-lg bg-secondary/60 p-3">
-                      <p className="text-xs text-muted-foreground">Author</p>
+                      <p className="text-xs text-muted-foreground">{t("mod.author", "Author")}</p>
                       <button
                         onClick={() => {
                           if (profile.submitter?.id) {
@@ -274,11 +275,11 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                         {profile.submitter?.avatarUrl
                           ? <img src={profile.submitter.avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover" loading="lazy" />
                           : <User className="h-4 w-4" />}
-                        <span className="line-clamp-1">{profile.submitter?.name ?? "Unknown"}</span>
+                        <span className="line-clamp-1">{profile.submitter?.name ?? t("mod.unknown", "Unknown")}</span>
                       </button>
                     </div>
                     <div className="rounded-lg bg-secondary/60 p-3">
-                      <p className="text-xs text-muted-foreground">Updated</p>
+                      <p className="text-xs text-muted-foreground">{t("mod.updated", "Updated")}</p>
                       <p className="font-semibold text-foreground">{formatDate(profile.dateUpdated || profile.dateModified || profile.dateAdded)}</p>
                     </div>
                   </div>
@@ -286,21 +287,21 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                   <div className="mt-4 space-y-2">
                     {supportsExecutableInstall && (
                       <div>
-                        <label className="mb-1 block text-xs text-muted-foreground">Install mode</label>
+                        <label className="mb-1 block text-xs text-muted-foreground">{t("mod.installMode", "Install mode")}</label>
                         <select
                           value={installMode}
                           onChange={(event) => setInstallMode(event.target.value as "executable" | "mod_folder")}
                           className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground"
                         >
-                          <option value="executable">Executable package (default)</option>
-                          <option value="mod_folder">Mod folder</option>
+                          <option value="executable">{t("mod.installModeExecutable", "Executable package (default)")}</option>
+                          <option value="mod_folder">{t("mod.installModeModFolder", "Mod folder")}</option>
                         </select>
                       </div>
                     )}
 
                     {!installAsExecutable && (
                       <div>
-                        <label className="mb-1 block text-xs text-muted-foreground">Install target engine</label>
+                        <label className="mb-1 block text-xs text-muted-foreground">{t("mod.installTargetEngine", "Install target engine")}</label>
                         <select
                           value={selectedEngineId}
                           onChange={(event) => setSelectedEngineId(event.target.value)}
@@ -320,28 +321,28 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                       className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary/80"
                     >
                       <ExternalLink className="h-4 w-4" />
-                      Open on GameBanana
+                      {t("mod.openOnGameBanana", "Open on GameBanana")}
                     </button>
                   </div>
 
                   {hasDependencyWarning && !installAsExecutable && (
                     <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
-                      This mod targets <span className="font-medium">{profile?.requiredEngine}</span>, but selected engine is <span className="font-medium">{selectedEngine?.slug}</span>.
+                       {t("mod.engineMismatch", "This mod targets")} <span className="font-medium">{profile?.requiredEngine}</span>, {t("mod.engineMismatchSelected", "but selected engine is")} <span className="font-medium">{selectedEngine?.slug}</span>.
                     </p>
                   )}
 
                   {!installAsExecutable && installedEngines.length === 0 && (
                     <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
-                      No engines installed. Install an engine first or switch install mode to executable package.
+                       {t("mod.noEnginesInstalled", "No engines installed. Install an engine first or switch install mode to executable package.")}
                     </p>
                   )}
                 </div>
 
                 <div className="mt-4 rounded-xl border border-border bg-card p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-foreground">Files</h4>
+                  <h4 className="mb-3 text-sm font-semibold text-foreground">{t("mod.files", "Files")}</h4>
                   <div className="space-y-3">
                     {profile.files.length === 0 && (
-                      <div className="text-sm text-muted-foreground">No downloadable files found.</div>
+                      <div className="text-sm text-muted-foreground">{t("mod.noFiles", "No downloadable files found.")}</div>
                     )}
                     {profile.files.map((file) => (
                       <div key={file.id} className="rounded-xl border border-border p-3">
@@ -363,7 +364,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                           className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <Download className="h-4 w-4" />
-                          Install
+                           {t("mod.install", "Install")}
                         </button>
                       </div>
                     ))}

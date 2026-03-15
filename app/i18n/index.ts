@@ -1,18 +1,15 @@
 import en from "./locales/en.json";
-import es from "./locales/es.json";
 
-export type SupportedLocale = "en" | "es";
+export type SupportedLocale = "en";
 
 type Dictionary = Record<string, string>;
 
 const dictionaries: Record<SupportedLocale, Dictionary> = {
   en,
-  es,
 };
 
 export const supportedLocales: Array<{ code: SupportedLocale; labelKey: string }> = [
   { code: "en", labelKey: "settings.language.english" },
-  { code: "es", labelKey: "settings.language.spanish" },
 ];
 
 export function normalizeLocale(rawLocale: string | undefined): SupportedLocale {
@@ -21,7 +18,7 @@ export function normalizeLocale(rawLocale: string | undefined): SupportedLocale 
   }
 
   const short = rawLocale.toLowerCase().split("-")[0];
-  return short === "es" ? "es" : "en";
+  return short === "en" ? "en" : "en";
 }
 
 export function translate(
