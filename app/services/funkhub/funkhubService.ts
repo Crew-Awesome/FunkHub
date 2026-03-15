@@ -732,6 +732,10 @@ export class FunkHubService {
   }
 
   setDefaultEngine(engineId: string): void {
+    if (!this.installedEngines.some((engine) => engine.id === engineId)) {
+      return;
+    }
+
     this.installedEngines = this.installedEngines.map((engine) => ({
       ...engine,
       isDefault: engine.id === engineId,
