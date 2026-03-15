@@ -749,6 +749,7 @@ async function handleLaunchEngine(payload) {
 
   let command = launchable;
   let args = [];
+  const launchCwd = path.dirname(launchable);
 
   if (process.platform === "linux" && launcher === "native" && launchable.toLowerCase().endsWith(".exe")) {
     throw new Error("Selected executable is a Windows .exe. Choose Wine/Wine64/Proton in Manage before launching.");
@@ -768,6 +769,7 @@ async function handleLaunchEngine(payload) {
 
     try {
       spawned = spawn(command, args, {
+        cwd: launchCwd,
         detached: true,
         stdio: "ignore",
         windowsHide: true,
