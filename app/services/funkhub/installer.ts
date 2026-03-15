@@ -139,6 +139,7 @@ export class ModInstallerService {
     mod: Pick<GameBananaModProfile, "id" | "name" | "version" | "profileUrl" | "submitter" | "thumbnailUrl" | "imageUrl" | "dependencies" | "description" | "text" | "rootCategory" | "screenshotUrls" | "credits">;
     sourceFileId: number;
     requiredEngine?: EngineSlug;
+    installedEngine?: EngineSlug;
   }): Promise<InstalledMod> {
     if (!window.funkhubDesktop) {
       throw new Error("Desktop bridge is unavailable");
@@ -156,7 +157,7 @@ export class ModInstallerService {
       gamebananaUrl: input.mod.profileUrl,
       installedAt: Date.now(),
       installPath: result.installPath,
-      engine: input.requiredEngine ?? "basegame",
+      engine: input.installedEngine ?? input.requiredEngine ?? "basegame",
       requiredEngine: input.requiredEngine,
       dependencies: input.mod.dependencies,
       sourceFileId: input.sourceFileId,
@@ -173,6 +174,7 @@ export class ModInstallerService {
     fileName: string;
     mod: Pick<GameBananaModProfile, "id" | "name" | "version" | "profileUrl" | "submitter" | "thumbnailUrl" | "imageUrl" | "dependencies" | "description" | "text" | "rootCategory" | "screenshotUrls" | "credits">;
     sourceFileId: number;
+    installedEngine?: EngineSlug;
   }): InstalledMod {
     const fallbackPath = `${input.plan.targetPath}/${sanitizeFileStem(input.fileName)}`;
     return {
@@ -185,7 +187,7 @@ export class ModInstallerService {
       gamebananaUrl: input.mod.profileUrl,
       installedAt: Date.now(),
       installPath: fallbackPath,
-      engine: input.plan.requiredEngine ?? "basegame",
+      engine: input.installedEngine ?? input.plan.requiredEngine ?? "basegame",
       requiredEngine: input.plan.requiredEngine,
       dependencies: input.mod.dependencies,
       sourceFileId: input.sourceFileId,

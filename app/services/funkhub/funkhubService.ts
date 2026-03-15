@@ -982,7 +982,7 @@ export class FunkHubService {
     if (task.modId <= 0) {
       throw new Error("Retry currently supports mod downloads only");
     }
-    this.queueInstall(task.modId, task.fileId, undefined, task.priority ?? 0);
+    this.queueInstall(task.modId, task.fileId, task.selectedEngineId, task.priority ?? 0);
   }
 
   cancelDownload(taskId: string): void {
@@ -1015,6 +1015,7 @@ export class FunkHubService {
         modId: input.modId,
         fileId: input.fileId,
         fileName: `file-${input.fileId}`,
+        selectedEngineId: input.selectedEngineId,
         priority: input.priority,
       },
       cancel: () => abortController.abort(),
@@ -1086,6 +1087,7 @@ export class FunkHubService {
             mod: profile,
             sourceFileId: selectedFile.id,
             requiredEngine: plan.requiredEngine,
+            installedEngine: selectedEngine?.slug,
           });
 
           this.installedMods = [installedMod, ...this.installedMods];
@@ -1142,6 +1144,7 @@ export class FunkHubService {
           fileName: selectedFile.fileName,
           mod: profile,
           sourceFileId: selectedFile.id,
+          installedEngine: selectedEngine?.slug,
         });
         this.installedMods = [installedMod, ...this.installedMods];
         funkHubStorageService.saveInstalledMods(this.installedMods);

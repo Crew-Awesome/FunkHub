@@ -76,6 +76,7 @@ export interface DownloadTask {
   modId: number;
   fileId: number;
   fileName: string;
+  selectedEngineId?: string;
   priority?: number;
   totalBytes?: number;
   downloadedBytes: number;
