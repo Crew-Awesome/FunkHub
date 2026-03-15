@@ -6,12 +6,84 @@ Notes:
 - Commit messages in early history are informal; explanations below translate likely intent.
 - Version sections map to release tags.
 
-## [Unreleased / v0.1.3-draft]
+## [v0.2.0] - 2026-03-15
 
-Changes after `v0.1.2` (not tagged as `v0.1.3` yet):
+### Public Release Summary (GitHub Release Body)
 
-- `1821cf2` - `fix everythingn on versioning fuck github`  
-  Final pass on versioning consistency (release tag version, build channel/version reporting, and release artifact naming alignment).
+## FunkHub v0.2.0
+This release focuses on reliability, executable-package support, deep-link install correctness, and a major UI/UX pass across core screens.
+
+**Range:** `v0.1.3..HEAD`  
+**First commit in range:** `10f443e`  
+**Latest commit in range:** `afd1f69`
+
+### Highlights
+#### Installer and One-Click Reliability
+- Improved one-click install flow from `funkhub://` links, including better engine targeting and safer protocol handling.
+- Fixed deep-link dedupe/retry behavior to prevent missed or ignored installs.
+- Improved engine detection and matching consistency when deciding install targets.
+- Added fallback handling for missing/empty download URLs.
+- Fixed overwrite/collision behavior by ensuring safer install path handling.
+- Hardened raw-package naming/sanitization in desktop extraction flow.
+
+#### Executable Mod Support (Category 3827)
+- Executable-category mods now route more consistently as standalone executable installs.
+- Added/expanded executable install target behavior so executable packages are not treated like normal mod-folder installs by default.
+- Added install-mode handling to support explicit executable vs standard-mod behavior in UI/service flow.
+- Improved cross-platform install behavior for Windows-targeted packages on Linux with warning/continue handling.
+
+#### UI/UX Overhaul
+- Large UI cleanup across app shell and major pages (Discover, Engines, Library, Settings, Updates).
+- Responsive improvements and layout restructuring for small/tight screens.
+- Mod Visualizer received multiple structural passes and fixes.
+- Engine management UX improved, including better visual hierarchy and controls.
+- Theme/token polish and consistency cleanup across many components.
+- CI type-check coverage tightened for UI paths.
+
+#### Search & Discovery Improvements
+- Search behavior improved with better matching and fallback handling.
+- Better handling for direct mod URLs / non-ideal search cases.
+- Discovery/category UX refinements and fallback label cleanup.
+
+#### Docs & Community
+- Added/updated contribution workflow docs and repo community health files:
+  - `CONTRIBUTING.md`
+  - `CODE_OF_CONDUCT.md`
+  - `SECURITY.md`
+  - PR/Issue templates
+- Added changelog tracking updates.
+
+### Full Changelog (Commit-by-Commit)
+- `10f443e` — changelog updates (`CHANGELOG.md`).
+- `39983a1` — one-click install reliability fixes + contribution/community workflow docs/templates.
+- `55b0766` — engine detection improvements (`engineDetection`, API mapping, installer integration).
+- `697d15f` — empty download URL handling fix.
+- `69ea5b8` — install overwrite/collision fix.
+- `d1894fc` — deep-link retry handling fix.
+- `4c1e3e3` — default engine guard/fix.
+- `cc63991` — deep-link parsing/handling fixes (`deepLink.ts`, provider flow).
+- `b280bc9` — engine selection persistence/save correctness.
+- `26bb7a8` — itch lookup/resolution fixes (service + runtime bridge).
+- `3fc68ac` — repeated-link handling fix.
+- `d7e1966` — raw package filename sanitization fix in desktop runtime.
+- `d9c9dfd` — broad UI cleanup pass (app shell, discover, downloads, engines, library, settings, updates, routing, theme, CI TS config).
+- `53365bf` — allow Windows-package workflow on Linux path with safer handling.
+- `ea67c8e` — Mod Visualizer refinement pass.
+- `fac97f2` — executable install target behavior updates (library/service/installer/runtime).
+- `d4b8cec` — provider-side install/deep-link flow follow-up adjustments.
+- `cad3a9f` — Mod Visualizer follow-up adjustments.
+- `940d14d` — Mod Visualizer fixes + runtime extraction flow adjustment.
+- `afd1f69` — search + install-mode plumbing updates (provider/service/API/installer/types + visualizer integration).
+
+### Changed Areas
+- **Frontend/UI:**  
+  `app/App.tsx`, `app/router.tsx`, `app/app-shell/*`, `app/features/{discover,downloads,engines,library,mods,settings,updates}/*`, `styles/theme.css`
+- **Installer/Core logic:**  
+  `app/services/funkhub/{installer,funkhubService,types,deepLink,gamebananaApi,engineDetection}.ts`
+- **Desktop runtime:**  
+  `electron/{main,runtime-bridge}.cjs`
+- **Project docs/templates:**  
+  `.github/ISSUE_TEMPLATE/*`, `.github/pull_request_template.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `README.md`, `CHANGELOG.md`
 
 ## [v0.1.2] - 2026-03-15
 
