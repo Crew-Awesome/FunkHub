@@ -462,7 +462,10 @@ export class FunkHubService {
       }
 
       const clientPlatform = detectClientPlatform();
-      const itchPlatform = clientPlatform === "any" ? "linux" : clientPlatform;
+      const releasePlatformMatch = input.releaseUrl.match(/^itch:\/\/funkin\/basegame\/(windows|linux|macos)$/i);
+      const releasePlatform = releasePlatformMatch?.[1]?.toLowerCase() as "windows" | "linux" | "macos" | undefined;
+      const itchPlatform = releasePlatform
+        ?? (clientPlatform === "unknown" || clientPlatform === "any" ? "unknown" : clientPlatform);
 
       const uploadIdMatch = input.releaseUrl.match(/^itch:\/\/upload\/(\d+)$/);
       const uploadId = uploadIdMatch ? Number(uploadIdMatch[1]) : undefined;

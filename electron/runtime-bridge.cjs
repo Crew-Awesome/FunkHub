@@ -1331,14 +1331,25 @@ async function getItchFunkinUploads(token) {
     Accept: "application/json",
   };
 
-  const ownedResponse = await fetch("https://api.itch.io/profile/owned-keys?page=1", { headers });
-  if (!ownedResponse.ok) {
-    throw new Error("itch.io auth failed, reconnect your account");
+  let target = null;
+  for (let page = 1; page <= 25; page += 1) {
+    const ownedResponse = await fetch(`https://api.itch.io/profile/owned-keys?page=${page}`, { headers });
+    if (!ownedResponse.ok) {
+      throw new Error("itch.io auth failed, reconnect your account");
+    }
+
+    const ownedPayload = await ownedResponse.json();
+    const ownedKeys = Array.isArray(ownedPayload?.owned_keys) ? ownedPayload.owned_keys : [];
+    target = ownedKeys.find((entry) => entry?.game_id === 792778 || String(entry?.game?.url || "").includes("ninja-muffin24.itch.io/funkin"));
+    if (target) {
+      break;
+    }
+
+    if (ownedKeys.length === 0) {
+      break;
+    }
   }
 
-  const ownedPayload = await ownedResponse.json();
-  const ownedKeys = Array.isArray(ownedPayload?.owned_keys) ? ownedPayload.owned_keys : [];
-  const target = ownedKeys.find((entry) => entry?.game_id === 792778 || String(entry?.game?.url || "").includes("ninja-muffin24.itch.io/funkin"));
   if (!target) {
     throw new Error("Funkin base game is not found in your itch.io library");
   }
@@ -1400,6 +1411,14 @@ async function handleListItchBaseGameReleases() {
 async function handleResolveItchBaseGameDownload(payload) {
   const platform = payload?.platform || "linux";
   const uploadId = Number(payload?.uploadId || 0) || undefined;
+
+  if (!uploadId && platform === "unknown") {
+    return {
+      ok: false,
+      message: "Platform is unknown. Select a specific base game release for your OS.",
+    };
+  }
+
   const token = await getItchAccessToken();
   if (!token) {
     return {
