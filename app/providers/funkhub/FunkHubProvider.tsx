@@ -107,6 +107,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [hasMoreDiscover, setHasMoreDiscover] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const handledDeepLinksRef = useRef<Set<string>>(new Set());
+  const processingDeepLinksRef = useRef<Set<string>>(new Set());
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | undefined>(undefined);
   const [appUpdateChecking, setAppUpdateChecking] = useState(false);
   const [appUpdateError, setAppUpdateError] = useState<string | undefined>(undefined);
@@ -175,10 +176,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   ), []);
 
   const handleDeepLink = useCallback(async (rawUrl: string) => {
-    if (!rawUrl || handledDeepLinksRef.current.has(rawUrl)) {
+    if (!rawUrl || handledDeepLinksRef.current.has(rawUrl) || processingDeepLinksRef.current.has(rawUrl)) {
       return;
     }
-    handledDeepLinksRef.current.add(rawUrl);
+    processingDeepLinksRef.current.add(rawUrl);
 
     try {
       if (!rawUrl.startsWith("funkhub:")) {
@@ -198,6 +199,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
           },
         });
         setSettings(nextSettings);
+        handledDeepLinksRef.current.add(rawUrl);
         window.alert("GameBanana pairing link received. Remote installs are now linked to this profile.");
         return;
       }
@@ -282,8 +284,11 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         selectedEngineId,
         priority: 20,
       });
+      handledDeepLinksRef.current.add(rawUrl);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Failed to process deep link");
+    } finally {
+      processingDeepLinksRef.current.delete(rawUrl);
     }
   }, [installedEngines, settings.gameBananaIntegration]);
 
