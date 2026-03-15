@@ -6,6 +6,63 @@ Notes:
 - Commit messages in early history are informal; explanations below translate likely intent.
 - Version sections map to release tags.
 
+## [v0.3.0] - 2026-03-15
+
+### Public Release Summary (GitHub Release Body)
+
+## FunkHub v0.3.0
+This release focuses on internationalization rollout, Weblate automation hardening, language-selection UX, and follow-up UI quality fixes across core screens.
+
+**Range:** `v0.2.0..HEAD`  
+**First commit in range:** `427de26`  
+**Latest commit in range:** `ca698ea`
+
+### Highlights
+#### Internationalization Rollout
+- Added runtime language selection plumbing through i18n provider + settings/discover flows.
+- Expanded translation coverage through Weblate-driven locale updates.
+- Added and iterated locale files during rollout, then intentionally narrowed supported locales to a curated set.
+- Final maintained locales in this release train: `en`, `es-419`, `pt-BR`, `ru`.
+
+#### Weblate and Workflow Reliability
+- Added and refined Weblate project/component configuration and synchronization logic.
+- Hardened Weblate API patch/sync behavior for language configuration updates.
+- Updated CI workflow orchestration around translation sync to reduce churn and improve operational stability.
+
+#### UI and Content Polish
+- Added missing translation keys and improved copy consistency in multiple pages/components.
+- Applied targeted UI cleanup across settings, engines, topbar, library, discover, downloads, updates, and modal flows.
+- Synced shared UI primitives and app shell pieces so localization surfaces are consistent.
+
+### Full Changelog (Grouped)
+- **Total commits in range:** `68`
+- **Translation automation commits:** `49`
+  - `25` x `Update translations via Weblate`
+  - `20` x `Added translation using Weblate (...)`
+  - `4` x `Deleted translation using Weblate (...)`
+- **Code/workflow commits:** `19` (including i18n runtime plumbing, workflow updates, UI polish, and translation-config fixes)
+
+### Key Code/Workflow Commits
+- `427de26` — deep-link/provider follow-up fix in `FunkHubProvider`.
+- `8d3998b` — package/dependency update.
+- `3ce281f` — broad i18n/workflow/runtime integration pass (`I18nProvider`, workflows, settings/storage/runtime).
+- `f3bd9a3` — Weblate config/sync follow-up fixes.
+- `9b3b3f1` — broad UI + i18n polish across top-level feature pages.
+- `63b0137` — fixed language patching behavior in Weblate config script.
+- `b70b7f5` — added missing translation/UI strings and shared UI text surfaces.
+- `5e2285b` — engines page translation/content updates.
+- `6defe52` — additional translation/UI consistency fixes.
+- `b9163de` — pruned locale set to `en`, `es-419`, `ru`, `pt-BR`.
+- `9ca3396` — expanded locale/config scaffolding before final pruning.
+- `acd28ab` — Weblate script/config adjustments.
+- `ad3db2e` — Weblate project config tuning.
+- `40258c0` — language selector + workflow updates.
+- `257d15d` — Weblate workflow follow-up.
+- `ca698ea` — Weblate workflow follow-up.
+
+### Compare
+- `https://github.com/Crew-Awesome/FunkHub/compare/v0.2.0...v0.3.0`
+
 ## [v0.2.0] - 2026-03-15
 
 ### Public Release Summary (GitHub Release Body)
