@@ -19,7 +19,7 @@ export function Sidebar() {
       <div className="hidden border-b border-sidebar-border p-4 md:block md:border-b-0 md:p-6">
         <Link to="/" className="inline-block">
           <h1 className="font-bigstage text-2xl font-bold text-primary">
-            FunkHub
+            {t("app.name", "FunkHub")}
           </h1>
         </Link>
       </div>

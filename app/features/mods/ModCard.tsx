@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { Download, Heart, UserCircle2 } from "lucide-react";
+import { useI18n } from "../../providers";
 
 interface ModCardProps {
   id?: number;
@@ -46,6 +47,8 @@ function formatLikes(value: number | undefined): string {
 }
 
 export function ModCard({ title, author, thumbnail, likes, downloads, onView, onAuthorClick, categoryLabel, statusLabel }: ModCardProps) {
+  const { t } = useI18n();
+
   return (
     <motion.div
       className="bg-card rounded-xl overflow-hidden border border-border group cursor-pointer"
@@ -79,7 +82,7 @@ export function ModCard({ title, author, thumbnail, likes, downloads, onView, on
           className="text-xs text-muted-foreground mb-3 inline-flex items-center gap-1 hover:text-foreground transition-colors"
         >
           <UserCircle2 className="w-3.5 h-3.5" />
-          by {author}
+          {t("mod.by", "by")} {author}
         </button>
 
         {categoryLabel && (

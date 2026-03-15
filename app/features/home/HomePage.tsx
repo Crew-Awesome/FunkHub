@@ -99,7 +99,7 @@ export function Home() {
                   <p className="text-sm text-muted-foreground mb-3">{t("home.by", "by")} {mod.author ?? t("home.unknown", "Unknown")}</p>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">{mod.engine}</span>
-                    <span className="text-muted-foreground">v{mod.version}</span>
+                    <span className="text-muted-foreground">{t("home.versionPrefix", "v")}{mod.version}</span>
                   </div>
                 </div>
               </div>

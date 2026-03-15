@@ -648,7 +648,7 @@ export function Engines() {
           <DialogHeader>
             <DialogTitle>{t("engines.confirmUninstall", "Confirm engine uninstall")}</DialogTitle>
             <DialogDescription>
-              Remove <span className="text-foreground font-medium">{confirmUninstall?.name}</span>{" "}
+              {t("engines.remove", "Remove")} <span className="text-foreground font-medium">{confirmUninstall?.name}</span>{" "}
               {confirmUninstall ? formatVersionLabel(confirmUninstall.version) : ""}?
             </DialogDescription>
           </DialogHeader>

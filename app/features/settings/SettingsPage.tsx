@@ -264,13 +264,13 @@ export function Settings() {
                   : t("settings.integration.notPaired", "Not paired")}
               </p>
               {settings.gameBananaIntegration.pairedAt && (
-                <p className="mt-1 text-xs text-muted-foreground">Last pair: {new Date(settings.gameBananaIntegration.pairedAt).toLocaleString()}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("settings.lastPair", "Last pair")}: {new Date(settings.gameBananaIntegration.pairedAt).toLocaleString()}</p>
               )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Remote queue polling rate (seconds)
+                {t("settings.remoteQueuePolling", "Remote queue polling rate (seconds)")}
               </label>
               <input
                 type="number"
@@ -293,7 +293,7 @@ export function Settings() {
                 onClick={() => updateGameBananaSettings({ memberId: undefined, secretKey: undefined, pairedAt: undefined, lastPairUrl: undefined })}
                 className="rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
               >
-                Clear Stored Pairing
+                {t("settings.clearStoredPairing", "Clear Stored Pairing")}
               </button>
             </div>
           </div>
@@ -316,7 +316,7 @@ export function Settings() {
           <div className="space-y-4">
             <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Download Location
+                  {t("settings.downloadLocation", "Download Location")}
                 </label>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
@@ -327,7 +327,7 @@ export function Settings() {
                     className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                   <button
-                    onClick={() => browseForSetting("downloadsDirectory", "Choose a download temp folder", downloadsDirectory)}
+                    onClick={() => browseForSetting("downloadsDirectory", t("settings.chooseDownloadTempFolder", "Choose a download temp folder"), downloadsDirectory)}
                     className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
                   >
                     <Folder className="w-4 h-4" />
@@ -456,15 +456,14 @@ export function Settings() {
             <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
               <p className="text-sm font-medium text-amber-700 dark:text-amber-200">{t("settings.itchBaseInstall", "itch.io base game install")}</p>
               <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-100/90">
-                FunkHub may require an itch.io login/API session to resolve fresh download links for base game installers.
-                If not connected, manual browser fallback will be used.
+                {t("settings.itchBaseInstallDesc", "FunkHub may require an itch.io login/API session to resolve fresh download links for base game installers. If not connected, manual browser fallback will be used.")}
               </p>
             </div>
 
             <div className="rounded-lg border border-border p-4">
               <p className="font-medium text-foreground">{t("settings.itchConnection", "itch.io Connection")}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Connect your itch.io account for automatic base game download resolution.
+                {t("settings.connectItchDesc", "Connect your itch.io account for automatic base game download resolution.")}
               </p>
               <div className="mt-3 flex gap-2">
                 {itchAuth.connected ? (
@@ -480,7 +479,7 @@ export function Settings() {
                     }}
                     className="px-4 py-2 bg-destructive/15 hover:bg-destructive/25 text-destructive rounded-lg text-sm"
                   >
-                    Disconnect
+                    {t("settings.disconnect", "Disconnect")}
                   </button>
                 ) : (
                   <button
@@ -495,7 +494,7 @@ export function Settings() {
                     }}
                     className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground rounded-lg text-sm"
                   >
-                    Connect itch.io
+                    {t("settings.connectItch", "Connect itch.io")}
                   </button>
                 )}
               </div>
@@ -527,7 +526,7 @@ export function Settings() {
               <div>
                 <p className="font-medium text-foreground">{t("settings.compatibilityChecks", "Enable compatibility checks")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Verify mod compatibility before installation
+                  {t("settings.compatibilityChecksDesc", "Verify mod compatibility before installation")}
                 </p>
               </div>
               <input
@@ -548,7 +547,7 @@ export function Settings() {
               <div>
                 <p className="font-medium text-foreground">{t("settings.autoUpdateMods", "Auto-update mods")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Automatically download updates for installed mods
+                  {t("settings.autoUpdateModsDesc", "Automatically download updates for installed mods")}
                 </p>
               </div>
               <input

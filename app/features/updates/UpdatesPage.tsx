@@ -39,7 +39,10 @@ export function Updates() {
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
               {t("updates.newVersion", "New version available")}: <span className="text-foreground font-medium">v{appUpdate.latestVersion}</span>
-              {" "}(current: v{appUpdate.currentVersion})
+              {" "}{t("updates.currentVersionInline", "({label}: v{{version}})", {
+                label: t("updates.current", "Current").toLowerCase(),
+                version: appUpdate.currentVersion,
+              })}
             </p>
             <div className="flex flex-wrap gap-2">
               <button
