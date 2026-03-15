@@ -2,6 +2,12 @@ name: Weblate Sync
 
 on:
   workflow_dispatch:
+    inputs:
+      force_run:
+        description: "Run even when push commit message would normally be skipped"
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths:
@@ -21,7 +27,7 @@ concurrency:
 jobs:
   configure-and-sync:
     name: Configure existing Weblate project
-    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, 'Update translations via Weblate') }}
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, 'Update translations via Weblate') || github.event.inputs.force_run == 'true' }}
     runs-on: ubuntu-latest
     environment: translations
     env:
