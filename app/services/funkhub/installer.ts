@@ -120,7 +120,7 @@ export class ModInstallerService {
   createDesktopInstallRequest(input: {
     jobId: string;
     plan: InstallPlan;
-    file: Pick<GameBananaFile, "fileName" | "downloadUrl">;
+    file: Pick<GameBananaFile, "id" | "fileName" | "downloadUrl">;
     modName: string;
   }): DesktopInstallRequest {
     return {
@@ -129,7 +129,7 @@ export class ModInstallerService {
       mode: "mod",
       installPath: input.plan.targetPath,
       installSubdir: sanitizeFileStem(input.modName),
-      downloadUrl: input.file.downloadUrl,
+      downloadUrl: input.file.downloadUrl || `https://gamebanana.com/dl/${input.file.id}`,
     };
   }
 
