@@ -169,25 +169,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Linux AppImage artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: FunkHub-linux-appimage
           path: release-artifacts/FunkHub-linux-appimage
 
       - name: Download Linux DEB artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: FunkHub-linux-deb
           path: release-artifacts/FunkHub-linux-deb
 
       - name: Download Windows artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: FunkHub-windows
           path: release-artifacts/FunkHub-windows
 
       - name: Download macOS artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: FunkHub-macos
           path: release-artifacts/FunkHub-macos
