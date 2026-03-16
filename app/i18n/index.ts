@@ -1,9 +1,10 @@
 import en from "./locales/en.json";
 import es419 from "./locales/es-419.json";
+import id from "./locales/id.json";
 import ru from "./locales/ru.json";
 import ptBR from "./locales/pt-BR.json";
 
-export type SupportedLocale = "en" | "es-419" | "ru" | "pt-BR";
+export type SupportedLocale = "en" | "es-419" | "id" | "ru" | "pt-BR";
 
 type Dictionary = Record<string, string | null | undefined>;
 
@@ -15,6 +16,7 @@ export interface LocaleOption {
 const dictionaries: Record<SupportedLocale, Dictionary> = {
   en,
   "es-419": es419,
+  id,
   ru,
   "pt-BR": ptBR,
 };
@@ -22,6 +24,7 @@ const dictionaries: Record<SupportedLocale, Dictionary> = {
 export const supportedLocales: LocaleOption[] = [
   { code: "en", label: "English" },
   { code: "es-419", label: "Espanol (Latinoamerica)" },
+  { code: "id", label: "Bahasa Indonesia" },
   { code: "ru", label: "Russkiy" },
   { code: "pt-BR", label: "Portugues (Brasil)" },
 ];
@@ -39,6 +42,10 @@ export function normalizeLocale(rawLocale: string | undefined): SupportedLocale 
 
   if (normalized === "es-419" || normalized === "es") {
     return "es-419";
+  }
+
+  if (normalized === "id" || normalized.startsWith("id-")) {
+    return "id";
   }
 
   if (normalized === "ru" || normalized.startsWith("ru-")) {
