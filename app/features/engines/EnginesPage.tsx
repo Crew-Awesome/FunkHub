@@ -210,7 +210,7 @@ export function Engines() {
       return { label: t("engines.ready", "Ready"), tone: "text-foreground/85 bg-primary/10 border-primary/20", icon: ShieldCheck };
     }
     if (health.health === "missing_binary") {
-      return { label: t("engines.executableNotDetected", "Executable Not Detected"), tone: "text-amber-500 dark:text-amber-300 bg-amber-500/10 border-amber-500/20", icon: ShieldAlert };
+      return { label: t("engines.executableNotDetected", "Executable Not Detected"), tone: "text-warning bg-warning/10 border-warning/20", icon: ShieldAlert };
     }
     return { label: t("engines.installBroken", "Engine Install Broken"), tone: "text-destructive bg-destructive/10 border-destructive/20", icon: ShieldX };
   };
@@ -378,7 +378,7 @@ export function Engines() {
         )}
 
         {platformWarning && (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-200 space-y-2">
+          <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning space-y-2">
             <p className="font-medium">{t("engines.crossPlatformWarning", "Cross-platform executable warning")}</p>
             <p>{platformWarning.message}</p>
             <p className="text-xs opacity-90">
@@ -523,7 +523,7 @@ export function Engines() {
               {getEngineHealth(engine.id).health === "missing_binary" && (
                 <button
                   onClick={() => handleManage(engine.id)}
-                  className="mt-2 text-xs inline-flex items-center gap-1.5 px-2 py-1 rounded border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300"
+                  className="mt-2 text-xs inline-flex items-center gap-1.5 px-2 py-1 rounded border border-warning/30 bg-warning/10 text-warning"
                 >
                   <FolderSearch className="w-3.5 h-3.5" />
                   {t("engines.locateExecutable", "Locate executable")}
@@ -542,7 +542,7 @@ export function Engines() {
       )}
 
       {notice && (
-        <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 p-3 text-sm">
+        <div className="mt-4 rounded-lg border border-success/30 bg-success/10 text-success p-3 text-sm">
           {notice}
         </div>
       )}

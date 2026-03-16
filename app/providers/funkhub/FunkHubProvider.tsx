@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { funkHubService } from "../../services/funkhub";
 import {
   AppUpdateInfo,
@@ -234,7 +235,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         });
         setSettings(nextSettings);
         processedDeepLinksRef.current.set(normalizedUrl, Date.now());
-        window.alert(t("provider.pairingReceived", "GameBanana pairing link received. Remote installs are now linked to this profile."));
+        toast.success(t("provider.pairingReceived", "GameBanana pairing link received. Remote installs are now linked to this profile."));
         return;
       }
 
@@ -340,7 +341,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       });
       processedDeepLinksRef.current.set(normalizedUrl, Date.now());
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : t("provider.failedProcessDeepLink", "Failed to process deep link"));
+      toast.error(error instanceof Error ? error.message : t("provider.failedProcessDeepLink", "Failed to process deep link"));
     } finally {
       processingDeepLinksRef.current.delete(normalizedUrl);
     }
@@ -524,8 +525,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       installMod: (modId, fileId, selectedEngineId, priority = 0, options) => {
         try {
           funkHubService.queueInstall(modId, fileId, selectedEngineId, priority, options);
+          toast.success(t("provider.installQueued", "Install queued — check Downloads for progress."));
         } catch (error) {
-          window.alert(error instanceof Error ? error.message : t("provider.unableQueueInstall", "Unable to queue install"));
+          toast.error(error instanceof Error ? error.message : t("provider.unableQueueInstall", "Unable to queue install"));
         }
       },
       installEngine: async (slug, downloadUrl, version, options) => {

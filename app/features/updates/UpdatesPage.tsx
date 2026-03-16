@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { RefreshCw, Download } from "lucide-react";
+import { toast } from "sonner";
 import { useFunkHub, useI18n } from "../../providers";
 
 export function Updates() {
@@ -55,7 +56,7 @@ export function Updates() {
               {autoUpdaterSupported ? (
                 appUpdateReadyToInstall ? (
                   <button
-                    onClick={() => installAppUpdate().catch((error) => window.alert(error instanceof Error ? error.message : t("updates.installUpdateError", "Unable to install update")))}
+                    onClick={() => installAppUpdate().catch((error) => toast.error(error instanceof Error ? error.message : t("updates.installUpdateError", "Unable to install update")))}
                     className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium"
                   >
                     {t("updates.installAndRestart", "Install and Restart")}
@@ -63,7 +64,7 @@ export function Updates() {
                 ) : (
                   <button
                     disabled={isDownloadingAppUpdate}
-                    onClick={() => downloadAppUpdate().catch((error) => window.alert(error instanceof Error ? error.message : t("updates.downloadUpdateError", "Unable to download update")))}
+                    onClick={() => downloadAppUpdate().catch((error) => toast.error(error instanceof Error ? error.message : t("updates.downloadUpdateError", "Unable to download update")))}
                     className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed text-primary-foreground rounded-lg text-sm font-medium"
                   >
                     {isDownloadingAppUpdate
@@ -73,7 +74,7 @@ export function Updates() {
                 )
               ) : (
                 <button
-                  onClick={() => openAppUpdateDownload().catch((error) => window.alert(error instanceof Error ? error.message : t("updates.openUpdateError", "Unable to open update")))}
+                  onClick={() => openAppUpdateDownload().catch((error) => toast.error(error instanceof Error ? error.message : t("updates.openUpdateError", "Unable to open update")))}
                   className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium"
                 >
                   {t("updates.downloadUpdate", "Download Update")}

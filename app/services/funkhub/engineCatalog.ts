@@ -266,7 +266,12 @@ async function fetchGithubReleases(source: GithubEngineSource): Promise<EngineDe
 export class EngineCatalogService {
   async getEngineCatalog(): Promise<EngineDefinition[]> {
     const githubEngines = await Promise.all(githubEngineSources.map((source) => fetchGithubReleases(source)));
-    return [...githubEngines, ...staticOnlyEngines];
+    const all = [...githubEngines, ...staticOnlyEngines];
+    return all.sort((a, b) => {
+      if (a.slug === "ale-psych") return -1;
+      if (b.slug === "ale-psych") return 1;
+      return a.name.localeCompare(b.name);
+    });
   }
 }
 

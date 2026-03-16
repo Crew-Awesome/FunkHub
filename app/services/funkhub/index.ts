@@ -5,4 +5,5 @@ export { modInstallerService } from "./installer";
 export { funkHubStorageService } from "./storage";
 export { funkHubService } from "./funkhubService";
 export { detectClientPlatform, pickBestReleaseForPlatform } from "./platform";
+export { detectRequiredEngineFromMetadata } from "./engineDetection";
 export * from "./types";

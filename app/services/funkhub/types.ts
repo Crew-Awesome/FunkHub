@@ -207,6 +207,7 @@ export interface DesktopBridge {
     launcher?: "native" | "wine" | "wine64" | "proton";
     launcherPath?: string;
     executablePath?: string;
+    args?: string[];
   }) => Promise<{ ok: boolean; launchedPath?: string }>;
   openPath: (payload: { targetPath: string }) => Promise<{ ok: boolean; openedPath?: string; error?: string }>;
   deletePath: (payload: { targetPath: string }) => Promise<{ ok: boolean; deletedPath?: string; error?: string }>;

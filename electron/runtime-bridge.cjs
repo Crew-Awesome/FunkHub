@@ -1092,6 +1092,7 @@ async function handleLaunchEngine(payload) {
   const launcher = payload?.launcher || "native";
   const launcherPath = payload?.launcherPath;
   const executablePath = payload?.executablePath;
+  const extraArgs = Array.isArray(payload?.args) ? payload.args : [];
   if (!installPath) {
     throw new Error("installPath is required");
   }
@@ -1172,6 +1173,10 @@ async function handleLaunchEngine(payload) {
     }
     command = launcherPath || launcher;
     args = [launchable];
+  }
+
+  if (extraArgs.length > 0) {
+    args = [...args, ...extraArgs];
   }
 
   const startupGraceMs = 1200;

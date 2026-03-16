@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Folder, Download, Palette, Sliders, Info, Twitter, MessageCircle, FolderOpen, Link2, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { useFunkHub, useI18n, useTheme } from "../../providers";
 import type { SupportedLocale } from "../../i18n";
 
@@ -94,7 +95,7 @@ export function Settings() {
     try {
       await openFolderPath(targetPath);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : t("settings.failedOpenFolder", "Failed to open folder"));
+      toast.error(error instanceof Error ? error.message : t("settings.failedOpenFolder", "Failed to open folder"));
     }
   };
 
@@ -467,16 +468,16 @@ export function Settings() {
           className={`${activeSection === "integrations" ? "" : "hidden"} bg-card border border-border rounded-xl p-6`}
         >
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-              <Download className="w-5 h-5 text-amber-500" />
+            <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
+              <Download className="w-5 h-5 text-warning" />
             </div>
             <h2 className="text-xl font-semibold text-foreground">{t("settings.baseGameInstall", "Base Game Install")}</h2>
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-200">{t("settings.itchBaseInstall", "itch.io base game install")}</p>
-              <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-100/90">
+            <div className="rounded-lg border border-warning/20 bg-warning/10 p-4">
+              <p className="text-sm font-medium text-warning">{t("settings.itchBaseInstall", "itch.io base game install")}</p>
+              <p className="mt-1 text-xs text-warning/80">
                 {t("settings.itchBaseInstallDesc", "FunkHub may require an itch.io login/API session to resolve fresh download links for base game installers. If not connected, manual browser fallback will be used.")}
               </p>
             </div>

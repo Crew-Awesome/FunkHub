@@ -43,6 +43,10 @@
   --sidebar-border: rgba(45, 37, 32, 0.12);
   --sidebar-ring: #E8743B;
   --hover-glow: rgba(232, 116, 59, 0.24);
+  --warning: #c2750a;
+  --warning-foreground: #fef3c7;
+  --success: #2a7a4b;
+  --success-foreground: #d1fae5;
 }
 
 .dark {
@@ -82,6 +86,10 @@
   --sidebar-border: rgba(245, 237, 230, 0.08);
   --sidebar-ring: #E8743B;
   --hover-glow: rgba(244, 162, 97, 0.32);
+  --warning: #f59e0b;
+  --warning-foreground: #fef3c7;
+  --success: #34d399;
+  --success-foreground: #052e16;
 }
 
 @theme inline {
@@ -123,6 +131,10 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
 }
 
 @layer base {

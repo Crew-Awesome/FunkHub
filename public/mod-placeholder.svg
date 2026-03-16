@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" fill="none">
+  <rect width="400" height="250" fill="#231C18"/>
+  <rect width="400" height="250" fill="url(#grain)" opacity="0.4"/>
+  <circle cx="200" cy="115" r="36" fill="#2D251F" stroke="#3A2F28" stroke-width="2"/>
+  <path d="M192 103 L192 127 L216 115 Z" fill="#6B5D54"/>
+  <text x="200" y="168" font-family="system-ui,sans-serif" font-size="13" fill="#6B5D54" text-anchor="middle">No preview</text>
+  <defs>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </defs>
+</svg>

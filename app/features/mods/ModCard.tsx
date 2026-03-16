@@ -51,16 +51,25 @@ export function ModCard({ title, author, thumbnail, likes, downloads, onView, on
 
   return (
     <motion.div
-      className="bg-card rounded-xl overflow-hidden border border-border group cursor-pointer"
+      role="button"
+      tabIndex={0}
+      className="bg-card rounded-xl overflow-hidden border border-border group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       whileHover={{ y: -4, boxShadow: "0 8px 24px var(--hover-glow)" }}
       transition={{ duration: 0.2 }}
       onClick={onView}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onView?.();
+        }
+      }}
+      aria-label={`${title} ${t("mod.by", "by")} ${author}`}
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-secondary">
         <img
           loading="lazy"
           src={thumbnail}
-          alt={title}
+          alt=""
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -70,7 +79,14 @@ export function ModCard({ title, author, thumbnail, likes, downloads, onView, on
         <div className="flex items-center gap-2 mb-1">
           <h3 className="font-semibold text-foreground line-clamp-1">{title}</h3>
           {statusLabel && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary whitespace-nowrap">{statusLabel}</span>
+            <motion.span
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 20 }}
+              className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary whitespace-nowrap"
+            >
+              {statusLabel}
+            </motion.span>
           )}
         </div>
         <button
@@ -92,10 +108,14 @@ export function ModCard({ title, author, thumbnail, likes, downloads, onView, on
         )}
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
+          <motion.div
+            className="flex items-center gap-1"
+            whileHover={{ scale: 1.15 }}
+            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+          >
             <Heart className="w-3.5 h-3.5 fill-primary/25 text-primary" />
             <span>{formatLikes(likes)}</span>
-          </div>
+          </motion.div>
           <div className="flex items-center gap-1">
             <Download className="w-3.5 h-3.5" />
             <span>{formatDownloads(downloads)}</span>

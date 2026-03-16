@@ -851,7 +851,15 @@ export class FunkHubService {
       return;
     }
 
-    await window.funkhubDesktop.launchEngine({ installPath: engine.installPath });
+    const modFolderName = installed.installPath.split(/[\\/]/).pop() ?? "";
+    let launchArgs: string[] | undefined;
+    if (engine.slug === "codename" && modFolderName) {
+      launchArgs = ["-mod", modFolderName];
+    } else if (engine.slug === "ale-psych" && modFolderName) {
+      launchArgs = [modFolderName];
+    }
+
+    await window.funkhubDesktop.launchEngine({ installPath: engine.installPath, args: launchArgs });
   }
 
   async updateInstalledModLaunchOptions(

@@ -1,5 +1,5 @@
-import { motion } from "motion/react";
-import { RotateCcw, X, FolderOpen, Download } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { RotateCcw, X, Download, CheckCircle2, AlertCircle, Clock, Zap } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
 
 function formatBytes(bytes: number | undefined): string {
@@ -19,141 +19,205 @@ function formatBytes(bytes: number | undefined): string {
   return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  queued: "Queued",
+  downloading: "Downloading",
+  installing: "Installing",
+  completed: "Completed",
+  failed: "Failed",
+};
+
 export function Downloads() {
   const { t } = useI18n();
   const { downloads, cancelDownload, retryDownload, clearDownloads } = useFunkHub();
   const activeDownloads = downloads.filter((task) => task.status === "queued" || task.status === "downloading" || task.status === "installing");
-  const completedDownloads = downloads.filter((task) => task.status === "completed").slice(0, 5);
-  const failedDownloads = downloads.filter((task) => task.status === "failed").slice(0, 8);
+  const completedDownloads = downloads.filter((task) => task.status === "completed");
+  const failedDownloads = downloads.filter((task) => task.status === "failed");
+  const hasAny = downloads.length > 0;
 
   return (
-    <div className="p-8">
+    <div className="p-6 md:p-8 max-w-3xl mx-auto">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold text-foreground">{t("downloads.title", "Downloads")}</h1>
-        <button
-          onClick={clearDownloads}
-          className="px-3 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-sm text-foreground"
-        >
-          {t("downloads.clear", "Clear Downloads")}
-        </button>
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">{t("downloads.title", "Downloads")}</h1>
+          {hasAny && (
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {activeDownloads.length > 0 && `${activeDownloads.length} active`}
+              {activeDownloads.length > 0 && (completedDownloads.length > 0 || failedDownloads.length > 0) && " · "}
+              {completedDownloads.length > 0 && `${completedDownloads.length} completed`}
+              {failedDownloads.length > 0 && (completedDownloads.length > 0 || activeDownloads.length > 0) && " · "}
+              {failedDownloads.length > 0 && `${failedDownloads.length} failed`}
+            </p>
+          )}
+        </div>
+        {hasAny && (
+          <button
+            onClick={clearDownloads}
+            className="px-3 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-sm text-foreground transition-colors"
+          >
+            {t("downloads.clear", "Clear All")}
+          </button>
+        )}
       </div>
 
-      {activeDownloads.length > 0 ? (
-        <div className="space-y-4">
-          {activeDownloads.map((download, index) => (
-            <motion.div
-              key={download.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="bg-card border border-border rounded-xl p-6"
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-chart-4 flex items-center justify-center flex-shrink-0">
-                  <Download className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground mb-1">{download.fileName}</h3>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{download.speedBytesPerSecond ? `${formatBytes(download.speedBytesPerSecond)}/s` : t("downloads.waiting", "Waiting...")}</span>
-                    <span>•</span>
-                    <span>{formatBytes(download.totalBytes)}</span>
-                    {download.phase && (
-                      <>
-                        <span>•</span>
-                        <span className="capitalize">{download.phase}</span>
-                      </>
-                    )}
-                  </div>
-                  {download.message && <p className="text-xs text-muted-foreground mt-1">{download.message}</p>}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => cancelDownload(download.id)}
-                    className="p-2 hover:bg-secondary rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5 text-destructive" />
-                  </button>
-                  <button className="p-2 hover:bg-secondary rounded-lg transition-colors">
-                    <FolderOpen className="w-5 h-5 text-foreground" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t("downloads.progress", "Progress")}</span>
-                  <span className="font-medium text-primary">{Math.round(download.progress * 100)}%</span>
-                </div>
-                <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-primary to-chart-3 origin-left"
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: Math.max(0, Math.min(1, download.progress)) }}
-                    transition={{ duration: 0.5 }}
-                  />
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-            <Download className="w-10 h-10 text-muted-foreground" />
-          </div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">{t("downloads.noneActive", "No active downloads")}</h3>
-          <p className="text-muted-foreground text-center max-w-md">
-            {t("downloads.noneActiveDesc", "Your downloads will appear here. Browse mods and click install to start downloading.")}
-          </p>
-        </div>
-      )}
-
-      {/* Download History */}
-      {completedDownloads.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">{t("downloads.recent", "Recent Downloads")}</h2>
-          <div className="bg-card border border-border rounded-xl p-4">
-            {completedDownloads.map((download) => (
-              <div key={download.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Download className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-foreground">{download.fileName}</h4>
-                    <p className="text-xs text-muted-foreground">{t("downloads.completed", "Completed")}</p>
-                  </div>
-                </div>
-                <span className="text-sm text-muted-foreground">{formatBytes(download.totalBytes)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {failedDownloads.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">{t("downloads.failed", "Failed Downloads")}</h2>
+      {/* Active Downloads */}
+      {activeDownloads.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("downloads.active", "Active")}</h2>
           <div className="space-y-3">
-            {failedDownloads.map((download) => (
-              <div key={download.id} className="bg-card border border-red-500/20 rounded-xl p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h4 className="font-medium text-foreground">{download.fileName}</h4>
-                    <p className="text-xs text-red-300 mt-1">{download.error || download.message || t("downloads.failedGeneric", "Download failed")}</p>
+            <AnimatePresence>
+              {activeDownloads.map((download) => {
+                const percent = Math.round(download.progress * 100);
+                const isInstalling = download.status === "installing";
+
+                return (
+                  <motion.div
+                    key={download.id}
+                    layout
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.97 }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-card border border-border rounded-xl p-4"
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isInstalling ? "bg-success/15" : "bg-primary/15"}`}>
+                        {isInstalling
+                          ? <Zap className="w-4 h-4 text-success" />
+                          : <Download className={`w-4 h-4 text-primary ${download.status === "downloading" ? "animate-bounce" : ""}`} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{download.fileName}</p>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground flex-wrap">
+                          <span className={`font-medium ${isInstalling ? "text-success" : "text-primary"}`}>
+                            {isInstalling ? t("downloads.installing", "Installing...") : (download.phase ?? STATUS_LABEL[download.status] ?? download.status)}
+                          </span>
+                          {download.speedBytesPerSecond ? (
+                            <span>{formatBytes(download.speedBytesPerSecond)}/s</span>
+                          ) : (
+                            <span>{t("downloads.waiting", "Waiting...")}</span>
+                          )}
+                          {download.totalBytes ? <span>{formatBytes(download.totalBytes)}</span> : null}
+                        </div>
+                        {download.message && (
+                          <p className="text-xs text-muted-foreground mt-1 truncate">{download.message}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => cancelDownload(download.id)}
+                        className="p-1.5 hover:bg-secondary rounded-lg transition-colors shrink-0"
+                        aria-label={t("downloads.cancel", "Cancel download")}
+                      >
+                        <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                      </button>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">{t("downloads.progress", "Progress")}</span>
+                        <span className="font-medium text-foreground tabular-nums">{percent}%</span>
+                      </div>
+                      <div className="h-1.5 bg-secondary rounded-full overflow-hidden relative">
+                        <motion.div
+                          className={`h-full origin-left rounded-full ${isInstalling ? "bg-success" : "bg-gradient-to-r from-primary to-chart-3"}`}
+                          initial={{ scaleX: 0 }}
+                          animate={{ scaleX: Math.max(0, Math.min(1, download.progress)) }}
+                          transition={{ duration: 0.4, ease: "easeOut" }}
+                        />
+                        {!isInstalling && download.status === "downloading" && (
+                          <div className="absolute inset-0 overflow-hidden rounded-full pointer-events-none">
+                            <div className="animate-shimmer absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        </section>
+      )}
+
+      {/* Completed */}
+      {completedDownloads.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("downloads.recent", "Completed")}</h2>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <AnimatePresence>
+              {completedDownloads.map((download, index) => (
+                <motion.div
+                  key={download.id}
+                  layout
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className={`flex items-center gap-3 px-4 py-3 ${index < completedDownloads.length - 1 ? "border-b border-border" : ""}`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-success/15 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{download.fileName}</p>
+                    <p className="text-xs text-muted-foreground">{t("downloads.completed", "Completed")} · {formatBytes(download.totalBytes)}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </section>
+      )}
+
+      {/* Failed */}
+      {failedDownloads.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("downloads.failed", "Failed")}</h2>
+          <div className="space-y-2">
+            <AnimatePresence>
+              {failedDownloads.map((download) => (
+                <motion.div
+                  key={download.id}
+                  layout
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="bg-card border border-destructive/20 rounded-xl px-4 py-3 flex items-center gap-3"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                    <AlertCircle className="w-4 h-4 text-destructive" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{download.fileName}</p>
+                    <p className="text-xs text-destructive/80 mt-0.5 truncate">{download.error || download.message || t("downloads.failedGeneric", "Download failed")}</p>
                   </div>
                   <button
                     onClick={() => retryDownload(download.id)}
-                    className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm inline-flex items-center gap-2"
+                    className="h-8 px-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs inline-flex items-center gap-1.5 shrink-0 transition-colors"
                   >
-                    <RotateCcw className="w-4 h-4" />
+                    <RotateCcw className="w-3.5 h-3.5" />
                     {t("downloads.retry", "Retry")}
                   </button>
-                </div>
-              </div>
-            ))}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </section>
+      )}
+
+      {/* Empty state */}
+      {!hasAny && (
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center">
+              <Clock className="w-9 h-9 text-muted-foreground" />
+            </div>
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-foreground mb-1">{t("downloads.noneActive", "Nothing downloading")}</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              {t("downloads.noneActiveDesc", "Install mods from Discover and your downloads will appear here.")}
+            </p>
           </div>
         </div>
       )}

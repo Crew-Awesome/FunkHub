@@ -178,6 +178,7 @@ export function Discover() {
           value={categorySearch}
           onChange={(event) => setCategorySearch(event.target.value)}
           placeholder={t("discover.searchCategories", "Search categories")}
+          aria-label={t("discover.searchCategories", "Search categories")}
           className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
       </div>
@@ -258,22 +259,28 @@ export function Discover() {
 
         {/* Sort Options */}
         <div className="flex gap-2 overflow-x-auto pb-2">
-          {modSortOptions.map((option) => (
-            <button
-              key={option.alias}
-              onClick={() => setDiscoverSort(option.alias)}
-              className={`
-                px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all
-                ${
-                  discoverSort === option.alias
-                    ? "bg-primary/10 text-primary border border-primary/20"
-                    : "bg-card hover:bg-secondary text-muted-foreground border border-border"
-                }
-              `}
-            >
-              {option.title}
-            </button>
-          ))}
+          {modSortOptions.map((option) => {
+            const isSelected = discoverSort === option.alias;
+            return (
+              <motion.button
+                key={option.alias}
+                onClick={() => setDiscoverSort(option.alias)}
+                whileTap={{ scale: 0.92 }}
+                animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                className={`
+                  px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors
+                  ${
+                    isSelected
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "bg-card hover:bg-secondary text-muted-foreground border border-border"
+                  }
+                `}
+              >
+                {option.title}
+              </motion.button>
+            );
+          })}
         </div>
       </div>
 
@@ -294,13 +301,13 @@ export function Discover() {
                 key={mod.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
+                transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.3) }}
               >
                 <ModCard
                   id={mod.id}
                   title={mod.name}
                   author={mod.submitter?.name ?? t("discover.communityUploader", "Community uploader")}
-                  thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400"}
+                  thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "/mod-placeholder.svg"}
                   likes={mod.likeCount}
                   downloads={mod.downloadCount}
                   onView={() => setSelectedModId(mod.id)}

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "motion/react";
 import { Download, Clock3, User, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
-import { modInstallerService } from "../../services/funkhub";
+import { modInstallerService, detectRequiredEngineFromMetadata } from "../../services/funkhub";
 import type { GameBananaMember, GameBananaModProfile } from "../../services/funkhub";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
@@ -25,16 +26,16 @@ function formatDownloads(value?: number): string {
   return String(value);
 }
 
-function formatDate(ts?: number): string {
+function formatDate(ts?: number, unknown = "Unknown"): string {
   if (!ts) {
-    return "Unknown";
+    return unknown;
   }
   return new Date(ts * 1000).toLocaleDateString();
 }
 
-function formatBytes(bytes?: number): string {
+function formatBytes(bytes?: number, unknown = "Unknown"): string {
   if (!bytes || bytes <= 0) {
-    return "Unknown";
+    return unknown;
   }
   const units = ["B", "KB", "MB", "GB"];
   let value = bytes;
@@ -53,11 +54,22 @@ function plainText(value?: string): string {
   return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+const FNF_LOADING_MESSAGES = [
+  "Loading the beats...",
+  "Warming up the crew...",
+  "Reading the charts...",
+  "Checking the tracklist...",
+  "Getting the stage ready...",
+  "Waking up Boyfriend...",
+  "Tuning the microphone...",
+];
+
 export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: ModVisualizerModalProps) {
   const { t } = useI18n();
   const { getModProfile, installMod, installedEngines } = useFunkHub();
   const [loading, setLoading] = useState(false);
   const [showLoadingState, setShowLoadingState] = useState(false);
+  const [loadingMsgIndex] = useState(() => Math.floor(Math.random() * FNF_LOADING_MESSAGES.length));
   const [profile, setProfile] = useState<GameBananaModProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedEngineId, setSelectedEngineId] = useState<string>("");
@@ -78,8 +90,16 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
         if (!cancelled) {
           setProfile(next);
           setActiveMediaIndex(0);
+          const detectedSlug = detectRequiredEngineFromMetadata({
+            name: next.name,
+            text: next.text ?? next.description,
+            rootCategoryName: next.rootCategory?.name ?? next.category?.name,
+          }) ?? next.requiredEngine;
+          const matchingEngine = detectedSlug
+            ? installedEngines.find((engine) => engine.slug === detectedSlug)
+            : undefined;
           const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
-          setSelectedEngineId(defaultEngine?.id ?? "");
+          setSelectedEngineId((matchingEngine ?? defaultEngine)?.id ?? "");
           const defaultExecutable = modInstallerService.isExecutableCategoryMod(next)
             || next.files.some((file) => modInstallerService.isExecutableMod(next, file));
           setInstallMode(defaultExecutable ? "executable" : "mod_folder");
@@ -116,7 +136,19 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
   const executableCategoryDefault = Boolean(profile && modInstallerService.isExecutableCategoryMod(profile));
   const supportsExecutableInstall = Boolean(executableCategoryDefault || isExecutableMod);
   const installAsExecutable = supportsExecutableInstall && installMode === "executable";
-  const hasDependencyWarning = Boolean(!isExecutableMod && profile?.requiredEngine && selectedEngine && selectedEngine.slug !== profile.requiredEngine);
+  const detectedEngineSlug = profile
+    ? (detectRequiredEngineFromMetadata({
+        name: profile.name,
+        text: profile.text ?? profile.description,
+        rootCategoryName: profile.rootCategory?.name ?? profile.category?.name,
+      }) ?? profile.requiredEngine)
+    : undefined;
+  const detectedEngineInstalled = detectedEngineSlug
+    ? installedEngines.find((engine) => engine.slug === detectedEngineSlug)
+    : undefined;
+  const hasDependencyWarning = Boolean(
+    !installAsExecutable && detectedEngineSlug && selectedEngine && selectedEngine.slug !== detectedEngineSlug,
+  );
 
   useEffect(() => {
     if (!loading) {
@@ -141,7 +173,14 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
         </DialogHeader>
 
         {loading && showLoadingState && (
-          <div className="p-8 text-sm text-muted-foreground">{t("mod.loadingDetails", "Loading mod details...")}</div>
+          <div className="p-8 flex items-center gap-3 text-sm text-muted-foreground">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+              className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full"
+            />
+            {FNF_LOADING_MESSAGES[loadingMsgIndex]}
+          </div>
         )}
 
         {error && (
@@ -281,7 +320,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                     </div>
                     <div className="rounded-lg bg-secondary/60 p-3">
                       <p className="text-xs text-muted-foreground">{t("mod.updated", "Updated")}</p>
-                      <p className="font-semibold text-foreground">{formatDate(profile.dateUpdated || profile.dateModified || profile.dateAdded)}</p>
+                      <p className="font-semibold text-foreground">{formatDate(profile.dateUpdated || profile.dateModified || profile.dateAdded, t("mod.unknown", "Unknown"))}</p>
                     </div>
                   </div>
 
@@ -327,13 +366,26 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                   </div>
 
                   {hasDependencyWarning && !installAsExecutable && (
-                    <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
-                       {t("mod.engineMismatch", "This mod targets")} <span className="font-medium">{profile?.requiredEngine}</span>, {t("mod.engineMismatchSelected", "but selected engine is")} <span className="font-medium">{selectedEngine?.slug}</span>.
-                    </p>
+                    <div className="mt-3 rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-foreground space-y-1.5">
+                      <p>
+                        {t("mod.engineMismatch", "This mod targets")} <span className="font-medium">{detectedEngineSlug}</span>
+                        {", "}{t("mod.engineMismatchSelected", "but selected engine is")} <span className="font-medium">{selectedEngine?.slug}</span>.
+                        {" "}{t("mod.engineMismatchProceed", "You can proceed anyway.")}
+                      </p>
+                      {detectedEngineInstalled && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEngineId(detectedEngineInstalled.id)}
+                          className="rounded bg-warning/20 px-2 py-1 font-medium hover:bg-warning/30"
+                        >
+                          {t("mod.switchToEngine", "Switch to")} {detectedEngineInstalled.name}
+                        </button>
+                      )}
+                    </div>
                   )}
 
                   {!installAsExecutable && installedEngines.length === 0 && (
-                    <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
+                    <p className="mt-3 rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-foreground">
                        {t("mod.noEnginesInstalled", "No engines installed. Install an engine first or switch install mode to executable package.")}
                     </p>
                   )}
@@ -351,9 +403,9 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                         <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           <span className="inline-flex items-center gap-1"><Download className="h-3.5 w-3.5" />{formatDownloads(file.downloadCount)}</span>
                           <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{formatDate(file.dateAdded)}</span>
-                          <span>{formatBytes(file.fileSize)}</span>
+                          <span>{formatBytes(file.fileSize, t("mod.unknown", "Unknown"))}</span>
                         </div>
-                        <button
+                        <motion.button
                           onClick={() => installMod(
                             profile.id,
                             file.id,
@@ -362,11 +414,14 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                             { forceInstallType: installAsExecutable ? "executable" : "standard_mod" },
                           )}
                           disabled={!installAsExecutable && installedEngines.length === 0}
+                          whileTap={{ scale: 0.94 }}
+                          whileHover={{ scale: 1.02 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 15 }}
                           className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <Download className="h-4 w-4" />
                            {t("mod.install", "Install")}
-                        </button>
+                        </motion.button>
                       </div>
                     ))}
                   </div>
