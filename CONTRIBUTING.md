@@ -36,6 +36,8 @@ Thanks for helping improve FunkHub.
 - [ ] No unrelated changes bundled
 - [ ] README/docs updated when behavior changes
 
+<!-- ai-assisted prs/commits are allowed as long as you've reviewed the code and know what you're doing!! -->
+
 ## Community
 
 - Discord: https://discord.gg/cdP7JhDv4u

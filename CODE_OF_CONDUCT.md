@@ -31,3 +31,5 @@ Report concerns privately to project maintainers through GitHub or Discord:
 ## Scope
 
 This Code of Conduct applies within project spaces and public spaces when representing the project.
+
+<!-- ai-assisted prs/commits are fine as long as you actually read the code and know what you're doing!! -->
