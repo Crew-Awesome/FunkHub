@@ -6,74 +6,64 @@ Notes:
 - Commit messages in early history are informal; explanations below translate likely intent.
 - Version sections map to release tags.
 
-## [v0.4.0] - 2026-03-16
+## [v0.4.0] - 2026-03-15
 
-### Public Release Summary (GitHub Release Body)
+### Release Notes
 
-## FunkHub v0.4.0 - Category Comeback
-This release covers everything from `v0.3.0` to the latest local `HEAD`, including local commits not yet pushed to remote. It focuses on Discover/category reliability, install/runtime correctness, updater polish, and ongoing i18n/UI/workflow cleanup.
+## FunkHub v0.4.0 - Playtime, Engines, and Polish
 
-**Range:** `v0.3.0..HEAD`  
-**First commit in range:** `459df7f`  
-**Latest commit in range:** `6704ef6`
+This release brings mod playtime tracking, overhauled engine and library pages, a redesigned downloads panel, ALE Psych / Codename Engine detection improvements, app updater integration, and a round of performance and i18n fixes.
 
-**Unpushed local commits included:** `2`  
-- `efc544c` — `fix discovery page :C messsed it up`  
-- `6704ef6` — `Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub`
+**Range:** `v0.3.0..HEAD`
+**First commit in range:** `459df7f`
+**Latest commit in range:** `48fda84`
 
 ### Highlights
-#### Discover Categories Restored
-- Brought back full category browsing in Discover (desktop sidebar + mobile sheet).
-- Restored category tree search/expand behavior and all-category reset flow.
-- Restored provider filtering pipeline so selected category/subtree drives discover results again.
-- Restored page-reset behavior on category/sort/search changes for consistent navigation.
-- Included local follow-up fix commit for Discover regression (`efc544c`).
 
-#### Install and Runtime Reliability
-- Improved zip/archive handling and executable install behavior for mod packages.
-- Added/adjusted standalone executable install paths and fallback handling in desktop runtime.
-- Improved Windows launch behavior to avoid hidden/background launch regressions.
+#### Mod Playtime Tracking
+- Added per-mod playtime tracking. Time is recorded while a mod or engine is running.
+- Library view now shows total playtime for each mod.
+- Players can clear playtime per mod from the Library detail panel.
 
-#### App Updates and Core UX
-- Added native app updater flow improvements and related settings/UI behavior.
-- Added mod playtime tracking and multiple quality passes across Engines/Library/Discover views.
-- Continued localization sync updates and empty-key translation fallback handling.
+#### Engine & Library Page Overhaul
+- Engine cards redesigned with cleaner layout, better visual hierarchy, and per-engine custom icons/names.
+- Engine health state (`ready`, `missing_binary`, `broken_install`) now shown inline on each card.
+- Running launch state tracked and shown live — stop button kills a running engine from the UI.
+- Library detail panel reorganised: screenshot carousel, launch settings, and manual mod import all improved.
+- Open Mod Folder action added — opens the installed mod's directory in the system file manager.
 
-#### Repo/Workflow Cleanup
-- Updated repo/workflow configuration and removed stale automation config (`dependabot.yml`).
-- Added/updated contribution and agent guidance docs in-repo.
+#### Downloads Panel Redesign
+- Active, completed, and failed downloads split into distinct labelled sections.
+- Progress bar now shows a shimmer animation while downloading and turns green during install phase.
+- Download speed, phase label, and byte totals surfaced inline per item.
+- `AnimatePresence` exit animations added so completed/cancelled tasks transition out smoothly.
+- Summary count line (`N active · N completed · N failed`) added below page heading.
 
-### Full Changelog (Grouped)
-- **Total commits in range:** `28`
-- **Translation sync commits:** `8` (`Update translations via Weblate`)
-- **Merge commits:** `4`
-- **Feature/fix/workflow/docs commits:** `16`
+#### ALE Psych and Codename Engine Detection
+- Improved engine binary detection for ALE Psych and Codename Engine installs.
+- Engine-specific detection logic made more robust to handle variant install layouts.
 
-### Key Commits
-- `459df7f` - changelog updates.
-- `30b949e` - i18n fallback handling for empty translations.
-- `cafac6c` - zip + executable install reliability fixes.
-- `39c3329` - library action/docs pass (`Open Mod Folder` + agent/contrib docs updates).
-- `d646ff9` - Windows engine launch foreground/background behavior follow-up.
-- `f5acd83` - updater integration/follow-up.
-- `d0af719` - engine detection and broad UI fixes.
-- `91c0558` - additional mixed follow-up fixes.
-- `e4b7a21` - repository/workflow configuration updates.
-- `9bb4c93` - removed `dependabot.yml`.
-- `acea876` - engines/library page quality pass.
-- `c6db26c` - playtime tracking support.
-- `9f1d3da` - optimization and cleanup pass.
-- `172b151` - optimization regression that removed Discover category flow.
-- `cb142d5` - accessibility/layout follow-up.
-- `efc544c` - local fix restoring Discover page/category behavior.
-- `6704ef6` - local merge commit.
+#### App Updater Integration
+- Native app update check, download, and install flow wired into Settings and the Updates page.
+- Update status streamed through a dedicated event channel (`onAppUpdateStatus`).
+- Auto-check on startup configurable via settings (`checkAppUpdatesOnStartup`).
 
-### Full Commit List (Oldest -> Newest)
+#### Performance & i18n
+- Optimization pass across provider re-render paths to reduce unnecessary work.
+- Empty translation key fallback implemented so missing locale strings never render blank.
+- Translation strings cleaned and synced via Weblate for `en`, `es-419`, `pt-BR`, `ru`.
+
+#### Repo Cleanup
+- Removed stale internal docs (`desktop-bridge.md`, `gamebanana-api-research.md`, `gamebanana-tool-page.md`).
+- Removed `dependabot.yml` and cleaned up CI/workflow configuration.
+- Added `AGENTS.md` with contributor/AI agent guidance.
+
+### Full Commit List (Oldest → Newest)
 - `459df7f` - changelog
 - `1a87254` - Update translations via Weblate
 - `ba440cf` - Update translations via Weblate
 - `30b949e` - implemented empty translations cus its fucking stupid
-- `e14d630` - Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub
+- `e14d630` - Merge branch 'main'
 - `cafac6c` - fix zip mod and executables
 - `39c3329` - Open Mod Folder + Agents for contribbutors
 - `d646ff9` - attempt to fix engine background launch :C
@@ -86,17 +76,20 @@ This release covers everything from `v0.3.0` to the latest local `HEAD`, includi
 - `acea876` - engine card, engines page, library page edits
 - `7092ebd` - Update translations via Weblate
 - `c6db26c` - add playtime, wait, POPPY PLAYTIME
-- `f94e933` - Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub
+- `f94e933` - Merge branch 'main'
 - `e960160` - Update translations via Weblate
 - `a6e9f22` - Update translations via Weblate
 - `9f1d3da` - OPTIMIZATIONS TIME :) and clean translations
-- `c2df951` - Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub
+- `c2df951` - Merge branch 'main'
 - `41f80d2` - Update translations via Weblate
 - `172b151` - fucking optimizations broke my butt
 - `cb142d5` - no skip to main content, it sucks booty cheeks
 - `68a8635` - Update translations via Weblate
 - `efc544c` - fix discovery page :C messsed it up
-- `6704ef6` - Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub
+- `6704ef6` - Merge branch 'main'
+- `2a1e70d` - CHANGELOG updates
+- `668baf3` - release notes iteration
+- `48fda84` - remove stale docs
 
 ### Compare
 - `https://github.com/Crew-Awesome/FunkHub/compare/v0.3.0...v0.4.0`
