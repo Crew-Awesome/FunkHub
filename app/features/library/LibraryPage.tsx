@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, Settings2, X } from "lucide-react";
+import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, Settings2, Square, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useFunkHub, useI18n } from "../../providers";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
@@ -23,6 +23,9 @@ export function Library() {
     openFolderPath,
     addManualMod,
     updateInstalledModLaunchOptions,
+    runningLaunchIds,
+    killLaunch,
+    clearModPlayTime,
   } = useFunkHub();
   const [selectedModId, setSelectedModId] = useState(installedMods[0]?.id);
   const [deleteFilesOnRemove, setDeleteFilesOnRemove] = useState(true);
@@ -44,11 +47,21 @@ export function Library() {
   const [carouselIndex, setCarouselIndex] = useState(0);
 
   const selectedMod = installedMods.find((mod) => mod.id === selectedModId) ?? installedMods[0];
+  const isRunning = Boolean(selectedMod && runningLaunchIds.has(selectedMod.id));
   const selectedEngineInstall = useMemo(
     () => installedEngines.find((engine) => selectedMod && selectedMod.installPath.startsWith(engine.installPath)),
     [installedEngines, selectedMod],
   );
   const isStandaloneMod = Boolean(selectedMod && (selectedMod.standalone || selectedMod.installPath.startsWith("executables")));
+
+  const formatPlayTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m`;
+    return `${totalSeconds}s`;
+  };
 
   useEffect(() => {
     if (!selectedMod) {
@@ -163,6 +176,12 @@ export function Library() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <h3 className="font-medium text-foreground text-sm truncate">{mod.modName}</h3>
+                    {runningLaunchIds.has(mod.id) && (
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-success/15 text-success shrink-0 flex items-center gap-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse inline-block" />
+                        {t("library.running", "Running")}
+                      </span>
+                    )}
                     {mod.updateAvailable && (
                       <span className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary shrink-0">{t("library.update", "Update")}</span>
                     )}
@@ -209,6 +228,12 @@ export function Library() {
                 </div>
                 {/* Action cluster */}
                 <div className="flex items-center gap-2 shrink-0">
+                  {isRunning && (
+                    <span className="flex items-center gap-1.5 text-xs text-success font-medium shrink-0">
+                      <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                      {t("library.running", "Running")}
+                    </span>
+                  )}
                   {selectedMod.updateAvailable && (
                     <button
                       onClick={() => installMod(selectedMod.modId, selectedMod.sourceFileId, undefined, 10)}
@@ -218,22 +243,32 @@ export function Library() {
                       {t("library.installUpdate", "Update")}
                     </button>
                   )}
-                  <motion.button
-                    onClick={() => launchInstalledMod(selectedMod.id).catch((error) => toast.error(error instanceof Error ? error.message : t("library.launchFailed", "Failed to launch mod")))}
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.93 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                    className="h-9 px-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-                  >
-                    <motion.span
-                      className="inline-flex"
-                      whileHover={{ rotate: [0, -15, 15, -8, 0] }}
-                      transition={{ duration: 0.4 }}
+                  {isRunning ? (
+                    <button
+                      onClick={() => killLaunch(selectedMod.id).catch((error) => toast.error(error instanceof Error ? error.message : t("library.stopFailed", "Failed to stop mod")))}
+                      className="h-9 px-4 bg-destructive/15 hover:bg-destructive/25 text-destructive rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors"
                     >
-                      <Play className="w-4 h-4" fill="currentColor" />
-                    </motion.span>
-                    {t("library.launchMod", "Launch")}
-                  </motion.button>
+                      <Square className="w-4 h-4" fill="currentColor" />
+                      {t("library.stopMod", "Stop")}
+                    </button>
+                  ) : (
+                    <motion.button
+                      onClick={() => launchInstalledMod(selectedMod.id).catch((error) => toast.error(error instanceof Error ? error.message : t("library.launchFailed", "Failed to launch mod")))}
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.93 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      className="h-9 px-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                    >
+                      <motion.span
+                        className="inline-flex"
+                        whileHover={{ rotate: [0, -15, 15, -8, 0] }}
+                        transition={{ duration: 0.4 }}
+                      >
+                        <Play className="w-4 h-4" fill="currentColor" />
+                      </motion.span>
+                      {t("library.launchMod", "Launch")}
+                    </motion.button>
+                  )}
                   <button
                     onClick={async () => {
                       try {
@@ -347,7 +382,7 @@ export function Library() {
               </div>
 
               {/* Meta strip */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                 <div className="bg-card border border-border rounded-lg p-3">
                   <p className="text-xs text-muted-foreground mb-0.5">{t("library.version", "Version")}</p>
                   <p className="text-sm font-semibold text-foreground truncate">
@@ -380,6 +415,26 @@ export function Library() {
                 <div className="bg-card border border-border rounded-lg p-3">
                   <p className="text-xs text-muted-foreground mb-0.5">{t("library.installedDate", "Installed")}</p>
                   <p className="text-sm font-semibold text-foreground">{new Date(selectedMod.installedAt).toLocaleDateString()}</p>
+                </div>
+                <div className="bg-card border border-border rounded-lg p-3 relative group">
+                  <p className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {t("library.playTime", "Play Time")}
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {selectedMod.totalPlayTimeMs && selectedMod.totalPlayTimeMs > 0
+                      ? formatPlayTime(selectedMod.totalPlayTimeMs)
+                      : "—"}
+                  </p>
+                  {selectedMod.totalPlayTimeMs != null && selectedMod.totalPlayTimeMs > 0 && (
+                    <button
+                      onClick={() => clearModPlayTime(selectedMod.id)}
+                      className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all text-[10px] px-1.5 py-0.5 rounded border border-border hover:border-destructive/40"
+                      title={t("library.clearPlayTime", "Clear play time")}
+                    >
+                      {t("library.clear", "Clear")}
+                    </button>
+                  )}
                 </div>
               </div>
 

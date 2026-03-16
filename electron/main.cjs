@@ -23,6 +23,8 @@ const {
   handleCheckAppUpdate,
   handleDownloadAppUpdate,
   handleInstallAppUpdate,
+  handleGetRunningLaunches,
+  handleKillLaunch,
 } = require("./runtime-bridge.cjs");
 
 let mainWindow = null;
@@ -285,6 +287,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:updateSettings", async (_event, payload) => {
     return handleUpdateSettings(payload);
+  });
+
+  ipcMain.handle("funkhub:getRunningLaunches", async () => {
+    return handleGetRunningLaunches();
+  });
+
+  ipcMain.handle("funkhub:killLaunch", async (_event, payload) => {
+    return handleKillLaunch(payload);
   });
 
   createWindow();

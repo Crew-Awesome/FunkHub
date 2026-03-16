@@ -861,6 +861,7 @@ export class FunkHubService {
         launcher: installed.launcher,
         launcherPath: installed.launcherPath,
         executablePath: installed.executablePath,
+        launchId: installedId,
       });
       return;
     }
@@ -873,7 +874,23 @@ export class FunkHubService {
       launchArgs = [modFolderName];
     }
 
-    await window.funkhubDesktop.launchEngine({ installPath: engine.installPath, args: launchArgs });
+    await window.funkhubDesktop.launchEngine({ installPath: engine.installPath, args: launchArgs, launchId: installedId });
+  }
+
+  addPlayTime(installedId: string, durationMs: number): void {
+    this.installedMods = this.installedMods.map((mod) =>
+      mod.id === installedId
+        ? { ...mod, totalPlayTimeMs: (mod.totalPlayTimeMs ?? 0) + durationMs }
+        : mod,
+    );
+    funkHubStorageService.saveInstalledMods(this.installedMods);
+  }
+
+  clearPlayTime(installedId: string): void {
+    this.installedMods = this.installedMods.map((mod) =>
+      mod.id === installedId ? { ...mod, totalPlayTimeMs: 0 } : mod,
+    );
+    funkHubStorageService.saveInstalledMods(this.installedMods);
   }
 
   async updateInstalledModLaunchOptions(
@@ -927,6 +944,7 @@ export class FunkHubService {
       launcher: options?.launcher,
       launcherPath: options?.launcherPath,
       executablePath: options?.executablePath,
+      launchId: engineId,
     });
   }
 

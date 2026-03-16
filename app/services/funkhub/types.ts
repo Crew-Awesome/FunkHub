@@ -115,6 +115,7 @@ export interface InstalledMod {
   executablePath?: string;
   updateAvailable?: boolean;
   latestVersion?: string;
+  totalPlayTimeMs?: number;
 }
 
 export type EngineSlug =
@@ -208,7 +209,11 @@ export interface DesktopBridge {
     launcherPath?: string;
     executablePath?: string;
     args?: string[];
+    launchId?: string;
   }) => Promise<{ ok: boolean; launchedPath?: string }>;
+  getRunningLaunches: () => Promise<{ launches: Array<{ launchId: string; installPath: string; startTime: number }> }>;
+  killLaunch: (payload: { launchId: string }) => Promise<{ ok: boolean; message?: string }>;
+  onLaunchExit: (listener: (payload: { launchId: string }) => void) => () => void;
   openPath: (payload: { targetPath: string }) => Promise<{ ok: boolean; openedPath?: string; error?: string }>;
   deletePath: (payload: { targetPath: string }) => Promise<{ ok: boolean; deletedPath?: string; error?: string }>;
   getItchAuthStatus: () => Promise<{ connected: boolean; connectedAt?: number; scopes?: string[] }>;

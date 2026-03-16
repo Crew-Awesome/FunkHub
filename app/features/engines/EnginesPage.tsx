@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Cpu, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldX, FolderSearch } from "lucide-react";
+import { Plus, Cpu, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldX, FolderSearch, Square } from "lucide-react";
 import { EngineCard } from "./EngineCard";
 import { getEngineIcon } from "./engineIcons";
 import { useFunkHub, useI18n } from "../../providers";
@@ -29,6 +29,8 @@ export function Engines() {
     browseFile,
     renameEngine,
     setEngineCustomIcon,
+    runningLaunchIds,
+    killLaunch,
   } = useFunkHub();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [installingSlug, setInstallingSlug] = useState<string | null>(null);
@@ -483,6 +485,12 @@ export function Engines() {
           >
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-2">
+                {runningLaunchIds.has(engine.id) && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-success/20 bg-success/10 text-success">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                    {t("engines.running", "Running")}
+                  </span>
+                )}
                 {(() => {
                   const meta = healthMeta(engine.id);
                   const Icon = meta.icon;
@@ -497,6 +505,16 @@ export function Engines() {
                   <span className="inline-flex items-center px-2 py-1 text-xs rounded border border-primary/20 bg-primary/10 text-primary">
                     {t("engines.updateAvailable", "Update available")}
                   </span>
+                )}
+                {runningLaunchIds.has(engine.id) && (
+                  <button
+                    type="button"
+                    onClick={() => killLaunch(engine.id).catch(() => undefined)}
+                    className="inline-flex items-center gap-1 rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-xs text-destructive hover:bg-destructive/20"
+                  >
+                    <Square className="w-3 h-3" fill="currentColor" />
+                    {t("engines.stopEngine", "Stop")}
+                  </button>
                 )}
                 {!engine.isDefault && (
                   <button

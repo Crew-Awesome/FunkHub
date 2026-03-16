@@ -92,6 +92,9 @@ interface FunkHubContextValue {
   downloadAppUpdate: () => Promise<void>;
   installAppUpdate: () => Promise<void>;
   appUpdateStatus?: DesktopAppUpdateStatus;
+  runningLaunchIds: Set<string>;
+  killLaunch: (launchId: string) => Promise<void>;
+  clearModPlayTime: (installedId: string) => void;
 }
 
 const FunkHubContext = createContext<FunkHubContextValue | undefined>(undefined);
@@ -124,6 +127,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     funkHubService.getDesktopAppUpdateStatus(),
   );
   const startupUpdateCheckedRef = useRef(false);
+  const [runningLaunchIds, setRunningLaunchIds] = useState<Set<string>>(new Set());
+  const launchStartTimesRef = useRef<Map<string, number>>(new Map());
   const t = useCallback((key: string, fallback: string, vars?: Record<string, string | number>) => {
     return translate(normalizeLocale(settings.locale), key, fallback, vars);
   }, [settings.locale]);
@@ -535,8 +540,39 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   }, [settings.autoDownloadAppUpdates, settings.checkAppUpdatesOnStartup]);
 
   useEffect(() => {
-    setDiscoverPage(1);
-  }, [selectedCategoryId, discoverSort, searchQuery]);
+    if (!window.funkhubDesktop?.getRunningLaunches || !window.funkhubDesktop?.onLaunchExit) {
+      return;
+    }
+
+    window.funkhubDesktop.getRunningLaunches()
+      .then(({ launches }) => {
+        const ids = new Set(launches.map((l) => l.launchId));
+        for (const l of launches) {
+          launchStartTimesRef.current.set(l.launchId, l.startTime);
+        }
+        setRunningLaunchIds(ids);
+      })
+      .catch(() => undefined);
+
+    const unsubscribe = window.funkhubDesktop.onLaunchExit(({ launchId }) => {
+      const startTime = launchStartTimesRef.current.get(launchId);
+      launchStartTimesRef.current.delete(launchId);
+      setRunningLaunchIds((prev) => {
+        const next = new Set(prev);
+        next.delete(launchId);
+        return next;
+      });
+      if (startTime !== undefined) {
+        const durationMs = Date.now() - startTime;
+        if (durationMs > 5_000) {
+          funkHubService.addPlayTime(launchId, durationMs);
+          setInstalledMods(funkHubService.getInstalledMods());
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   const value = useMemo<FunkHubContextValue>(
     () => ({
@@ -596,7 +632,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
       launchEngine: async (engineId, options) => {
+        launchStartTimesRef.current.set(engineId, Date.now());
         await funkHubService.launchEngine(engineId, options);
+        setRunningLaunchIds((prev) => { const next = new Set(prev); next.add(engineId); return next; });
       },
       openEngineFolder: async (engineId) => {
         await funkHubService.openEngineFolder(engineId);
@@ -610,7 +648,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
       launchInstalledMod: async (installedId) => {
+        launchStartTimesRef.current.set(installedId, Date.now());
         await funkHubService.launchInstalledMod(installedId);
+        setRunningLaunchIds((prev) => { const next = new Set(prev); next.add(installedId); return next; });
       },
       updateInstalledModLaunchOptions: async (installedId, options) => {
         await funkHubService.updateInstalledModLaunchOptions(installedId, options);
@@ -679,6 +719,15 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       downloadAppUpdate,
       installAppUpdate,
       appUpdateStatus,
+      runningLaunchIds,
+      killLaunch: async (launchId) => {
+        await window.funkhubDesktop?.killLaunch?.({ launchId });
+        setRunningLaunchIds((prev) => { const next = new Set(prev); next.delete(launchId); return next; });
+      },
+      clearModPlayTime: (installedId) => {
+        funkHubService.clearPlayTime(installedId);
+        setInstalledMods(funkHubService.getInstalledMods());
+      },
     }),
     [
       loading,
@@ -711,6 +760,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       installAppUpdate,
       getModProfile,
       listModsBySubmitter,
+      runningLaunchIds,
     ],
   );
 

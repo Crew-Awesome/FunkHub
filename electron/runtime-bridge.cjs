@@ -4,12 +4,13 @@ const http = require("node:http");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
-const { app } = require("electron");
+const { app, BrowserWindow } = require("electron");
 const { path7za } = require("7zip-bin");
 
 const ARCHIVE_EXTENSIONS = [".zip", ".rar", ".7z"];
 const GITHUB_RELEASES_URL = "https://github.com/Crew-Awesome/FunkHub/releases/latest";
 const jobState = new Map();
+const runningProcesses = new Map(); // launchId -> { pid, installPath, startTime, child }
 const appUpdateState = {
   initialized: false,
   autoUpdater: null,
@@ -1093,6 +1094,7 @@ async function handleLaunchEngine(payload) {
   const launcherPath = payload?.launcherPath;
   const executablePath = payload?.executablePath;
   const extraArgs = Array.isArray(payload?.args) ? payload.args : [];
+  const launchId = typeof payload?.launchId === "string" ? payload.launchId : null;
   if (!installPath) {
     throw new Error("installPath is required");
   }
@@ -1251,6 +1253,19 @@ async function handleLaunchEngine(payload) {
       reject(error instanceof Error ? error : new Error(message));
     });
   });
+
+  if (launchId && child.exitCode === null) {
+    const startTime = Date.now();
+    runningProcesses.set(launchId, { pid: child.pid, installPath: absolutePath, startTime });
+    child.once("exit", () => {
+      runningProcesses.delete(launchId);
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send("funkhub:launch-exit", { launchId });
+        }
+      }
+    });
+  }
 
   if (shouldDetach) {
     child.unref();
@@ -1893,6 +1908,36 @@ async function handleInstallAppUpdate() {
   }
 }
 
+function handleGetRunningLaunches() {
+  const launches = Array.from(runningProcesses.entries()).map(([launchId, info]) => ({
+    launchId,
+    installPath: info.installPath,
+    startTime: info.startTime,
+  }));
+  return { launches };
+}
+
+function handleKillLaunch(payload) {
+  const launchId = payload?.launchId;
+  if (!launchId) {
+    throw new Error("launchId is required");
+  }
+  const info = runningProcesses.get(launchId);
+  if (!info) {
+    return { ok: false, message: "No running process found" };
+  }
+  try {
+    if (process.platform === "win32") {
+      spawn("taskkill", ["/PID", String(info.pid), "/F", "/T"], { stdio: "ignore" });
+    } else {
+      process.kill(info.pid, "SIGTERM");
+    }
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Failed to kill process" };
+  }
+}
+
 module.exports = {
   handleInstallArchive,
   handleInstallEngine,
@@ -1916,4 +1961,6 @@ module.exports = {
   handleCheckAppUpdate,
   handleDownloadAppUpdate,
   handleInstallAppUpdate,
+  handleGetRunningLaunches,
+  handleKillLaunch,
 };

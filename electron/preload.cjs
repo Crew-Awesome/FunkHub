@@ -47,4 +47,13 @@ contextBridge.exposeInMainWorld("funkhubDesktop", {
       ipcRenderer.removeListener("funkhub:app-update", wrapped);
     };
   },
+  getRunningLaunches: () => ipcRenderer.invoke("funkhub:getRunningLaunches"),
+  killLaunch: (payload) => ipcRenderer.invoke("funkhub:killLaunch", payload),
+  onLaunchExit: (listener) => {
+    const wrapped = (_event, payload) => listener(payload);
+    ipcRenderer.on("funkhub:launch-exit", wrapped);
+    return () => {
+      ipcRenderer.removeListener("funkhub:launch-exit", wrapped);
+    };
+  },
 });
