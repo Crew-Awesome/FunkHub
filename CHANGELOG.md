@@ -11,18 +11,23 @@ Notes:
 ### Public Release Summary (GitHub Release Body)
 
 ## FunkHub v0.4.0 - Category Comeback
-This release focuses on discovery reliability, category browsing restoration, install/runtime correctness for executable mods, and app update/launcher quality improvements.
+This release covers everything from `v0.3.0` to the latest local `HEAD`, including local commits not yet pushed to remote. It focuses on Discover/category reliability, install/runtime correctness, updater polish, and ongoing i18n/UI/workflow cleanup.
 
 **Range:** `v0.3.0..HEAD`  
 **First commit in range:** `459df7f`  
-**Latest commit in range:** `cb142d5`
+**Latest commit in range:** `6704ef6`
+
+**Unpushed local commits included:** `2`  
+- `efc544c` — `fix discovery page :C messsed it up`  
+- `6704ef6` — `Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub`
 
 ### Highlights
 #### Discover Categories Restored
 - Brought back full category browsing in Discover (desktop sidebar + mobile sheet).
 - Restored category tree search/expand behavior and all-category reset flow.
-- Fixed category filtering pipeline in provider state so selected categories correctly drive discover results.
-- Restored page-reset behavior when filters/sort/search change to keep paging consistent.
+- Restored provider filtering pipeline so selected category/subtree drives discover results again.
+- Restored page-reset behavior on category/sort/search changes for consistent navigation.
+- Included local follow-up fix commit for Discover regression (`efc544c`).
 
 #### Install and Runtime Reliability
 - Improved zip/archive handling and executable install behavior for mod packages.
@@ -36,22 +41,62 @@ This release focuses on discovery reliability, category browsing restoration, in
 
 #### Repo/Workflow Cleanup
 - Updated repo/workflow configuration and removed stale automation config (`dependabot.yml`).
+- Added/updated contribution and agent guidance docs in-repo.
 
 ### Full Changelog (Grouped)
-- **Total commits in range:** `25`
-- **Translation sync commits:** `7` (`Update translations via Weblate`)
-- **Merge commits:** `3`
-- **Feature/fix/workflow commits:** `15`
+- **Total commits in range:** `28`
+- **Translation sync commits:** `8` (`Update translations via Weblate`)
+- **Merge commits:** `4`
+- **Feature/fix/workflow/docs commits:** `16`
 
 ### Key Commits
-- `cafac6c` - installer/runtime fixes for zip + executable content handling.
-- `d646ff9` - engine launch follow-up on Windows foreground behavior.
-- `f5acd83` - app updater integration/follow-up.
-- `d0af719` - engine detection + broad UI fixes.
-- `acea876` - engines/library page edits and UX refinement.
-- `c6db26c` - mod playtime support.
-- `9f1d3da` - performance/cleanup pass.
-- `172b151` / `cb142d5` - Discover regression introduced; fixed in this release train by restoring categories + filtering behavior.
+- `459df7f` - changelog updates.
+- `30b949e` - i18n fallback handling for empty translations.
+- `cafac6c` - zip + executable install reliability fixes.
+- `39c3329` - library action/docs pass (`Open Mod Folder` + agent/contrib docs updates).
+- `d646ff9` - Windows engine launch foreground/background behavior follow-up.
+- `f5acd83` - updater integration/follow-up.
+- `d0af719` - engine detection and broad UI fixes.
+- `91c0558` - additional mixed follow-up fixes.
+- `e4b7a21` - repository/workflow configuration updates.
+- `9bb4c93` - removed `dependabot.yml`.
+- `acea876` - engines/library page quality pass.
+- `c6db26c` - playtime tracking support.
+- `9f1d3da` - optimization and cleanup pass.
+- `172b151` - optimization regression that removed Discover category flow.
+- `cb142d5` - accessibility/layout follow-up.
+- `efc544c` - local fix restoring Discover page/category behavior.
+- `6704ef6` - local merge commit.
+
+### Full Commit List (Oldest -> Newest)
+- `459df7f` - changelog
+- `1a87254` - Update translations via Weblate
+- `ba440cf` - Update translations via Weblate
+- `30b949e` - implemented empty translations cus its fucking stupid
+- `e14d630` - Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub
+- `cafac6c` - fix zip mod and executables
+- `39c3329` - Open Mod Folder + Agents for contribbutors
+- `d646ff9` - attempt to fix engine background launch :C
+- `df9a6b8` - Update translations via Weblate
+- `f5acd83` - updater?
+- `d0af719` - ale psych/cne detection and ui fixes
+- `91c0558` - .
+- `e4b7a21` - configure more gitshit
+- `9bb4c93` - Delete dependabot.yml
+- `acea876` - engine card, engines page, library page edits
+- `7092ebd` - Update translations via Weblate
+- `c6db26c` - add playtime, wait, POPPY PLAYTIME
+- `f94e933` - Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub
+- `e960160` - Update translations via Weblate
+- `a6e9f22` - Update translations via Weblate
+- `9f1d3da` - OPTIMIZATIONS TIME :) and clean translations
+- `c2df951` - Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub
+- `41f80d2` - Update translations via Weblate
+- `172b151` - fucking optimizations broke my butt
+- `cb142d5` - no skip to main content, it sucks booty cheeks
+- `68a8635` - Update translations via Weblate
+- `efc544c` - fix discovery page :C messsed it up
+- `6704ef6` - Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub
 
 ### Compare
 - `https://github.com/Crew-Awesome/FunkHub/compare/v0.3.0...v0.4.0`
