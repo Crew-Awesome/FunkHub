@@ -183,7 +183,7 @@
     "mod.installMode": "Modo de instalación",
     "mod.installModeExecutable": "Paquete ejecutable (predeterminado)",
     "mod.installModeModFolder": "Carpeta del mod",
-    "mod.installTargetEngine": "",
+    "mod.installTargetEngine": "Instalar el engine fijo",
     "mod.loadingDetails": "",
     "mod.nextImage": "",
     "mod.noEnginesInstalled": "",
