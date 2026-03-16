@@ -322,6 +322,8 @@ export interface InstalledEngine {
   id: string;
   slug: EngineSlug;
   name: string;
+  customName?: string;
+  customIconUrl?: string;
   version: string;
   installPath: string;
   modsPath: string;

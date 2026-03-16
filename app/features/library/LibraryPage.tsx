@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { useFunkHub, useI18n } from "../../providers";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 import { Checkbox } from "../../shared/ui/checkbox";
+import { formatEngineName, type EngineSlug } from "../../services/funkhub";
+import { getEngineIcon } from "../engines/engineIcons";
 
 export function Library() {
   const { t } = useI18n();
@@ -165,8 +167,15 @@ export function Library() {
                       <span className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary shrink-0">{t("library.update", "Update")}</span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{mod.categoryName ?? mod.engine ?? t("library.uncategorized", "Uncategorized")}</p>
-                  <p className="text-xs text-muted-foreground">{mod.version ? `v${mod.version}` : t("library.versionUnknown", "Version unknown")}</p>
+                  <p className="text-xs text-muted-foreground truncate">{mod.categoryName ?? t("library.uncategorized", "Uncategorized")}</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {mod.engine && (
+                      <img src={getEngineIcon(mod.engine as EngineSlug)} alt="" className="w-3 h-3 object-contain shrink-0" loading="lazy" />
+                    )}
+                    <p className="text-xs text-muted-foreground truncate">
+                      {mod.engine ? formatEngineName(mod.engine as EngineSlug) : (mod.version ? `v${mod.version}` : t("library.versionUnknown", "Version unknown"))}
+                    </p>
+                  </div>
                 </div>
               </div>
             </button>
@@ -348,7 +357,25 @@ export function Library() {
                 </div>
                 <div className="bg-card border border-border rounded-lg p-3">
                   <p className="text-xs text-muted-foreground mb-0.5">{t("library.requiredEngine", "Engine")}</p>
-                  <p className="text-sm font-semibold text-foreground truncate">{isStandaloneMod ? t("library.standalone", "Standalone") : (selectedMod.requiredEngine ?? selectedMod.engine ?? "—")}</p>
+                  {isStandaloneMod ? (
+                    <p className="text-sm font-semibold text-foreground truncate">{t("library.standalone", "Standalone")}</p>
+                  ) : (
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {selectedEngineInstall && (
+                        <img
+                          src={selectedEngineInstall.customIconUrl ?? getEngineIcon(selectedEngineInstall.slug)}
+                          alt=""
+                          className="w-4 h-4 object-contain shrink-0"
+                          loading="lazy"
+                        />
+                      )}
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {selectedEngineInstall
+                          ? (selectedEngineInstall.customName ?? selectedEngineInstall.name)
+                          : formatEngineName((selectedMod.requiredEngine ?? selectedMod.engine) as EngineSlug)}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="bg-card border border-border rounded-lg p-3">
                   <p className="text-xs text-muted-foreground mb-0.5">{t("library.installedDate", "Installed")}</p>

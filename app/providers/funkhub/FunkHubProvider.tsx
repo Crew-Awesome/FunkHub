@@ -72,6 +72,8 @@ interface FunkHubContextValue {
   retryDownload: (taskId: string) => void;
   clearDownloads: () => void;
   setDefaultEngine: (engineId: string) => void;
+  renameEngine: (engineId: string, name: string) => void;
+  setEngineCustomIcon: (engineId: string, iconUrl?: string) => void;
   removeInstalledMod: (installedId: string, options?: { deleteFiles?: boolean }) => Promise<void>;
   updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
@@ -126,12 +128,54 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     return translate(normalizeLocale(settings.locale), key, fallback, vars);
   }, [settings.locale]);
 
+  const collectCategoryIds = useCallback((targetId: number): Set<number> => {
+    const ids = new Set<number>();
+    const walk = (nodes: CategoryNode[]) => {
+      for (const node of nodes) {
+        if (node.id === targetId || ids.size > 0) {
+          ids.add(node.id);
+          walk(node.children);
+        } else {
+          const before = ids.size;
+          walk(node.children);
+          if (ids.size > before) {
+            ids.add(node.id);
+          }
+        }
+      }
+    };
+    // Find the target node and collect it + all descendants
+    const findAndCollect = (nodes: CategoryNode[]): boolean => {
+      for (const node of nodes) {
+        if (node.id === targetId) {
+          const collectAll = (n: CategoryNode) => { ids.add(n.id); n.children.forEach(collectAll); };
+          collectAll(node);
+          return true;
+        }
+        if (findAndCollect(node.children)) return true;
+      }
+      return false;
+    };
+    findAndCollect(categories);
+    if (ids.size === 0) ids.add(targetId);
+    return ids;
+  }, [categories]);
+
   const refreshDiscover = useCallback(async () => {
     try {
       if (searchQuery.trim().length >= 2) {
         const results = await funkHubService.searchMods({ query: searchQuery, page: discoverPage, perPage: discoverPerPage });
-        setDiscoverMods(results);
-        setHasMoreDiscover(results.length >= discoverPerPage);
+        if (selectedCategoryId !== undefined) {
+          const categoryIds = collectCategoryIds(selectedCategoryId);
+          const filtered = results.filter((mod) =>
+            categoryIds.has(mod.rootCategory?.id ?? -1) || categoryIds.has((mod as { category?: { id: number } }).category?.id ?? -1),
+          );
+          setDiscoverMods(filtered);
+          setHasMoreDiscover(filtered.length >= discoverPerPage);
+        } else {
+          setDiscoverMods(results);
+          setHasMoreDiscover(results.length >= discoverPerPage);
+        }
         return;
       }
 
@@ -147,7 +191,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setDiscoverMods([]);
       setHasMoreDiscover(false);
     }
-  }, [searchQuery, selectedCategoryId, discoverSort, discoverPage]);
+  }, [searchQuery, selectedCategoryId, discoverSort, discoverPage, collectCategoryIds]);
 
   const refreshModUpdates = useCallback(async () => {
     const updates = await funkHubService.refreshModUpdates();
@@ -581,6 +625,14 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       clearDownloads: () => {
         funkHubService.clearDownloadHistory();
         setDownloads(funkHubService.getDownloadHistory());
+      },
+      renameEngine: (engineId, name) => {
+        funkHubService.renameEngine(engineId, name);
+        setInstalledEngines(funkHubService.getInstalledEngines());
+      },
+      setEngineCustomIcon: (engineId, iconUrl) => {
+        funkHubService.setEngineCustomIcon(engineId, iconUrl);
+        setInstalledEngines(funkHubService.getInstalledEngines());
       },
       setDefaultEngine: (engineId) => {
         funkHubService.setDefaultEngine(engineId);

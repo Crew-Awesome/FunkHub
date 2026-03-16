@@ -24,7 +24,7 @@ import {
   SearchModsParams,
 } from "./types";
 
-function formatEngineName(slug: EngineSlug): string {
+export function formatEngineName(slug: EngineSlug): string {
   switch (slug) {
     case "psych":
       return "Psych Engine";
@@ -802,6 +802,20 @@ export class FunkHubService {
       ...engine,
       isDefault: engine.id === engineId,
     }));
+    funkHubStorageService.saveInstalledEngines(this.installedEngines);
+  }
+
+  renameEngine(engineId: string, name: string): void {
+    this.installedEngines = this.installedEngines.map((engine) =>
+      engine.id === engineId ? { ...engine, customName: name.trim() || undefined } : engine,
+    );
+    funkHubStorageService.saveInstalledEngines(this.installedEngines);
+  }
+
+  setEngineCustomIcon(engineId: string, iconUrl?: string): void {
+    this.installedEngines = this.installedEngines.map((engine) =>
+      engine.id === engineId ? { ...engine, customIconUrl: iconUrl?.trim() || undefined } : engine,
+    );
     funkHubStorageService.saveInstalledEngines(this.installedEngines);
   }
 

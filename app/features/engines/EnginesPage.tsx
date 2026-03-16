@@ -4,7 +4,7 @@ import { Plus, Cpu, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldX, Fol
 import { EngineCard } from "./EngineCard";
 import { getEngineIcon } from "./engineIcons";
 import { useFunkHub, useI18n } from "../../providers";
-import { detectClientPlatform, pickBestReleaseForPlatform, type EngineSlug } from "../../services/funkhub";
+import { detectClientPlatform, pickBestReleaseForPlatform, formatEngineName, type EngineSlug } from "../../services/funkhub";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
 export function Engines() {
@@ -27,6 +27,8 @@ export function Engines() {
     refreshEngineHealth,
     browseFolder,
     browseFile,
+    renameEngine,
+    setEngineCustomIcon,
   } = useFunkHub();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [installingSlug, setInstallingSlug] = useState<string | null>(null);
@@ -39,6 +41,8 @@ export function Engines() {
   const [manageLauncher, setManageLauncher] = useState<"native" | "wine" | "wine64" | "proton">("native");
   const [manageLauncherPath, setManageLauncherPath] = useState("");
   const [manageExecutablePath, setManageExecutablePath] = useState("");
+  const [manageCustomName, setManageCustomName] = useState("");
+  const [manageCustomIconUrl, setManageCustomIconUrl] = useState("");
   const [selectedReleaseBySlug, setSelectedReleaseBySlug] = useState<Record<string, string>>({});
   const [platformWarning, setPlatformWarning] = useState<{
     slug: EngineSlug;
@@ -110,10 +114,13 @@ export function Engines() {
 
   const handleManage = (engineId: string) => {
     const override = getLaunchOverride(engineId);
+    const engine = installedEngines.find((entry) => entry.id === engineId);
     setManageEngineId(engineId);
     setManageLauncher(override.launcher);
     setManageLauncherPath(override.launcherPath ?? "");
     setManageExecutablePath(override.executablePath ?? "");
+    setManageCustomName(engine?.customName ?? "");
+    setManageCustomIconUrl(engine?.customIconUrl ?? "");
   };
 
   const handleUpdate = async (engineId: string) => {
@@ -169,6 +176,8 @@ export function Engines() {
         },
       },
     });
+    renameEngine(manageEngineId, manageCustomName);
+    setEngineCustomIcon(manageEngineId, manageCustomIconUrl.trim() || undefined);
     setNotice(t("engines.launchSettingsSaved", "Engine launch settings saved."));
   };
 
@@ -500,9 +509,11 @@ export function Engines() {
                 )}
               </div>
               <EngineCard
-                name={engine.name}
+                name={engine.customName ?? engine.name}
                 version={formatVersionLabel(engine.version)}
                 iconSrc={getEngineIcon(engine.slug)}
+                customIconUrl={engine.customIconUrl}
+                typeBadge={engine.customName ? formatEngineName(engine.slug) : undefined}
                 isDefault={engine.isDefault}
                 onLaunch={() => {
                   if (!busyEngineId) {
@@ -572,6 +583,29 @@ export function Engines() {
                    <button onClick={() => openEngineFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : t("engines.openFolderFailed", "Failed to open folder")))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("engines.openFolder", "Open Folder")}</button>
                    <button onClick={() => openEngineModsFolder(engine.id).catch((error) => setActionError(error instanceof Error ? error.message : t("engines.openModsFolderFailed", "Failed to open mods folder")))} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("engines.openModsFolder", "Open Mods Folder")}</button>
                    <button onClick={() => handleUpdate(engine.id)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("engines.update", "Update")}</button>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div>
+                      <label className="text-xs text-muted-foreground">{t("engines.customName", "Custom name")}</label>
+                      <input
+                        value={manageCustomName}
+                        onChange={(event) => setManageCustomName(event.target.value)}
+                        placeholder={engine.name}
+                        className="mt-1 w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">{t("engines.customIconUrl", "Custom icon URL")}</label>
+                      <input
+                        value={manageCustomIconUrl}
+                        onChange={(event) => setManageCustomIconUrl(event.target.value)}
+                        placeholder={t("engines.customIconUrlPlaceholder", "https://...")}
+                        className="mt-1 w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-4 space-y-2">
