@@ -24,7 +24,7 @@ const dictionaries: Record<SupportedLocale, Dictionary> = {
 export const supportedLocales: LocaleOption[] = [
   { code: "en", label: "English" },
   { code: "es-419", label: "Espanol (Latinoamerica)" },
-  { code: "id", label: "Bahasa Indonesia" },
+  { code: "id", label: "Indonesia" },
   { code: "ru", label: "Russkiy" },
   { code: "pt-BR", label: "Portugues (Brasil)" },
 ];
