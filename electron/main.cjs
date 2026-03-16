@@ -25,6 +25,8 @@ const {
   handleInstallAppUpdate,
   handleGetRunningLaunches,
   handleKillLaunch,
+  handleDetectWineRuntimes,
+  handleScanCommonEnginePaths,
 } = require("./runtime-bridge.cjs");
 
 let mainWindow = null;
@@ -295,6 +297,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:killLaunch", async (_event, payload) => {
     return handleKillLaunch(payload);
+  });
+
+  ipcMain.handle("funkhub:detectWineRuntimes", async () => {
+    return handleDetectWineRuntimes();
+  });
+
+  ipcMain.handle("funkhub:scanCommonEnginePaths", async () => {
+    return handleScanCommonEnginePaths();
   });
 
   createWindow();

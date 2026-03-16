@@ -4,7 +4,8 @@ import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { ModCard, ModVisualizerModal, UserProfileModal } from "../mods";
 import { useFunkHub, useI18n } from "../../providers";
-import type { CategoryNode, GameBananaMember } from "../../services/funkhub";
+import type { CategoryNode, ContentRating, GameBananaMember, ReleaseType, SearchField, SearchSortOrder } from "../../services/funkhub";
+import { CONTENT_RATING_OPTIONS, RELEASE_TYPE_OPTIONS, SEARCH_FIELD_OPTIONS, SEARCH_SORT_OPTIONS } from "../../services/funkhub";
 import type { SupportedLocale } from "../../i18n";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../shared/ui/sheet";
@@ -25,6 +26,14 @@ export function Discover() {
     hasMoreDiscover,
     searchQuery,
     setSearchQuery,
+    searchOrder,
+    setSearchOrder,
+    searchFields,
+    setSearchFields,
+    browseReleaseType,
+    setBrowseReleaseType,
+    browseContentRatings,
+    setBrowseContentRatings,
     installedMods,
     modUpdates,
     settings,
@@ -35,6 +44,8 @@ export function Discover() {
 
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<number[]>([]);
   const [categorySearch, setCategorySearch] = useState("");
+  const [showBrowseFilters, setShowBrowseFilters] = useState(false);
+  const [showRatingPicker, setShowRatingPicker] = useState(false);
   const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
   const [onboardingOpen, setOnboardingOpen] = useState(!settings.firstRunCompleted);
@@ -260,31 +271,195 @@ export function Discover() {
           </button>
         </div>
 
-        {/* Sort Options */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {modSortOptions.map((option) => {
-            const isSelected = discoverSort === option.alias;
-            return (
-              <motion.button
-                key={option.alias}
-                onClick={() => setDiscoverSort(option.alias)}
-                whileTap={{ scale: 0.92 }}
-                animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
-                transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                className={`
-                  px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors
-                  ${
-                    isSelected
-                      ? "bg-primary/10 text-primary border border-primary/20"
-                      : "bg-card hover:bg-secondary text-muted-foreground border border-border"
-                  }
-                `}
+        {/* Sort + filter bar — browse mode */}
+        {!searchQuery.trim() && (
+          <div className="space-y-2">
+            {/* Sort pills + filter toggle */}
+            <div className="flex gap-2 overflow-x-auto pb-1 items-center">
+              {modSortOptions.map((option) => {
+                const isSelected = discoverSort === option.alias;
+                return (
+                  <motion.button
+                    key={option.alias}
+                    onClick={() => setDiscoverSort(option.alias)}
+                    whileTap={{ scale: 0.92 }}
+                    animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    className={`
+                      px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0
+                      ${isSelected
+                        ? "bg-primary/10 text-primary border border-primary/20"
+                        : "bg-card hover:bg-secondary text-muted-foreground border border-border"}
+                    `}
+                  >
+                    {option.title}
+                  </motion.button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setShowBrowseFilters((v) => !v)}
+                className={`ml-auto shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  showBrowseFilters || browseReleaseType || browseContentRatings.length > 0
+                    ? "bg-primary/10 text-primary border-primary/20"
+                    : "bg-card text-muted-foreground border-border hover:bg-secondary"
+                }`}
               >
-                {option.title}
-              </motion.button>
-            );
-          })}
-        </div>
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                {t("discover.filters", "Filters")}
+                {(browseReleaseType || browseContentRatings.length > 0) && (
+                  <span className="ml-1 rounded-full bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 leading-none">
+                    {[browseReleaseType ? 1 : 0, browseContentRatings.length > 0 ? 1 : 0].reduce((a, b) => a + b, 0)}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Filter panel */}
+            {showBrowseFilters && (
+              <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+                {/* Release type */}
+                <div>
+                  <p className="text-xs font-medium text-foreground mb-2">{t("discover.releaseType", "Release type")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {RELEASE_TYPE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setBrowseReleaseType(opt.value as ReleaseType)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                          browseReleaseType === opt.value
+                            ? "bg-primary/10 text-primary border-primary/20"
+                            : "bg-secondary text-muted-foreground border-transparent hover:border-border"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Content ratings */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-foreground">
+                      {t("discover.contentRatings", "Content ratings")}
+                      {browseContentRatings.length > 0 && (
+                        <span className="ml-2 text-muted-foreground font-normal">
+                          ({browseContentRatings.length} selected)
+                        </span>
+                      )}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowRatingPicker((v) => !v)}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        {showRatingPicker ? t("discover.hide", "Hide") : t("discover.pick", "Pick ratings")}
+                      </button>
+                      {browseContentRatings.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setBrowseContentRatings([])}
+                          className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                        >
+                          {t("discover.clearAll", "Clear")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {showRatingPicker && (
+                    <div className="flex flex-wrap gap-2">
+                      {CONTENT_RATING_OPTIONS.map((opt) => {
+                        const active = browseContentRatings.includes(opt.value as ContentRating);
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => {
+                              setBrowseContentRatings(
+                                active
+                                  ? browseContentRatings.filter((r) => r !== opt.value)
+                                  : [...browseContentRatings, opt.value as ContentRating],
+                              );
+                            }}
+                            className={`px-2.5 py-1 rounded-md text-xs border transition-colors ${
+                              active
+                                ? "bg-primary/10 text-primary border-primary/20"
+                                : "bg-secondary text-muted-foreground border-transparent hover:border-border"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Search options — search mode */}
+        {searchQuery.trim().length >= 2 && (
+          <div className="space-y-2 pb-2">
+            {/* Search sort order */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs text-muted-foreground shrink-0">{t("discover.sortBy", "Sort by")}:</span>
+              {SEARCH_SORT_OPTIONS.map((option) => {
+                const isSelected = searchOrder === option.value;
+                return (
+                  <motion.button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSearchOrder(option.value as SearchSortOrder)}
+                    whileTap={{ scale: 0.92 }}
+                    animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                      isSelected
+                        ? "bg-primary/10 text-primary border border-primary/20"
+                        : "bg-card hover:bg-secondary text-muted-foreground border border-border"
+                    }`}
+                  >
+                    {option.label}
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Search fields */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs text-muted-foreground shrink-0">{t("discover.searchIn", "Search in")}:</span>
+              {SEARCH_FIELD_OPTIONS.map((field) => {
+                const isActive = searchFields.includes(field.value as SearchField);
+                return (
+                  <button
+                    key={field.value}
+                    type="button"
+                    onClick={() => {
+                      if (isActive && searchFields.length === 1) return; // keep at least one
+                      setSearchFields(
+                        isActive
+                          ? searchFields.filter((f) => f !== field.value)
+                          : [...searchFields, field.value as SearchField],
+                      );
+                    }}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors border ${
+                      isActive
+                        ? "bg-primary/10 text-primary border-primary/20"
+                        : "bg-card text-muted-foreground border-border hover:bg-secondary"
+                    }`}
+                  >
+                    {field.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
@@ -323,7 +498,7 @@ export function Discover() {
                       });
                     }
                   }}
-                  categoryLabel={selectedCategoryId === undefined ? (mod.rootCategory?.name ?? t("discover.uncategorized", "Uncategorized")) : undefined}
+                  categoryLabel={selectedCategoryId === undefined ? (mod.rootCategory?.name || t("discover.uncategorized", "Uncategorized")) : undefined}
                   statusLabel={(() => {
                     const installed = installedMods.find((entry) => entry.modId === mod.id);
                     if (!installed) {

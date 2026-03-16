@@ -132,10 +132,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
   }, [profile]);
   const categoryLabel = profile?.rootCategory?.name ?? profile?.category?.name ?? profile?.superCategory?.name;
   const selectedEngine = installedEngines.find((engine) => engine.id === selectedEngineId);
-  const isExecutableMod = Boolean(profile && profile.files.some((file) => modInstallerService.isExecutableMod(profile, file)));
-  const executableCategoryDefault = Boolean(profile && modInstallerService.isExecutableCategoryMod(profile));
-  const supportsExecutableInstall = Boolean(executableCategoryDefault || isExecutableMod);
-  const installAsExecutable = supportsExecutableInstall && installMode === "executable";
+  const installAsExecutable = installMode === "executable";
   const detectedEngineSlug = profile
     ? (detectRequiredEngineFromMetadata({
         name: profile.name,
@@ -325,19 +322,17 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                   </div>
 
                   <div className="mt-4 space-y-2">
-                    {supportsExecutableInstall && (
-                      <div>
-                        <label className="mb-1 block text-xs text-muted-foreground">{t("mod.installMode", "Install mode")}</label>
-                        <select
-                          value={installMode}
-                          onChange={(event) => setInstallMode(event.target.value as "executable" | "mod_folder")}
-                          className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground"
-                        >
-                          <option value="executable">{t("mod.installModeExecutable", "Executable package (default)")}</option>
-                          <option value="mod_folder">{t("mod.installModeModFolder", "Mod folder")}</option>
-                        </select>
-                      </div>
-                    )}
+                    <div>
+                      <label className="mb-1 block text-xs text-muted-foreground">{t("mod.installMode", "Install mode")}</label>
+                      <select
+                        value={installMode}
+                        onChange={(event) => setInstallMode(event.target.value as "executable" | "mod_folder")}
+                        className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground"
+                      >
+                        <option value="mod_folder">{t("mod.installModeModFolder", "Mod folder (default)")}</option>
+                        <option value="executable">{t("mod.installModeExecutable", "Standalone executable")}</option>
+                      </select>
+                    </div>
 
                     {!installAsExecutable && (
                       <div>

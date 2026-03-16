@@ -125,7 +125,8 @@ export type EngineSlug =
   | "fps-plus"
   | "js-engine"
   | "ale-psych"
-  | "p-slice";
+  | "p-slice"
+;
 
 export interface EngineRelease {
   platform: "windows" | "macos" | "linux" | "any";
@@ -214,6 +215,8 @@ export interface DesktopBridge {
   getRunningLaunches: () => Promise<{ launches: Array<{ launchId: string; installPath: string; startTime: number }> }>;
   killLaunch: (payload: { launchId: string }) => Promise<{ ok: boolean; message?: string }>;
   onLaunchExit: (listener: (payload: { launchId: string }) => void) => () => void;
+  detectWineRuntimes: () => Promise<{ runtimes: Array<{ type: "wine" | "wine64" | "proton"; path: string; label: string }> }>;
+  scanCommonEnginePaths: () => Promise<{ paths: string[] }>;
   openPath: (payload: { targetPath: string }) => Promise<{ ok: boolean; openedPath?: string; error?: string }>;
   deletePath: (payload: { targetPath: string }) => Promise<{ ok: boolean; deletedPath?: string; error?: string }>;
   getItchAuthStatus: () => Promise<{ connected: boolean; connectedAt?: number; scopes?: string[] }>;
@@ -353,16 +356,76 @@ export interface CategoryNode extends GameBananaCategory {
   children: CategoryNode[];
 }
 
+export type ReleaseType = "" | "studio" | "indie" | "redistribution";
+
+export const RELEASE_TYPE_OPTIONS: Array<{ value: ReleaseType; label: string }> = [
+  { value: "", label: "Any" },
+  { value: "studio", label: "Studio" },
+  { value: "indie", label: "Indie" },
+  { value: "redistribution", label: "Redistribution" },
+];
+
+export type ContentRating =
+  | "none" | "cp" | "st" | "sc" | "bg" | "au"
+  | "tu" | "du" | "fl" | "sa" | "la" | "pn"
+  | "fn" | "iv" | "ft" | "rp";
+
+export const CONTENT_RATING_OPTIONS: Array<{ value: ContentRating; label: string }> = [
+  { value: "none", label: "Unrated" },
+  { value: "cp",   label: "Crude or Profane" },
+  { value: "st",   label: "Sexual Themes" },
+  { value: "sc",   label: "Sexual Content" },
+  { value: "bg",   label: "Blood and Gore" },
+  { value: "au",   label: "Alcohol Use" },
+  { value: "tu",   label: "Tobacco Use" },
+  { value: "du",   label: "Drug Use" },
+  { value: "fl",   label: "Flashing Lights & Patterns" },
+  { value: "sa",   label: "Skinny Attire" },
+  { value: "la",   label: "Lewd Angles & Poses" },
+  { value: "pn",   label: "Partial Nudity" },
+  { value: "fn",   label: "Full Nudity" },
+  { value: "iv",   label: "Intense Violence" },
+  { value: "ft",   label: "Fetish Use" },
+  { value: "rp",   label: "Rating Pending" },
+];
+
 export interface ListModsParams {
   page?: number;
   perPage?: number;
   categoryId?: number;
   submitterId?: number;
   sort?: string;
+  releaseType?: ReleaseType;
+  contentRatings?: ContentRating[];
 }
+
+export type SearchSortOrder = "best_match" | "popularity" | "date" | "udate";
+
+export type SearchField = "name" | "description" | "article" | "attribs" | "owner" | "studio" | "credits";
+
+export const SEARCH_SORT_OPTIONS: Array<{ value: SearchSortOrder; label: string }> = [
+  { value: "best_match", label: "Best Match" },
+  { value: "popularity", label: "Most Popular" },
+  { value: "date", label: "Newest" },
+  { value: "udate", label: "Recently Updated" },
+];
+
+export const SEARCH_FIELD_OPTIONS: Array<{ value: SearchField; label: string }> = [
+  { value: "name", label: "Name" },
+  { value: "description", label: "Description" },
+  { value: "article", label: "Blurb/Readme" },
+  { value: "attribs", label: "Tags" },
+  { value: "owner", label: "Submitter" },
+  { value: "studio", label: "Studio" },
+  { value: "credits", label: "Credits" },
+];
+
+export const ALL_SEARCH_FIELDS: SearchField[] = ["name", "description", "article", "attribs", "owner", "studio", "credits"];
 
 export interface SearchModsParams {
   query: string;
   page?: number;
   perPage?: number;
+  order?: SearchSortOrder;
+  fields?: SearchField[];
 }

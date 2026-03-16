@@ -2,8 +2,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { toast } from "sonner";
 import { funkHubService } from "../../services/funkhub";
 import {
+  ALL_SEARCH_FIELDS,
   AppUpdateInfo,
   CategoryNode,
+  ContentRating,
   DesktopAppUpdateStatus,
   DownloadTask,
   EngineDefinition,
@@ -14,6 +16,9 @@ import {
   InstalledEngine,
   InstalledMod,
   ModUpdateInfo,
+  ReleaseType,
+  SearchField,
+  SearchSortOrder,
 } from "../../services/funkhub";
 import { parseFunkHubDeepLink } from "../../services/funkhub/deepLink";
 import { modInstallerService } from "../../services/funkhub/installer";
@@ -42,13 +47,21 @@ interface FunkHubContextValue {
   hasMoreDiscover: boolean;
   searchQuery: string;
   setSearchQuery: (value: string) => void;
+  searchOrder: SearchSortOrder;
+  setSearchOrder: (order: SearchSortOrder) => void;
+  searchFields: SearchField[];
+  setSearchFields: (fields: SearchField[]) => void;
+  browseReleaseType: ReleaseType;
+  setBrowseReleaseType: (value: ReleaseType) => void;
+  browseContentRatings: ContentRating[];
+  setBrowseContentRatings: (value: ContentRating[]) => void;
   refreshDiscover: () => Promise<void>;
   refreshModUpdates: () => Promise<void>;
   getModProfile: (modId: number) => Promise<GameBananaModProfile>;
   listModsBySubmitter: (input: { submitterId: number; categoryId?: number; page?: number; perPage?: number }) => Promise<GameBananaModSummary[]>;
   installMod: (modId: number, fileId: number, selectedEngineId?: string, priority?: number, options?: InstallOptions) => void;
   installEngine: (slug: InstalledEngine["slug"], downloadUrl: string, version: string, options?: { allowMissingExecutable?: boolean }) => Promise<void>;
-  importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string) => Promise<void>;
+  importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string, sourcePath?: string) => Promise<void>;
   updateEngine: (engineId: string) => Promise<void>;
   uninstallEngine: (engineId: string) => Promise<void>;
   launchEngine: (
@@ -74,6 +87,7 @@ interface FunkHubContextValue {
   setDefaultEngine: (engineId: string) => void;
   renameEngine: (engineId: string, name: string) => void;
   setEngineCustomIcon: (engineId: string, iconUrl?: string) => void;
+  setModCustomImage: (installedId: string, imageUrl?: string) => void;
   removeInstalledMod: (installedId: string, options?: { deleteFiles?: boolean }) => Promise<void>;
   updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
@@ -95,6 +109,8 @@ interface FunkHubContextValue {
   runningLaunchIds: Set<string>;
   killLaunch: (launchId: string) => Promise<void>;
   clearModPlayTime: (installedId: string) => void;
+  detectWineRuntimes: () => Promise<Array<{ type: "wine" | "wine64" | "proton"; path: string; label: string }>>;
+  scanCommonEnginePaths: () => Promise<string[]>;
 }
 
 const FunkHubContext = createContext<FunkHubContextValue | undefined>(undefined);
@@ -118,6 +134,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const discoverPerPage = 24;
   const [hasMoreDiscover, setHasMoreDiscover] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOrder, setSearchOrder] = useState<SearchSortOrder>("best_match");
+  const [searchFields, setSearchFields] = useState<SearchField[]>(ALL_SEARCH_FIELDS);
+  const [browseReleaseType, setBrowseReleaseType] = useState<ReleaseType>("");
+  const [browseContentRatings, setBrowseContentRatings] = useState<ContentRating[]>([]);
   const processedDeepLinksRef = useRef<Map<string, number>>(new Map());
   const processingDeepLinksRef = useRef<Set<string>>(new Set());
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | undefined>(undefined);
@@ -169,7 +189,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         : undefined;
 
       if (searchQuery.trim().length >= 2) {
-        const results = await funkHubService.searchMods({ query: searchQuery, page: discoverPage, perPage: discoverPerPage });
+        const results = await funkHubService.searchMods({ query: searchQuery, page: discoverPage, perPage: discoverPerPage, order: searchOrder, fields: searchFields });
         const filtered = selectedCategoryIds
           ? results.filter((mod) => selectedCategoryIds.has(mod.rootCategory?.id ?? -1))
           : results;
@@ -183,6 +203,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         page: discoverPage,
         perPage: discoverPerPage,
         sort: discoverSort,
+        releaseType: browseReleaseType,
+        contentRatings: browseContentRatings.length > 0 ? browseContentRatings : undefined,
       });
       setDiscoverMods(mods);
       setHasMoreDiscover(mods.length >= discoverPerPage);
@@ -190,7 +212,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setDiscoverMods([]);
       setHasMoreDiscover(false);
     }
-  }, [searchQuery, selectedCategoryId, discoverSort, discoverPage, collectCategoryIds]);
+  }, [searchQuery, searchOrder, searchFields, selectedCategoryId, discoverSort, discoverPage, browseReleaseType, browseContentRatings, collectCategoryIds]);
 
   const refreshModUpdates = useCallback(async () => {
     const updates = await funkHubService.refreshModUpdates();
@@ -450,7 +472,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setDiscoverPage(1);
-  }, [selectedCategoryId, discoverSort, searchQuery]);
+  }, [selectedCategoryId, discoverSort, searchQuery, searchOrder, searchFields, browseReleaseType, browseContentRatings]);
 
   useEffect(() => {
     if (!window.funkhubDesktop?.onDeepLink || !window.funkhubDesktop?.getPendingDeepLinks) {
@@ -595,6 +617,14 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       hasMoreDiscover,
       searchQuery,
       setSearchQuery,
+      searchOrder,
+      setSearchOrder,
+      searchFields,
+      setSearchFields,
+      browseReleaseType,
+      setBrowseReleaseType,
+      browseContentRatings,
+      setBrowseContentRatings,
       refreshDiscover,
       refreshModUpdates,
       getModProfile,
@@ -616,8 +646,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         });
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
-      importEngineFromFolder: async (slug, versionHint) => {
-        await funkHubService.importEngineFromFolder({ slug, versionHint });
+      importEngineFromFolder: async (slug, versionHint, sourcePath) => {
+        await funkHubService.importEngineFromFolder({ slug, versionHint, sourcePath });
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
       updateEngine: async (engineId) => {
@@ -670,6 +700,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setEngineCustomIcon: (engineId, iconUrl) => {
         funkHubService.setEngineCustomIcon(engineId, iconUrl);
         setInstalledEngines(funkHubService.getInstalledEngines());
+      },
+      setModCustomImage: (installedId, imageUrl) => {
+        funkHubService.setModCustomImage(installedId, imageUrl);
+        setInstalledMods(funkHubService.getInstalledMods());
       },
       setDefaultEngine: (engineId) => {
         funkHubService.setDefaultEngine(engineId);
@@ -725,6 +759,14 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         funkHubService.clearPlayTime(installedId);
         setInstalledMods(funkHubService.getInstalledMods());
       },
+      detectWineRuntimes: async () => {
+        const result = await window.funkhubDesktop?.detectWineRuntimes?.();
+        return result?.runtimes ?? [];
+      },
+      scanCommonEnginePaths: async () => {
+        const result = await window.funkhubDesktop?.scanCommonEnginePaths?.();
+        return result?.paths ?? [];
+      },
     }),
     [
       loading,
@@ -749,6 +791,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       discoverPerPage,
       hasMoreDiscover,
       searchQuery,
+      searchOrder,
+      searchFields,
+      browseReleaseType,
+      browseContentRatings,
       refreshDiscover,
       refreshModUpdates,
       checkAppUpdate,

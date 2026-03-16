@@ -49,6 +49,8 @@ contextBridge.exposeInMainWorld("funkhubDesktop", {
   },
   getRunningLaunches: () => ipcRenderer.invoke("funkhub:getRunningLaunches"),
   killLaunch: (payload) => ipcRenderer.invoke("funkhub:killLaunch", payload),
+  detectWineRuntimes: () => ipcRenderer.invoke("funkhub:detectWineRuntimes"),
+  scanCommonEnginePaths: () => ipcRenderer.invoke("funkhub:scanCommonEnginePaths"),
   onLaunchExit: (listener) => {
     const wrapped = (_event, payload) => listener(payload);
     ipcRenderer.on("funkhub:launch-exit", wrapped);

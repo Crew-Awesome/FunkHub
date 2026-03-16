@@ -819,6 +819,13 @@ export class FunkHubService {
     funkHubStorageService.saveInstalledEngines(this.installedEngines);
   }
 
+  setModCustomImage(installedId: string, imageUrl?: string): void {
+    this.installedMods = this.installedMods.map((mod) =>
+      mod.id === installedId ? { ...mod, thumbnailUrl: imageUrl?.trim() || undefined } : mod,
+    );
+    funkHubStorageService.saveInstalledMods(this.installedMods);
+  }
+
   async removeInstalledMod(installedId: string, options?: { deleteFiles?: boolean }): Promise<void> {
     const installed = this.installedMods.find((mod) => mod.id === installedId);
     if (!installed) {

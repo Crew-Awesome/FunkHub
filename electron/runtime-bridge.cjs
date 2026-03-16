@@ -146,14 +146,18 @@ function canUseNativeAutoUpdater() {
   if (!app.isPackaged) {
     return false;
   }
-  if (process.platform !== "win32" && process.platform !== "darwin") {
-    return false;
-  }
   const version = String(app.getVersion() || "").toLowerCase();
   if (version.includes("nightly") || version.includes("indev")) {
     return false;
   }
-  return true;
+  if (process.platform === "win32" || process.platform === "darwin") {
+    return true;
+  }
+  // On Linux, electron-updater supports AppImage updates via the APPIMAGE env var.
+  if (process.platform === "linux" && process.env.APPIMAGE) {
+    return true;
+  }
+  return false;
 }
 
 function ensureAppUpdaterInitialized() {
@@ -1876,7 +1880,7 @@ async function handleCheckAppUpdate() {
         releaseName: "Auto updater unavailable",
         releaseUrl: GITHUB_RELEASES_URL,
         notes: process.platform === "linux"
-          ? "In-app auto updates are not enabled on Linux builds yet."
+          ? "In-app updates are only supported on the AppImage build. Download the latest AppImage from the GitHub releases page."
           : "In-app auto updates are unavailable in this build.",
       },
     };
@@ -1901,7 +1905,7 @@ async function handleDownloadAppUpdate() {
     return {
       ok: false,
       error: process.platform === "linux"
-        ? "In-app auto download is not enabled on Linux builds yet."
+        ? "In-app updates require the AppImage build. Download the latest AppImage from GitHub releases."
         : "In-app auto download is unavailable in this build.",
     };
   }
@@ -1970,6 +1974,100 @@ function handleKillLaunch(payload) {
   }
 }
 
+async function handleDetectWineRuntimes() {
+  const os = require("node:os");
+  const home = os.homedir();
+
+  const candidates = [
+    { type: "wine", path: "/usr/bin/wine" },
+    { type: "wine64", path: "/usr/bin/wine64" },
+    { type: "wine", path: "/usr/local/bin/wine" },
+    { type: "wine64", path: "/usr/local/bin/wine64" },
+  ];
+
+  const found = [];
+
+  for (const candidate of candidates) {
+    try {
+      await fs.access(candidate.path, fsSync.constants.X_OK);
+      found.push({ type: candidate.type, path: candidate.path, label: candidate.type === "wine64" ? "Wine64" : "Wine" });
+    } catch {
+      // not found
+    }
+  }
+
+  // Scan Steam Proton installations
+  const protonSearchRoots = [
+    path.join(home, ".steam", "root", "compatibilitytools.d"),
+    path.join(home, ".local", "share", "Steam", "steamapps", "common"),
+  ];
+
+  for (const searchRoot of protonSearchRoots) {
+    try {
+      const entries = await fs.readdir(searchRoot, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const isProton = entry.name.toLowerCase().includes("proton");
+        if (!isProton) continue;
+        const protonBin = path.join(searchRoot, entry.name, "proton");
+        try {
+          await fs.access(protonBin, fsSync.constants.F_OK);
+          found.push({ type: "proton", path: protonBin, label: entry.name });
+        } catch {
+          // no proton binary in this folder
+        }
+      }
+    } catch {
+      // directory doesn't exist
+    }
+  }
+
+  return { runtimes: found };
+}
+
+async function handleScanCommonEnginePaths() {
+  const os = require("node:os");
+  const home = os.homedir();
+
+  const ENGINE_BINARY_NAMES = ["Funkin.exe", "Funkin", "FunkinLinux64", "Funkin-Mac", "FPSPlus.exe", "FPSPlus"];
+
+  const searchRoots = [
+    path.join(home, "Games"),
+    path.join(home, ".local", "share"),
+    path.join(home, "Applications"),
+    "/opt",
+  ];
+
+  const found = [];
+
+  async function scanDir(dir, depth) {
+    if (depth > 3) return;
+    let entries;
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    const hasBinary = entries.some((e) => ENGINE_BINARY_NAMES.includes(e.name));
+    if (hasBinary) {
+      found.push(dir);
+      return; // don't descend further if we already found an engine here
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      // skip hidden dirs and common non-engine folders
+      if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+      await scanDir(path.join(dir, entry.name), depth + 1);
+    }
+  }
+
+  for (const root of searchRoots) {
+    await scanDir(root, 0);
+  }
+
+  return { paths: found };
+}
+
 module.exports = {
   handleInstallArchive,
   handleInstallEngine,
@@ -1995,4 +2093,6 @@ module.exports = {
   handleInstallAppUpdate,
   handleGetRunningLaunches,
   handleKillLaunch,
+  handleDetectWineRuntimes,
+  handleScanCommonEnginePaths,
 };

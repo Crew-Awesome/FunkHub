@@ -35,7 +35,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION} && node ./node_modules/electron-builder/cli.js --linux deb --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION}
+            package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION}
           - os: windows-latest
             artifact: FunkHub-windows
             package_cmd: node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION}
@@ -115,17 +115,11 @@ jobs:
         run: |
           set -euo pipefail
           appimage_count=$(find dist-desktop -type f -name "*.AppImage" | wc -l | tr -d ' ')
-          deb_count=$(find dist-desktop -type f -name "*.deb" | wc -l | tr -d ' ')
           if [[ "$appimage_count" -eq 0 ]]; then
             echo "No Linux installer (.AppImage) was produced under dist-desktop/."
             exit 1
           fi
-          if [[ "$deb_count" -eq 0 ]]; then
-            echo "No Linux package (.deb) was produced under dist-desktop/."
-            exit 1
-          fi
           find dist-desktop -type f -name "*.AppImage" -print
-          find dist-desktop -type f -name "*.deb" -print
 
       - name: Verify Windows installer output
         if: matrix.os == 'windows-latest'
@@ -167,11 +161,3 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload Linux DEB artifact
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: FunkHub-linux-deb
-          path: dist-desktop/**/*.deb
-          if-no-files-found: error
-          retention-days: 14

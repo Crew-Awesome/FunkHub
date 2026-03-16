@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, Settings2, Square, Clock } from "lucide-react";
+import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, Settings2, Square, Clock, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { useFunkHub, useI18n } from "../../providers";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
@@ -26,6 +26,8 @@ export function Library() {
     runningLaunchIds,
     killLaunch,
     clearModPlayTime,
+    setModCustomImage,
+    detectWineRuntimes,
   } = useFunkHub();
   const [selectedModId, setSelectedModId] = useState(installedMods[0]?.id);
   const [deleteFilesOnRemove, setDeleteFilesOnRemove] = useState(true);
@@ -43,6 +45,7 @@ export function Library() {
   const [launchMode, setLaunchMode] = useState<"native" | "wine" | "wine64" | "proton">("native");
   const [launchPath, setLaunchPath] = useState("");
   const [launchExecutablePath, setLaunchExecutablePath] = useState("");
+  const [detectedRuntimes, setDetectedRuntimes] = useState<Array<{ type: "wine" | "wine64" | "proton"; path: string; label: string }> | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
 
@@ -188,12 +191,22 @@ export function Library() {
                   </div>
                   {mod.categoryName && <p className="text-xs text-muted-foreground truncate">{mod.categoryName}</p>}
                   <div className="flex items-center gap-1 mt-0.5">
-                    {mod.engine && (
-                      <img src={getEngineIcon(mod.engine as EngineSlug)} alt="" className="w-3 h-3 object-contain shrink-0" loading="lazy" />
-                    )}
-                    <p className="text-xs text-muted-foreground truncate">
-                      {mod.engine ? formatEngineName(mod.engine as EngineSlug) : (mod.version ? `v${mod.version}` : "")}
-                    </p>
+                    {(() => {
+                      const isStandalone = mod.standalone || mod.installPath.startsWith("executables");
+                      if (isStandalone) {
+                        return <p className="text-xs text-muted-foreground truncate">{t("library.standalone", "Standalone")}</p>;
+                      }
+                      return (
+                        <>
+                          {mod.engine && (
+                            <img src={getEngineIcon(mod.engine as EngineSlug)} alt="" className="w-3 h-3 object-contain shrink-0" loading="lazy" />
+                          )}
+                          <p className="text-xs text-muted-foreground truncate">
+                            {mod.engine ? formatEngineName(mod.engine as EngineSlug) : (mod.version ? `v${mod.version}` : "")}
+                          </p>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -213,7 +226,7 @@ export function Library() {
             transition={{ duration: 0.25 }}
           >
             {/* Hero Banner */}
-            <div className="relative h-64 md:h-80 overflow-hidden">
+            <div className="relative h-64 md:h-80 overflow-hidden group">
               <img
                 src={selectedMod.thumbnailUrl ?? "/mod-placeholder.svg"}
                 alt={selectedMod.modName}
@@ -221,6 +234,17 @@ export function Library() {
                 loading="eager"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+              <button
+                onClick={async () => {
+                  const path = await browseFile({ title: t("library.chooseImage", "Choose Image"), filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }] });
+                  if (path) setModCustomImage(selectedMod.id, `file://${path}`);
+                }}
+                className="absolute top-3 right-3 h-8 w-8 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label={t("library.changeImage", "Change image")}
+                title={t("library.changeImage", "Change image")}
+              >
+                <ImagePlus className="w-4 h-4" />
+              </button>
               <div className="absolute bottom-0 left-0 right-0 p-6 flex items-end justify-between gap-4">
                 <div className="min-w-0">
                   <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight mb-1 drop-shadow-sm">{selectedMod.modName}</h1>
@@ -561,23 +585,56 @@ export function Library() {
             </div>
 
             {launchMode !== "native" && (
-              <div className="flex gap-2">
-                <input
-                  value={launchPath}
-                  onChange={(event) => setLaunchPath(event.target.value)}
-                  placeholder={t("library.optionalLauncherPath", "Optional launcher path")}
-                  className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
-                />
-                <button
-                  onClick={async () => {
-                    const selected = await browseFile({ title: t("library.selectLauncherBinary", "Select launcher binary"), defaultPath: launchPath || undefined });
-                    if (selected) setLaunchPath(selected);
-                  }}
-                  className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
-                >
-                  {t("library.browse", "Browse")}
-                </button>
-              </div>
+              <>
+                <div className="flex gap-2">
+                  <input
+                    value={launchPath}
+                    onChange={(event) => setLaunchPath(event.target.value)}
+                    placeholder={t("library.optionalLauncherPath", "Optional launcher path")}
+                    className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                  />
+                  <button
+                    onClick={async () => {
+                      const selected = await browseFile({ title: t("library.selectLauncherBinary", "Select launcher binary"), defaultPath: launchPath || undefined });
+                      if (selected) setLaunchPath(selected);
+                    }}
+                    className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                  >
+                    {t("library.browse", "Browse")}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const runtimes = await detectWineRuntimes();
+                      setDetectedRuntimes(runtimes);
+                    }}
+                    className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm whitespace-nowrap"
+                  >
+                    {t("library.detect", "Detect")}
+                  </button>
+                </div>
+                {detectedRuntimes !== null && detectedRuntimes.length === 0 && (
+                  <p className="text-xs text-muted-foreground">{t("library.noRuntimesFound", "No Wine/Proton runtimes detected.")}</p>
+                )}
+                {detectedRuntimes !== null && detectedRuntimes.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">{t("library.detectedRuntimes", "Detected runtimes — click to use:")}</p>
+                    {detectedRuntimes.map((rt) => (
+                      <button
+                        key={rt.path}
+                        onClick={() => {
+                          setLaunchMode(rt.type);
+                          setLaunchPath(rt.path);
+                          setDetectedRuntimes(null);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-sm flex items-center justify-between"
+                      >
+                        <span className="font-medium">{rt.label}</span>
+                        <span className="text-xs text-muted-foreground font-mono truncate ml-2">{rt.path}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             <div className="flex gap-2">

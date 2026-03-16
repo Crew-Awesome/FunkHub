@@ -1,6 +1,5 @@
 import {
   CategoryNode,
-  FNF_CATEGORY_IDS,
   FNF_GAME_ID,
   GameBananaCategory,
   GameBananaFile,
@@ -142,7 +141,7 @@ function normalizeSummary(record: Record<string, unknown>): GameBananaModSummary
     },
     rootCategory: {
       id: rootCategoryId,
-      name: String(rootCategory._sName ?? "Unknown"),
+      name: rootCategory._sName ? String(rootCategory._sName) : "",
       profileUrl: String(rootCategory._sProfileUrl ?? ""),
       iconUrl: typeof rootCategory._sIconUrl === "string" ? rootCategory._sIconUrl : undefined,
     },
@@ -285,7 +284,7 @@ export class GameBananaApiService {
     };
   }
 
-  async listMods({ page = 1, perPage = 20, categoryId, submitterId, sort = "Generic_NewAndUpdated" }: ListModsParams = {}): Promise<GameBananaModSummary[]> {
+  async listMods({ page = 1, perPage = 20, categoryId, submitterId, sort = "Generic_NewAndUpdated", releaseType, contentRatings }: ListModsParams = {}): Promise<GameBananaModSummary[]> {
     const url = new URL(`${APIV11_BASE}/Mod/Index`);
     url.searchParams.set("_nPage", String(page));
     url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
@@ -297,6 +296,12 @@ export class GameBananaApiService {
     }
     if (submitterId) {
       url.searchParams.set("_aFilters[Generic_Submitter]", String(submitterId));
+    }
+    if (releaseType) {
+      url.searchParams.set("_aFilters[Generic_ReleaseType]", releaseType);
+    }
+    if (contentRatings && contentRatings.length > 0) {
+      url.searchParams.set("_aFilters[Generic_ContentRatings]", contentRatings.join(","));
     }
 
     const cacheKey = `listMods:${url.toString()}`;
@@ -312,7 +317,7 @@ export class GameBananaApiService {
     return normalized;
   }
 
-  async searchMods({ query, page = 1, perPage = 15 }: SearchModsParams): Promise<GameBananaModSummary[]> {
+  async searchMods({ query, page = 1, perPage = 15, order = "best_match", fields }: SearchModsParams): Promise<GameBananaModSummary[]> {
     const normalizedQuery = query.trim();
     if (normalizedQuery.length < 2) {
       return [];
@@ -356,6 +361,12 @@ export class GameBananaApiService {
     url.searchParams.set("_sSearchString", normalizedQuery);
     url.searchParams.set("_nPage", String(page));
     url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
+    url.searchParams.set("_sModelName", "Mod");
+    url.searchParams.set("_idGameRow", String(FNF_GAME_ID));
+    url.searchParams.set("_sOrder", order);
+    if (fields && fields.length > 0) {
+      url.searchParams.set("_csvFields", fields.join(","));
+    }
 
     const cacheKey = `searchMods:${url.toString()}`;
     const payload = await this.fetchJsonCached<{ _aRecords?: Record<string, unknown>[] }>({
@@ -366,19 +377,9 @@ export class GameBananaApiService {
     });
     const records = payload._aRecords ?? [];
 
-    const queryLower = normalizedQuery.toLowerCase();
     const normalized = records
       .map(normalizeSummary)
-      .filter((mod) => mod.modelName === "Mod")
-      .filter((mod) => {
-        if (mod.game?.id === FNF_GAME_ID) {
-          return true;
-        }
-        if (mod.rootCategory?.id && FNF_CATEGORY_IDS.includes(mod.rootCategory.id as (typeof FNF_CATEGORY_IDS)[number])) {
-          return true;
-        }
-        return mod.name.toLowerCase().includes(queryLower);
-      });
+      .filter((mod) => mod.modelName === "Mod" && mod.game?.id === FNF_GAME_ID);
     this.prefetchThumbnails(normalized);
     return normalized;
   }

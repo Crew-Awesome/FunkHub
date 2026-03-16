@@ -39,6 +39,5 @@ export function detectRequiredEngineFromMetadata(input: {
   if (includesAny(haystack, ["p-slice", "pslice"])) {
     return "p-slice";
   }
-
   return undefined;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Cpu, Loader2, AlertCircle, Download } from "lucide-react";
+import { Plus, Cpu, Loader2, AlertCircle, Download, ImagePlus } from "lucide-react";
 import { EngineCard } from "./EngineCard";
 import { getEngineIcon } from "./engineIcons";
 import { useFunkHub, useI18n } from "../../providers";
@@ -31,6 +31,8 @@ export function Engines() {
     setEngineCustomIcon,
     runningLaunchIds,
     killLaunch,
+    detectWineRuntimes,
+    scanCommonEnginePaths,
   } = useFunkHub();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [installingSlug, setInstallingSlug] = useState<string | null>(null);
@@ -45,6 +47,9 @@ export function Engines() {
   const [manageCustomName, setManageCustomName] = useState("");
   const [manageCustomIconUrl, setManageCustomIconUrl] = useState("");
   const [selectedReleaseBySlug, setSelectedReleaseBySlug] = useState<Record<string, string>>({});
+  const [scannedPaths, setScannedPaths] = useState<string[] | null>(null);
+  const [scanningPaths, setScanningPaths] = useState(false);
+  const [detectedRuntimes, setDetectedRuntimes] = useState<Array<{ type: "wine" | "wine64" | "proton"; path: string; label: string }> | null>(null);
   const [platformWarning, setPlatformWarning] = useState<{
     slug: EngineSlug;
     releaseUrl: string;
@@ -400,6 +405,64 @@ export function Engines() {
             {actionError}
           </div>
         )}
+
+        {/* Scan for engine folders on disk */}
+        <div className="border-t border-border pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-foreground">{t("engines.scanTitle", "Scan for existing engines")}</p>
+            <button
+              onClick={async () => {
+                setScanningPaths(true);
+                try {
+                  const paths = await scanCommonEnginePaths();
+                  setScannedPaths(paths);
+                } finally {
+                  setScanningPaths(false);
+                }
+              }}
+              disabled={scanningPaths}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-secondary disabled:opacity-50"
+            >
+              {scanningPaths ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              {scanningPaths ? t("engines.scanning", "Scanning…") : t("engines.scanNow", "Scan Now")}
+            </button>
+          </div>
+          {scannedPaths !== null && scannedPaths.length === 0 && (
+            <p className="text-xs text-muted-foreground">{t("engines.scanNoneFound", "No engine folders found in common locations.")}</p>
+          )}
+          {scannedPaths !== null && scannedPaths.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground mb-2">{t("engines.scanFoundPaths", "Found potential engine folders — select a slug to import:")}</p>
+              {scannedPaths.map((foundPath) => (
+                <div key={foundPath} className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2">
+                  <span className="flex-1 text-xs font-mono text-muted-foreground truncate">{foundPath}</span>
+                  {availableEngines.map((eng) => (
+                    <button
+                      key={eng.slug}
+                      onClick={async () => {
+                        setInstallingSlug(eng.slug);
+                        try {
+                          await importEngineFromFolder(eng.slug, "imported", foundPath);
+                          await refreshEngineHealth();
+                          setScannedPaths((prev) => prev ? prev.filter((p) => p !== foundPath) : prev);
+                          setShowAddDialog(false);
+                        } catch (error) {
+                          setInstallError(error instanceof Error ? error.message : t("engines.importFailed", "Engine import failed"));
+                        } finally {
+                          setInstallingSlug(null);
+                        }
+                      }}
+                      disabled={installingSlug === eng.slug}
+                      className="shrink-0 rounded border border-border px-2 py-1 text-[10px] text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
+                    >
+                      {eng.name}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
@@ -607,12 +670,25 @@ export function Engines() {
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground">{t("engines.customIconUrl", "Custom icon URL")}</label>
-                        <input
-                          value={manageCustomIconUrl}
-                          onChange={(e) => setManageCustomIconUrl(e.target.value)}
-                          placeholder="https://..."
-                          className="mt-1 w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
-                        />
+                        <div className="mt-1 flex gap-2">
+                          <input
+                            value={manageCustomIconUrl}
+                            onChange={(e) => setManageCustomIconUrl(e.target.value)}
+                            placeholder="https://..."
+                            className="min-w-0 flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const path = await browseFile({ title: t("engines.chooseIcon", "Choose Icon"), filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"] }] });
+                              if (path) setManageCustomIconUrl(`file://${path}`);
+                            }}
+                            className="shrink-0 px-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-foreground flex items-center"
+                            title={t("engines.browseIcon", "Browse for image")}
+                          >
+                            <ImagePlus className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -667,17 +743,49 @@ export function Engines() {
                       </select>
 
                       {manageLauncher !== "native" && (
-                        <div className="flex gap-2">
-                          <input
-                            value={manageLauncherPath}
-                            onChange={(e) => setManageLauncherPath(e.target.value)}
-                            placeholder={t("engines.optionalLauncherPath", "Optional launcher binary path (eg /usr/bin/wine)")}
-                            className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
-                          />
-                          <button onClick={browseLauncherPath} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">
-                            {t("engines.browse", "Browse")}
-                          </button>
-                        </div>
+                        <>
+                          <div className="flex gap-2">
+                            <input
+                              value={manageLauncherPath}
+                              onChange={(e) => setManageLauncherPath(e.target.value)}
+                              placeholder={t("engines.optionalLauncherPath", "Optional launcher binary path (eg /usr/bin/wine)")}
+                              className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                            />
+                            <button onClick={browseLauncherPath} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">
+                              {t("engines.browse", "Browse")}
+                            </button>
+                            <button
+                              onClick={async () => {
+                                const runtimes = await detectWineRuntimes();
+                                setDetectedRuntimes(runtimes);
+                              }}
+                              className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm whitespace-nowrap"
+                            >
+                              {t("engines.detect", "Detect")}
+                            </button>
+                          </div>
+                          {detectedRuntimes !== null && detectedRuntimes.length === 0 && (
+                            <p className="text-xs text-muted-foreground">{t("engines.noRuntimesFound", "No Wine/Proton runtimes detected.")}</p>
+                          )}
+                          {detectedRuntimes !== null && detectedRuntimes.length > 0 && (
+                            <div className="space-y-1">
+                              {detectedRuntimes.map((rt) => (
+                                <button
+                                  key={rt.path}
+                                  onClick={() => {
+                                    setManageLauncher(rt.type);
+                                    setManageLauncherPath(rt.path);
+                                    setDetectedRuntimes(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-sm flex items-center justify-between"
+                                >
+                                  <span className="font-medium">{rt.label}</span>
+                                  <span className="text-xs text-muted-foreground font-mono truncate ml-2">{rt.path}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
 
                       <div className="flex gap-2">
