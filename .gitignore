@@ -1,10 +1,41 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 dist-desktop/
-.DS_Store
+out/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Logs
 *.log
+npm-debug.log*
+bun-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Local dev
+*.local
+
+# FunkHub internal
 /.megamemory
-/.megamemory
+.megamemory/
+*.db
+*.db-shm
 *.db-wal
-.megamemory/knowledge.db-shm
-.megamemory/knowledge.db-wal
+
+# Electron builder cache
+.electron-builder-cache/

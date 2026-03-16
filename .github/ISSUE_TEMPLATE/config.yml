@@ -3,3 +3,6 @@ contact_links:
   - name: Community Discord
     url: https://discord.gg/cdP7JhDv4u
     about: Ask setup questions, share logs, or get quick help from maintainers/community.
+  - name: Security vulnerability
+    url: https://github.com/Crew-Awesome/FunkHub/security/advisories/new
+    about: Report a security vulnerability privately via GitHub's advisory system.

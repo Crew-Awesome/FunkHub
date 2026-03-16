@@ -1,2 +1,40 @@
 # Auto detect text files and perform LF normalization
-* text=auto
+* text=auto eol=lf
+
+# Source
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.js    text eol=lf
+*.cjs   text eol=lf
+*.mjs   text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.sh    text eol=lf
+
+# Shell scripts should be executable
+*.sh    text eol=lf
+
+# Binaries — diff/merge disabled
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.icns  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.zip   binary
+*.7z    binary
+*.gz    binary
+*.tar   binary
+*.AppImage binary
+*.deb   binary
+*.exe   binary
+*.dmg   binary

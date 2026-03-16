@@ -12,8 +12,7 @@ Agent guide for working in `FunkHub`.
 
 - `.cursor/rules/`: not present.
 - `.cursorrules`: not present.
-- `.github/copilot-instructions.md`: not present.
-- If these files are added later, treat them as higher-priority repo rules and update this document.
+- `.github/copilot-instructions.md`: **present** — treat as higher-priority repo rules.
 
 ## Stack Overview
 
