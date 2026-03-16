@@ -133,16 +133,53 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     return translate(normalizeLocale(settings.locale), key, fallback, vars);
   }, [settings.locale]);
 
+  const collectCategoryIds = useCallback((targetId: number): Set<number> => {
+    const ids = new Set<number>();
+
+    const walk = (nodes: CategoryNode[]): boolean => {
+      for (const node of nodes) {
+        if (node.id === targetId) {
+          const collectChildren = (current: CategoryNode) => {
+            ids.add(current.id);
+            current.children.forEach(collectChildren);
+          };
+          collectChildren(node);
+          return true;
+        }
+
+        if (walk(node.children)) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    walk(categories);
+    if (ids.size === 0) {
+      ids.add(targetId);
+    }
+    return ids;
+  }, [categories]);
+
   const refreshDiscover = useCallback(async () => {
     try {
+      const selectedCategoryIds = selectedCategoryId !== undefined
+        ? collectCategoryIds(selectedCategoryId)
+        : undefined;
+
       if (searchQuery.trim().length >= 2) {
         const results = await funkHubService.searchMods({ query: searchQuery, page: discoverPage, perPage: discoverPerPage });
-        setDiscoverMods(results);
-        setHasMoreDiscover(results.length >= discoverPerPage);
+        const filtered = selectedCategoryIds
+          ? results.filter((mod) => selectedCategoryIds.has(mod.rootCategory?.id ?? -1))
+          : results;
+        setDiscoverMods(filtered);
+        setHasMoreDiscover(filtered.length >= discoverPerPage);
         return;
       }
 
       const mods = await funkHubService.listMods({
+        categoryId: selectedCategoryId,
         page: discoverPage,
         perPage: discoverPerPage,
         sort: discoverSort,
@@ -153,7 +190,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setDiscoverMods([]);
       setHasMoreDiscover(false);
     }
-  }, [searchQuery, discoverSort, discoverPage]);
+  }, [searchQuery, selectedCategoryId, discoverSort, discoverPage, collectCategoryIds]);
 
   const refreshModUpdates = useCallback(async () => {
     const updates = await funkHubService.refreshModUpdates();
@@ -410,6 +447,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshDiscover();
   }, [refreshDiscover]);
+
+  useEffect(() => {
+    setDiscoverPage(1);
+  }, [selectedCategoryId, discoverSort, searchQuery]);
 
   useEffect(() => {
     if (!window.funkhubDesktop?.onDeepLink || !window.funkhubDesktop?.getPendingDeepLinks) {

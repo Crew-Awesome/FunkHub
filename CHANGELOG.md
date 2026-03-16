@@ -6,6 +6,56 @@ Notes:
 - Commit messages in early history are informal; explanations below translate likely intent.
 - Version sections map to release tags.
 
+## [v0.4.0] - 2026-03-16
+
+### Public Release Summary (GitHub Release Body)
+
+## FunkHub v0.4.0 - Category Comeback
+This release focuses on discovery reliability, category browsing restoration, install/runtime correctness for executable mods, and app update/launcher quality improvements.
+
+**Range:** `v0.3.0..HEAD`  
+**First commit in range:** `459df7f`  
+**Latest commit in range:** `cb142d5`
+
+### Highlights
+#### Discover Categories Restored
+- Brought back full category browsing in Discover (desktop sidebar + mobile sheet).
+- Restored category tree search/expand behavior and all-category reset flow.
+- Fixed category filtering pipeline in provider state so selected categories correctly drive discover results.
+- Restored page-reset behavior when filters/sort/search change to keep paging consistent.
+
+#### Install and Runtime Reliability
+- Improved zip/archive handling and executable install behavior for mod packages.
+- Added/adjusted standalone executable install paths and fallback handling in desktop runtime.
+- Improved Windows launch behavior to avoid hidden/background launch regressions.
+
+#### App Updates and Core UX
+- Added native app updater flow improvements and related settings/UI behavior.
+- Added mod playtime tracking and multiple quality passes across Engines/Library/Discover views.
+- Continued localization sync updates and empty-key translation fallback handling.
+
+#### Repo/Workflow Cleanup
+- Updated repo/workflow configuration and removed stale automation config (`dependabot.yml`).
+
+### Full Changelog (Grouped)
+- **Total commits in range:** `25`
+- **Translation sync commits:** `7` (`Update translations via Weblate`)
+- **Merge commits:** `3`
+- **Feature/fix/workflow commits:** `15`
+
+### Key Commits
+- `cafac6c` - installer/runtime fixes for zip + executable content handling.
+- `d646ff9` - engine launch follow-up on Windows foreground behavior.
+- `f5acd83` - app updater integration/follow-up.
+- `d0af719` - engine detection + broad UI fixes.
+- `acea876` - engines/library page edits and UX refinement.
+- `c6db26c` - mod playtime support.
+- `9f1d3da` - performance/cleanup pass.
+- `172b151` / `cb142d5` - Discover regression introduced; fixed in this release train by restoring categories + filtering behavior.
+
+### Compare
+- `https://github.com/Crew-Awesome/FunkHub/compare/v0.3.0...v0.4.0`
+
 ## [v0.3.0] - 2026-03-15
 
 ### Public Release Summary (GitHub Release Body)
