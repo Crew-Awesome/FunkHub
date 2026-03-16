@@ -26,14 +26,14 @@ function formatDownloads(value?: number): string {
   return String(value);
 }
 
-function formatDate(ts?: number, unknown = "Unknown"): string {
+function formatDate(ts?: number, unknown = "—"): string {
   if (!ts) {
     return unknown;
   }
   return new Date(ts * 1000).toLocaleDateString();
 }
 
-function formatBytes(bytes?: number, unknown = "Unknown"): string {
+function formatBytes(bytes?: number, unknown = "—"): string {
   if (!bytes || bytes <= 0) {
     return unknown;
   }
@@ -296,7 +296,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                     </div>
                     <div className="rounded-lg bg-secondary/60 p-3">
                       <p className="text-xs text-muted-foreground">{t("mod.version", "Version")}</p>
-                      <p className="font-semibold text-foreground">{profile.version ?? t("mod.unknown", "Unknown")}</p>
+                      <p className="font-semibold text-foreground">{profile.version ?? "—"}</p>
                     </div>
                     <div className="rounded-lg bg-secondary/60 p-3">
                       <p className="text-xs text-muted-foreground">{t("mod.author", "Author")}</p>
@@ -315,12 +315,12 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                         {profile.submitter?.avatarUrl
                           ? <img src={profile.submitter.avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover" loading="lazy" />
                           : <User className="h-4 w-4" />}
-                        <span className="line-clamp-1">{profile.submitter?.name ?? t("mod.unknown", "Unknown")}</span>
+                        <span className="line-clamp-1">{profile.submitter?.name ?? "—"}</span>
                       </button>
                     </div>
                     <div className="rounded-lg bg-secondary/60 p-3">
                       <p className="text-xs text-muted-foreground">{t("mod.updated", "Updated")}</p>
-                      <p className="font-semibold text-foreground">{formatDate(profile.dateUpdated || profile.dateModified || profile.dateAdded, t("mod.unknown", "Unknown"))}</p>
+                      <p className="font-semibold text-foreground">{formatDate(profile.dateUpdated || profile.dateModified || profile.dateAdded, "—")}</p>
                     </div>
                   </div>
 
@@ -403,7 +403,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                         <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           <span className="inline-flex items-center gap-1"><Download className="h-3.5 w-3.5" />{formatDownloads(file.downloadCount)}</span>
                           <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{formatDate(file.dateAdded)}</span>
-                          <span>{formatBytes(file.fileSize, t("mod.unknown", "Unknown"))}</span>
+                          <span>{formatBytes(file.fileSize, "—")}</span>
                         </div>
                         <motion.button
                           onClick={() => installMod(

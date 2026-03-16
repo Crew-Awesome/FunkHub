@@ -20,4 +20,15 @@ export default defineConfig({
     __FUNKHUB_VERSION__: JSON.stringify(appVersion),
     __FUNKHUB_CHANNEL__: JSON.stringify(buildChannel),
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router"],
+          "vendor-motion": ["motion"],
+          "vendor-ui": ["@radix-ui/react-dialog", "@radix-ui/react-checkbox", "sonner"],
+        },
+      },
+    },
+  },
 });

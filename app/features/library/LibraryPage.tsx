@@ -186,13 +186,13 @@ export function Library() {
                       <span className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary shrink-0">{t("library.update", "Update")}</span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{mod.categoryName ?? t("library.uncategorized", "Uncategorized")}</p>
+                  {mod.categoryName && <p className="text-xs text-muted-foreground truncate">{mod.categoryName}</p>}
                   <div className="flex items-center gap-1 mt-0.5">
                     {mod.engine && (
                       <img src={getEngineIcon(mod.engine as EngineSlug)} alt="" className="w-3 h-3 object-contain shrink-0" loading="lazy" />
                     )}
                     <p className="text-xs text-muted-foreground truncate">
-                      {mod.engine ? formatEngineName(mod.engine as EngineSlug) : (mod.version ? `v${mod.version}` : t("library.versionUnknown", "Version unknown"))}
+                      {mod.engine ? formatEngineName(mod.engine as EngineSlug) : (mod.version ? `v${mod.version}` : "")}
                     </p>
                   </div>
                 </div>
@@ -224,7 +224,7 @@ export function Library() {
               <div className="absolute bottom-0 left-0 right-0 p-6 flex items-end justify-between gap-4">
                 <div className="min-w-0">
                   <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight mb-1 drop-shadow-sm">{selectedMod.modName}</h1>
-                  <p className="text-sm text-muted-foreground">{t("library.by", "by")} {selectedMod.author ?? t("library.unknown", "Unknown")}</p>
+                  {selectedMod.author && <p className="text-sm text-muted-foreground">{t("library.by", "by")} {selectedMod.author}</p>}
                 </div>
                 {/* Action cluster */}
                 <div className="flex items-center gap-2 shrink-0">

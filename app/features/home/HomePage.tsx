@@ -4,6 +4,7 @@ import { Play, Eye, Gamepad2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { ModCard, ModVisualizerModal } from "../mods";
 import { useFunkHub, useI18n } from "../../providers";
+import { formatEngineName, type EngineSlug } from "../../services/funkhub";
 
 export function Home() {
   const { t } = useI18n();
@@ -106,10 +107,10 @@ export function Home() {
                 </div>
                 <div className="p-4">
                   <h4 className="font-bold text-foreground mb-1">{mod.modName}</h4>
-                  <p className="text-sm text-muted-foreground mb-3">{t("home.by", "by")} {mod.author ?? t("home.unknown", "Unknown")}</p>
+                  {mod.author && <p className="text-sm text-muted-foreground mb-3">{t("home.by", "by")} {mod.author}</p>}
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{mod.engine}</span>
-                    <span className="text-muted-foreground">{t("home.versionPrefix", "v")}{mod.version}</span>
+                    {mod.engine && <span className="text-muted-foreground">{formatEngineName(mod.engine as EngineSlug)}</span>}
+                    {mod.version && <span className="text-muted-foreground">v{mod.version}</span>}
                   </div>
                 </div>
               </div>
@@ -140,7 +141,7 @@ export function Home() {
               <ModCard
                 id={mod.id}
                 title={mod.name}
-                author={mod.submitter?.name ?? t("home.unknown", "Unknown")}
+                author={mod.submitter?.name}
                 thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "/mod-placeholder.svg"}
                 downloads={mod.downloadCount}
                 likes={mod.likeCount}

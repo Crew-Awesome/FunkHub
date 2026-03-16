@@ -950,6 +950,22 @@ async function handleCancelInstall(payload) {
   return { ok: true };
 }
 
+async function findMacAppInnerBinary(appBundlePath) {
+  const macosDir = path.join(appBundlePath, "Contents", "MacOS");
+  try {
+    const entries = await fs.readdir(macosDir, { withFileTypes: true });
+    const appName = path.basename(appBundlePath, ".app").toLowerCase();
+    const files = entries.filter((e) => e.isFile());
+    const preferred = files.find((e) => e.name.toLowerCase() === appName) ?? files[0];
+    if (preferred) {
+      return path.join(macosDir, preferred.name);
+    }
+  } catch {
+    // Non-standard bundle or missing Contents/MacOS
+  }
+  return null;
+}
+
 async function findLaunchableExecutable(dirPath, hints = []) {
   const queue = [dirPath];
   const normalizedHints = hints.map((hint) => hint.toLowerCase());
@@ -1157,16 +1173,32 @@ async function handleLaunchEngine(payload) {
 
   let command = launchable;
   let args = [];
-  const launchCwd = path.dirname(launchable);
-  const launchNeedsWrapper = process.platform === "darwin" && launcher === "native" && launchable.toLowerCase().endsWith(".app");
+  let launchCwd = path.dirname(launchable);
+  const isAppBundle = process.platform === "darwin" && launcher === "native" && launchable.toLowerCase().endsWith(".app");
+  let usingOpenWrapper = false;
 
   if (process.platform === "linux" && launcher === "native" && launchable.toLowerCase().endsWith(".exe")) {
     throw new Error("Selected executable is a Windows .exe. Choose Wine/Wine64/Proton in Manage before launching.");
   }
 
-  if (launchNeedsWrapper) {
-    command = "open";
-    args = [launchable];
+  if (isAppBundle) {
+    const innerBinary = await findMacAppInnerBinary(launchable);
+    if (innerBinary) {
+      command = innerBinary;
+      launchCwd = path.dirname(innerBinary);
+      try {
+        const stats = await fs.stat(innerBinary);
+        if ((stats.mode & 0o111) === 0) {
+          await fs.chmod(innerBinary, 0o755);
+        }
+      } catch {
+        // Ignore chmod failures.
+      }
+    } else {
+      command = "open";
+      args = [launchable];
+      usingOpenWrapper = true;
+    }
   }
 
   if (launcher !== "native") {
@@ -1182,10 +1214,10 @@ async function handleLaunchEngine(payload) {
   }
 
   const startupGraceMs = 1200;
-  const allowImmediateExit = launcher !== "native" || launchNeedsWrapper;
-  const shouldDetach = !(process.platform === "win32" && launcher === "native" && !launchNeedsWrapper);
+  const allowImmediateExit = launcher !== "native" || usingOpenWrapper;
+  const shouldDetach = !(process.platform === "win32" && launcher === "native" && !isAppBundle);
   const shouldHideWindow = process.platform === "win32"
-    ? (launcher !== "native" || launchNeedsWrapper)
+    ? (launcher !== "native" || isAppBundle)
     : true;
 
   const child = await new Promise((resolve, reject) => {

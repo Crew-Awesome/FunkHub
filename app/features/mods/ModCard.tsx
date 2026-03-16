@@ -5,7 +5,7 @@ import { useI18n } from "../../providers";
 interface ModCardProps {
   id?: number;
   title: string;
-  author: string;
+  author?: string;
   thumbnail: string;
   likes?: number;
   downloads?: string | number;
@@ -63,7 +63,7 @@ export function ModCard({ title, author, thumbnail, likes, downloads, onView, on
           onView?.();
         }
       }}
-      aria-label={`${title} ${t("mod.by", "by")} ${author}`}
+      aria-label={author ? `${title} ${t("mod.by", "by")} ${author}` : title}
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-secondary">
         <img
@@ -98,7 +98,7 @@ export function ModCard({ title, author, thumbnail, likes, downloads, onView, on
           className="text-xs text-muted-foreground mb-3 inline-flex items-center gap-1 hover:text-foreground transition-colors"
         >
           <UserCircle2 className="w-3.5 h-3.5" />
-          {t("mod.by", "by")} {author}
+          {author ? `${t("mod.by", "by")} ${author}` : t("mod.by", "by")}
         </button>
 
         {categoryLabel && (
