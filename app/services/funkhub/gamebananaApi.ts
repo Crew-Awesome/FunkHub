@@ -118,8 +118,10 @@ function normalizeSummary(record: Record<string, unknown>): GameBananaModSummary
     profileUrl: String(record._sProfileUrl ?? ""),
     version: typeof record._sVersion === "string" ? record._sVersion : undefined,
     description: typeof record._sDescription === "string" ? record._sDescription : undefined,
-    imageUrl: firstImageUrl(record._aPreviewMedia, "_sFile530"),
-    thumbnailUrl: firstImageUrl(record._aPreviewMedia, "_sFile220"),
+    imageUrl: firstImageUrl(record._aPreviewMedia, "_sFile530")
+      ?? (typeof record._sImageUrl === "string" ? record._sImageUrl : undefined),
+    thumbnailUrl: firstImageUrl(record._aPreviewMedia, "_sFile220")
+      ?? (typeof record._sThumbnailUrl === "string" ? record._sThumbnailUrl : undefined),
     screenshotUrls: allImageUrls(record._aPreviewMedia, "_sFile530"),
     dateAdded: toNumber(record._tsDateAdded),
     dateModified: toNumber(record._tsDateModified),

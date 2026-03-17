@@ -236,9 +236,14 @@ export function Library() {
       <div className="flex gap-2.5">
         <div className="relative w-10 h-10 shrink-0">
           <img
-            src={mod.thumbnailUrl ?? "/mod-placeholder.svg"}
+            src={mod.thumbnailUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
             alt={mod.modName}
             className={`w-10 h-10 rounded-lg object-cover ${mod.enabled === false ? "opacity-40" : ""}`}
+            onError={(e) => {
+              const img = e.currentTarget;
+              img.onerror = null;
+              img.src = `${import.meta.env.BASE_URL}mod-placeholder.svg`;
+            }}
           />
           <button
             onClick={(e) => { e.stopPropagation(); setModEnabled(mod.id, mod.enabled === false); }}
@@ -526,10 +531,15 @@ export function Library() {
             {/* Hero Banner */}
             <div className="relative h-64 md:h-80 overflow-hidden group">
               <img
-                src={selectedMod.thumbnailUrl ?? "/mod-placeholder.svg"}
+                src={selectedMod.thumbnailUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
                 alt={selectedMod.modName}
                 className="w-full h-full object-cover"
                 loading="eager"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  img.onerror = null;
+                  img.src = `${import.meta.env.BASE_URL}mod-placeholder.svg`;
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
               <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">

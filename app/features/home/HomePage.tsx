@@ -142,7 +142,12 @@ export function Home() {
           transition={{ duration: 0.4 }}
         >
           <img
-            src={heroMod.thumbnailUrl ?? "/mod-placeholder.svg"}
+            src={heroMod.thumbnailUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
+            onError={(e) => {
+              const img = e.currentTarget;
+              img.onerror = null;
+              img.src = `${import.meta.env.BASE_URL}mod-placeholder.svg`;
+            }}
             alt={heroMod.modName}
             className="absolute inset-0 w-full h-full object-cover"
             loading="eager"
@@ -310,7 +315,17 @@ export function Home() {
                         onClick={() => isRunning ? navigate("/library") : launchInstalledMod(mod.id)}
                         className="relative block w-full aspect-square overflow-hidden bg-secondary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:outline-none"
                       >
-                        <img src={mod.thumbnailUrl ?? "/mod-placeholder.svg"} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                        <img
+                          src={mod.thumbnailUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
+                          alt=""
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          onError={(e) => {
+                            const img = e.currentTarget;
+                            img.onerror = null;
+                            img.src = `${import.meta.env.BASE_URL}mod-placeholder.svg`;
+                          }}
+                        />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${isRunning ? "bg-warning" : "bg-primary"}`}>
@@ -364,7 +379,7 @@ export function Home() {
                   id={mod.id}
                   title={mod.name}
                   author={mod.submitter?.name}
-                  thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "/mod-placeholder.svg"}
+                  thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
                   downloads={mod.downloadCount}
                   likes={mod.likeCount}
                   onView={() => setSelectedModId(mod.id)}

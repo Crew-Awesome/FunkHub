@@ -404,11 +404,15 @@ export function Discover() {
               aria-label={`View ${hero.name}`}
             >
               <img
-                src={hero.imageUrl ?? hero.thumbnailUrl ?? "/mod-placeholder.svg"}
+                src={hero.imageUrl ?? hero.thumbnailUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
                 alt={hero.name}
                 className="w-full h-full object-cover"
                 loading="eager"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/mod-placeholder.svg"; }}
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  img.onerror = null;
+                  img.src = `${import.meta.env.BASE_URL}mod-placeholder.svg`;
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
               {hero.period && (
@@ -459,11 +463,15 @@ export function Discover() {
                       aria-pressed={isSelected}
                     >
                       <img
-                        src={mod.thumbnailUrl ?? mod.imageUrl ?? "/mod-placeholder.svg"}
+                        src={mod.thumbnailUrl ?? mod.imageUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
                         alt={mod.name}
                         className="w-full h-full object-cover"
                         loading="lazy"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/mod-placeholder.svg"; }}
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          img.onerror = null;
+                          img.src = `${import.meta.env.BASE_URL}mod-placeholder.svg`;
+                        }}
                       />
                     </button>
                   );
@@ -649,7 +657,7 @@ export function Discover() {
                   id={mod.id}
                   title={mod.name}
                   author={mod.submitter?.name ?? t("discover.communityUploader", "Community uploader")}
-                  thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? "/mod-placeholder.svg"}
+                  thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
                   likes={mod.likeCount}
                   downloads={mod.downloadCount}
                   onView={() => setSelectedModId(mod.id)}

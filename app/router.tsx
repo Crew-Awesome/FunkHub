@@ -8,6 +8,7 @@ const Downloads = lazy(() => import("./features/downloads").then((module) => ({ 
 const Engines = lazy(() => import("./features/engines").then((module) => ({ default: module.Engines })));
 const Library = lazy(() => import("./features/library").then((module) => ({ default: module.Library })));
 const Settings = lazy(() => import("./features/settings").then((module) => ({ default: module.Settings })));
+const Stats = lazy(() => import("./features/stats").then((module) => ({ default: module.Stats })));
 const Updates = lazy(() => import("./features/updates").then((module) => ({ default: module.Updates })));
 
 function RouteErrorPage() {
@@ -53,6 +54,7 @@ export const router = routerFactory([
       { path: "updates", Component: Updates },
       { path: "engines", Component: Engines },
       { path: "settings", Component: Settings },
+      { path: "stats", Component: Stats },
       { path: "*", Component: Discover },
     ],
   },
