@@ -65,19 +65,17 @@ export function Discover() {
   };
 
   useEffect(() => {
-    const defaultExpanded: number[] = [];
-    const collectDefaults = (nodes: CategoryNode[]) => {
+    const allExpanded: number[] = [];
+    const collectAll = (nodes: CategoryNode[]) => {
       for (const node of nodes) {
-        if (node.id === 43771 || node.id === 43773) {
-          defaultExpanded.push(node.id);
-        }
         if (node.children.length > 0) {
-          collectDefaults(node.children);
+          allExpanded.push(node.id);
+          collectAll(node.children);
         }
       }
     };
-    collectDefaults(categories);
-    setExpandedCategoryIds(defaultExpanded);
+    collectAll(categories);
+    setExpandedCategoryIds(allExpanded);
   }, [categories]);
 
   const usernameFilter = useMemo(() => {
@@ -199,18 +197,18 @@ export function Discover() {
       <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-1">
         <button
           onClick={() => {
-            setSelectedCategoryId(undefined);
+            setSelectedCategoryId(8694);
             setShowCategoryPanel(false);
           }}
           className={[
             "w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors text-left border",
-            selectedCategoryId === undefined
+            selectedCategoryId === 8694
               ? "bg-primary/10 text-primary border-primary/20"
               : "hover:bg-secondary text-foreground border-transparent",
           ].join(" ")}
         >
           <Layers className="w-4 h-4" />
-          <span>{t("discover.all", "All")}</span>
+          <span>{t("discover.allMods", "All Mods")}</span>
         </button>
         {renderCategoryTree(filteredCategoryTree)}
       </div>

@@ -1,6 +1,7 @@
 {
   "app.loading": "Loading…",
   "discover.all": "All",
+  "discover.allMods": "All Mods",
   "discover.browseCategories": "Browse Categories",
   "discover.browseCategoriesDesc": "Filter discover results by category.",
   "discover.categories": "Categories",
