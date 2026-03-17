@@ -62,15 +62,15 @@ export function Discover() {
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
   const [onboardingOpen, setOnboardingOpen] = useState(!settings.firstRunCompleted);
   const [showCategoryPanel, setShowCategoryPanel] = useState(false);
-  const [bestOfPeriod, setBestOfPeriod] = useState("week");
   const [bestOfIndex, setBestOfIndex] = useState(0);
 
-  const bestOfByPeriod = useMemo(() => {
-    return bestOfMods.reduce((acc, mod) => {
-      const key = mod.period ?? "alltime";
-      (acc[key] ??= []).push(mod);
-      return acc;
-    }, {} as Record<string, typeof bestOfMods>);
+  // Flat list of all bestOfMods sorted by period order (today first, alltime last)
+  const bestOfFlat = useMemo(() => {
+    return [...bestOfMods].sort((a, b) => {
+      const ai = PERIOD_ORDER.indexOf(a.period ?? "alltime");
+      const bi = PERIOD_ORDER.indexOf(b.period ?? "alltime");
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
   }, [bestOfMods]);
 
   const needsOnboarding = !settings.firstRunCompleted;
@@ -80,10 +80,6 @@ export function Discover() {
       setOnboardingOpen(true);
     }
   }, [needsOnboarding]);
-
-  useEffect(() => {
-    setBestOfIndex(0);
-  }, [bestOfPeriod]);
 
   const completeOnboarding = async () => {
     await updateSettings({ firstRunCompleted: true });
@@ -481,108 +477,85 @@ export function Discover() {
       </div>
 
       {/* Best Of hero carousel — only shown in browse mode (no search, no category filter) */}
-      {bestOfMods.length > 0 && !searchQuery.trim() && selectedCategoryId === undefined && (() => {
-        const currentPeriodMods = bestOfByPeriod[bestOfPeriod] ?? [];
-        const hero = currentPeriodMods[bestOfIndex];
-        const availablePeriods = PERIOD_ORDER.filter((p) => (bestOfByPeriod[p]?.length ?? 0) > 0);
-
-        if (availablePeriods.length === 0) return null;
+      {bestOfFlat.length > 0 && !searchQuery.trim() && selectedCategoryId === undefined && (() => {
+        const hero = bestOfFlat[bestOfIndex];
+        if (!hero) return null;
 
         return (
-          <div className="mb-8">
-            {/* Period tabs */}
-            <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1">
-              <span className="text-xs font-medium text-muted-foreground shrink-0">Best of:</span>
-              {availablePeriods.map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setBestOfPeriod(period)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap border shrink-0 transition-colors ${
-                    bestOfPeriod === period
-                      ? "bg-primary/10 text-primary border-primary/20"
-                      : "bg-card text-muted-foreground border-border hover:bg-secondary"
-                  }`}
-                >
-                  {PERIOD_LABELS[period] ?? period}
-                </button>
-              ))}
+          <div className="mb-8 rounded-2xl overflow-hidden border border-border bg-card">
+            {/* Large hero image */}
+            <div
+              className="relative h-56 cursor-pointer"
+              onClick={() => setSelectedModId(hero.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && setSelectedModId(hero.id)}
+              aria-label={`View ${hero.name}`}
+            >
+              <img
+                src={hero.imageUrl ?? hero.thumbnailUrl ?? "/mod-placeholder.svg"}
+                alt={hero.name}
+                className="w-full h-full object-cover"
+                loading="eager"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+              {hero.period && (
+                <div className="absolute top-3 left-3">
+                  <span className="bg-primary/90 text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full backdrop-blur-sm">
+                    Best of {PERIOD_LABELS[hero.period] ?? hero.period}
+                  </span>
+                </div>
+              )}
+              <div className="absolute bottom-4 left-4 right-4">
+                <h3 className="text-white font-bold text-lg leading-tight line-clamp-1">{hero.name}</h3>
+                {hero.description && (
+                  <p className="text-white/70 text-xs mt-1 line-clamp-2">{hero.description}</p>
+                )}
+                {hero.likeCount !== undefined && (
+                  <span className="text-white/60 text-xs mt-1.5 inline-block">♥ {hero.likeCount.toLocaleString()}</span>
+                )}
+              </div>
             </div>
 
-            {/* Hero card + thumbnail strip */}
-            {hero && (
-              <div className="rounded-2xl overflow-hidden border border-border bg-card">
-                {/* Large hero image */}
-                <div
-                  className="relative h-56 cursor-pointer"
-                  onClick={() => setSelectedModId(hero.id)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === "Enter" && setSelectedModId(hero.id)}
-                  aria-label={`View ${hero.name}`}
-                >
-                  <img
-                    src={hero.imageUrl ?? hero.thumbnailUrl ?? "/mod-placeholder.svg"}
-                    alt={hero.name}
-                    className="w-full h-full object-cover"
-                    loading="eager"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                  <div className="absolute top-3 left-3">
-                    <span className="bg-primary/90 text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full backdrop-blur-sm">
-                      Best of {PERIOD_LABELS[bestOfPeriod] ?? bestOfPeriod}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <h3 className="text-white font-bold text-lg leading-tight line-clamp-1">{hero.name}</h3>
-                    {hero.description && (
-                      <p className="text-white/70 text-xs mt-1 line-clamp-2">{hero.description}</p>
-                    )}
-                    {hero.likeCount !== undefined && (
-                      <span className="text-white/60 text-xs mt-1.5 inline-block">♥ {hero.likeCount.toLocaleString()}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Navigation + thumbnail strip */}
-                <div className="flex items-center gap-2 p-3 bg-card border-t border-border">
+            {/* Navigation + flat thumbnail strip */}
+            <div className="flex items-center gap-2 p-3 bg-card border-t border-border">
+              <button
+                onClick={() => setBestOfIndex(Math.max(0, bestOfIndex - 1))}
+                disabled={bestOfIndex === 0}
+                className="shrink-0 w-7 h-7 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
+                aria-label="Previous"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex-1 flex gap-2 overflow-x-auto">
+                {bestOfFlat.map((mod, index) => (
                   <button
-                    onClick={() => setBestOfIndex(Math.max(0, bestOfIndex - 1))}
-                    disabled={bestOfIndex === 0}
-                    className="shrink-0 w-7 h-7 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
-                    aria-label="Previous"
+                    key={mod.id}
+                    onClick={() => setBestOfIndex(index)}
+                    title={mod.period ? `${mod.name} — Best of ${PERIOD_LABELS[mod.period] ?? mod.period}` : mod.name}
+                    className={`relative shrink-0 w-14 h-10 rounded-lg overflow-hidden border-2 transition-all ${
+                      index === bestOfIndex ? "border-primary" : "border-transparent opacity-50 hover:opacity-100"
+                    }`}
+                    aria-label={mod.name}
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <img
+                      src={mod.thumbnailUrl ?? mod.imageUrl ?? "/mod-placeholder.svg"}
+                      alt={mod.name}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
                   </button>
-                  <div className="flex-1 flex gap-2 overflow-x-auto">
-                    {currentPeriodMods.map((mod, index) => (
-                      <button
-                        key={mod.id}
-                        onClick={() => setBestOfIndex(index)}
-                        className={`shrink-0 w-14 h-10 rounded-lg overflow-hidden border-2 transition-all ${
-                          index === bestOfIndex ? "border-primary" : "border-transparent opacity-50 hover:opacity-100"
-                        }`}
-                        aria-label={mod.name}
-                      >
-                        <img
-                          src={mod.thumbnailUrl ?? mod.imageUrl ?? "/mod-placeholder.svg"}
-                          alt={mod.name}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setBestOfIndex(Math.min(currentPeriodMods.length - 1, bestOfIndex + 1))}
-                    disabled={bestOfIndex >= currentPeriodMods.length - 1}
-                    className="shrink-0 w-7 h-7 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
-                    aria-label="Next"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
+                ))}
               </div>
-            )}
+              <button
+                onClick={() => setBestOfIndex(Math.min(bestOfFlat.length - 1, bestOfIndex + 1))}
+                disabled={bestOfIndex >= bestOfFlat.length - 1}
+                className="shrink-0 w-7 h-7 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
+                aria-label="Next"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         );
       })()}

@@ -47,35 +47,31 @@ function firstDefinedNumber(...values: unknown[]): number | undefined {
   return undefined;
 }
 
-function firstImageUrl(previewMedia: unknown, preferredKey: "_sFile220" | "_sFile530" | "_sFile100" = "_sFile220"): string | undefined {
-  if (!previewMedia || typeof previewMedia !== "object") {
-    return undefined;
-  }
+function resolveImageList(previewMedia: unknown): unknown[] {
+  if (!previewMedia || typeof previewMedia !== "object") return [];
+  // Shape A: { _aImages: [...] }
+  const wrapped = (previewMedia as { _aImages?: unknown[] })._aImages;
+  if (Array.isArray(wrapped) && wrapped.length > 0) return wrapped;
+  // Shape B: direct array  (TopSubs and some other endpoints)
+  if (Array.isArray(previewMedia)) return previewMedia;
+  return [];
+}
 
-  const images = (previewMedia as { _aImages?: unknown[] })._aImages;
-  if (!Array.isArray(images) || images.length === 0) {
-    return undefined;
-  }
+function firstImageUrl(previewMedia: unknown, preferredKey: "_sFile220" | "_sFile530" | "_sFile100" = "_sFile220"): string | undefined {
+  const images = resolveImageList(previewMedia);
+  if (images.length === 0) return undefined;
 
   const first = images[0] as { _sBaseUrl?: string; _sFile?: string; _sFile220?: string; _sFile530?: string; _sFile100?: string };
   const base = first._sBaseUrl;
-  const file = first[preferredKey] ?? first._sFile;
-  if (!base || !file) {
-    return undefined;
-  }
+  const file = first[preferredKey] ?? first._sFile530 ?? first._sFile220 ?? first._sFile;
+  if (!base || !file) return undefined;
 
   return `${base}/${file}`;
 }
 
 function allImageUrls(previewMedia: unknown, preferredKey: "_sFile220" | "_sFile530" | "_sFile100" = "_sFile530"): string[] {
-  if (!previewMedia || typeof previewMedia !== "object") {
-    return [];
-  }
-
-  const images = (previewMedia as { _aImages?: unknown[] })._aImages;
-  if (!Array.isArray(images) || images.length === 0) {
-    return [];
-  }
+  const images = resolveImageList(previewMedia);
+  if (images.length === 0) return [];
 
   return images
     .map((entry) => {
