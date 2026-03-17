@@ -102,6 +102,12 @@ jobs:
             sleep "$sleep_seconds"
           done
 
+      - name: Remove macOS quarantine (workaround for unsigned builds)
+        if: matrix.os == 'macos-latest'
+        run: |
+          find dist -name "*.app" -exec xattr -cr {} \; || true
+          find dist -name "*.dmg" -exec xattr -cr {} \; || true
+
       - name: Verify Linux output
         if: matrix.os == 'ubuntu-latest'
         shell: bash

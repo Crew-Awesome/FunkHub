@@ -430,7 +430,11 @@ async function ensureModFolderStructure(extractDir, modFolderName) {
     if (fsSync.existsSync(to)) {
       await removePath(to);
     }
-    await fs.rename(from, to);
+    if (entry.isDirectory()) {
+      await moveDirectory(from, to);
+    } else {
+      await moveFile(from, to);
+    }
   }
 
   return modRoot;
@@ -605,6 +609,40 @@ function base64ToBuffer(value) {
 function detectVersionFromName(name) {
   const match = name.match(/v?\d+\.\d+(?:\.\d+)?(?:[-+._A-Za-z0-9]+)?/i);
   return match ? match[0].replace(/^v/i, "") : "unknown";
+}
+
+async function moveDirectory(src, dest) {
+  try {
+    await fs.rename(src, dest);
+  } catch (err) {
+    if (err.code !== "EXDEV") throw err;
+    await copyDirectoryRecursive(src, dest);
+    await removePath(src);
+  }
+}
+
+async function copyDirectoryRecursive(src, dest) {
+  await ensureDir(dest);
+  const entries = await fs.readdir(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      await copyDirectoryRecursive(srcPath, destPath);
+    } else {
+      await fs.copyFile(srcPath, destPath);
+    }
+  }
+}
+
+async function moveFile(src, dest) {
+  try {
+    await fs.rename(src, dest);
+  } catch (err) {
+    if (err.code !== "EXDEV") throw err;
+    await fs.copyFile(src, dest);
+    await fs.unlink(src);
+  }
 }
 
 async function detectArchiveSignature(filePath) {
@@ -838,7 +876,7 @@ async function installArchiveInternal(webContents, payload) {
           if (treatAsStandaloneMod) {
             await removePath(resolvedInstallPath);
             await ensureDir(path.dirname(resolvedInstallPath));
-            await fs.rename(extractTempPath, resolvedInstallPath);
+            await moveDirectory(extractTempPath, resolvedInstallPath);
             finalInstallPath = resolvedInstallPath;
           } else {
             const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
@@ -847,13 +885,13 @@ async function installArchiveInternal(webContents, payload) {
             const destination = path.join(resolvedInstallPath, safeFolderName);
             await removePath(destination);
             await ensureDir(resolvedInstallPath);
-            await fs.rename(modRoot, destination);
+            await moveDirectory(modRoot, destination);
             finalInstallPath = destination;
           }
         } else {
           await removePath(resolvedInstallPath);
           await ensureDir(path.dirname(resolvedInstallPath));
-          await fs.rename(extractTempPath, resolvedInstallPath);
+          await moveDirectory(extractTempPath, resolvedInstallPath);
           await ensureDir(path.join(resolvedInstallPath, "mods"));
 
           emitProgress(webContents, {

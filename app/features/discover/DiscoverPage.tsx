@@ -255,7 +255,7 @@ export function Discover() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder={t("discover.searchMods", "Search for mods...")}
+              placeholder={t("discover.searchMods", "Search mods or paste a GameBanana URL...")}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full bg-input-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"

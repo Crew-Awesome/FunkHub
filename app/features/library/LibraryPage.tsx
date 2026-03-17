@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, Settings2, Square, Clock, ImagePlus } from "lucide-react";
+import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, Settings2, Square, Clock, ImagePlus, Eye, EyeOff, Search, Layers, Tag, X, Check, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useFunkHub, useI18n } from "../../providers";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 import { Checkbox } from "../../shared/ui/checkbox";
 import { formatEngineName, type EngineSlug } from "../../services/funkhub";
 import { getEngineIcon } from "../engines/engineIcons";
+
+type SortBy = "newest" | "oldest" | "name" | "nameDesc" | "mostPlayed" | "engine" | "updates";
 
 export function Library() {
   const { t } = useI18n();
@@ -27,9 +29,17 @@ export function Library() {
     killLaunch,
     clearModPlayTime,
     setModCustomImage,
+    setModEnabled,
+    setModTags,
     detectWineRuntimes,
   } = useFunkHub();
   const [selectedModId, setSelectedModId] = useState(installedMods[0]?.id);
+  const [sidebarSearch, setSidebarSearch] = useState("");
+  const [sortBy, setSortBy] = useState<SortBy>("newest");
+  const [groupByEngine, setGroupByEngine] = useState(false);
+  const [activeCollection, setActiveCollection] = useState<string | null>(null);
+  const [collectionTargetId, setCollectionTargetId] = useState<string | null>(null);
+  const [newCollectionInput, setNewCollectionInput] = useState("");
   const [deleteFilesOnRemove, setDeleteFilesOnRemove] = useState(true);
   const [selectedProfileShots, setSelectedProfileShots] = useState<string[]>([]);
   const [showManualModal, setShowManualModal] = useState(false);
@@ -56,6 +66,47 @@ export function Library() {
     [installedEngines, selectedMod],
   );
   const isStandaloneMod = Boolean(selectedMod && (selectedMod.standalone || selectedMod.installPath.startsWith("executables")));
+
+  const allCollections = useMemo(() => {
+    const set = new Set<string>();
+    for (const mod of installedMods) {
+      for (const tag of (mod.tags ?? [])) set.add(tag);
+    }
+    return Array.from(set).sort();
+  }, [installedMods]);
+
+  const displayedMods = useMemo(() => {
+    let mods = [...installedMods];
+    if (sidebarSearch.trim()) {
+      const q = sidebarSearch.trim().toLowerCase();
+      mods = mods.filter((m) => m.modName.toLowerCase().includes(q) || m.author?.toLowerCase().includes(q));
+    }
+    if (activeCollection) {
+      mods = mods.filter((m) => m.tags?.includes(activeCollection));
+    }
+    switch (sortBy) {
+      case "name": mods.sort((a, b) => a.modName.localeCompare(b.modName)); break;
+      case "nameDesc": mods.sort((a, b) => b.modName.localeCompare(a.modName)); break;
+      case "newest": mods.sort((a, b) => b.installedAt - a.installedAt); break;
+      case "oldest": mods.sort((a, b) => a.installedAt - b.installedAt); break;
+      case "mostPlayed": mods.sort((a, b) => (b.totalPlayTimeMs ?? 0) - (a.totalPlayTimeMs ?? 0)); break;
+      case "engine": mods.sort((a, b) => (a.engine ?? "zzz").localeCompare(b.engine ?? "zzz")); break;
+      case "updates": mods.sort((a, b) => Number(b.updateAvailable ?? false) - Number(a.updateAvailable ?? false)); break;
+    }
+    return mods;
+  }, [installedMods, sidebarSearch, sortBy, activeCollection]);
+
+  const groupedMods = useMemo(() => {
+    if (!groupByEngine) return null;
+    const groups = new Map<string, typeof installedMods>();
+    for (const mod of displayedMods) {
+      const isStandalone = mod.standalone || mod.installPath.startsWith("executables");
+      const key = isStandalone ? "__standalone__" : (mod.engine ?? "__unknown__");
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(mod);
+    }
+    return groups;
+  }, [displayedMods, groupByEngine]);
 
   const formatPlayTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -119,6 +170,92 @@ export function Library() {
     }
   }, [installedEngines, manualEngineId]);
 
+  const renderModRow = (mod: (typeof installedMods)[number]) => (
+    <div
+      key={mod.id}
+      role="button"
+      tabIndex={0}
+      onClick={() => setSelectedModId(mod.id)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedModId(mod.id); } }}
+      className={`w-full text-left p-2.5 rounded-lg transition-all cursor-pointer ${
+        selectedMod?.id === mod.id
+          ? "bg-primary/10 border border-primary/20"
+          : "hover:bg-secondary border border-transparent"
+      }`}
+    >
+      <div className="flex gap-2.5">
+        <div className="relative w-10 h-10 shrink-0">
+          <img
+            src={mod.thumbnailUrl ?? "/mod-placeholder.svg"}
+            alt={mod.modName}
+            className={`w-10 h-10 rounded-lg object-cover ${mod.enabled === false ? "opacity-40" : ""}`}
+          />
+          <button
+            onClick={(e) => { e.stopPropagation(); setModEnabled(mod.id, mod.enabled === false); }}
+            className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 hover:bg-black/40 opacity-0 hover:opacity-100 transition-all"
+            aria-label={mod.enabled === false ? t("library.enableMod", "Enable mod") : t("library.disableMod", "Disable mod")}
+            title={mod.enabled === false ? t("library.enableMod", "Enable mod") : t("library.disableMod", "Disable mod")}
+          >
+            {mod.enabled === false ? <EyeOff className="w-3.5 h-3.5 text-white" /> : <Eye className="w-3.5 h-3.5 text-white" />}
+          </button>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1 mb-0.5">
+            <h3 className="font-medium text-foreground text-sm truncate flex-1">{mod.modName}</h3>
+            {mod.enabled === false && (
+              <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">{t("library.modDisabled", "Disabled")}</span>
+            )}
+            {runningLaunchIds.has(mod.id) && (
+              <span className="text-[9px] px-1 py-0.5 rounded bg-success/15 text-success shrink-0 flex items-center gap-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse inline-block" />
+                {t("library.running", "Running")}
+              </span>
+            )}
+            {mod.updateAvailable && (
+              <span className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary shrink-0">{t("library.update", "Update")}</span>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); setCollectionTargetId(mod.id); setNewCollectionInput(""); }}
+              className="shrink-0 p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+              aria-label={t("library.manageCollections", "Manage collections")}
+              title={t("library.manageCollections", "Manage collections")}
+            >
+              <Tag className="w-3 h-3" />
+            </button>
+          </div>
+          {mod.categoryName && !groupByEngine && <p className="text-xs text-muted-foreground truncate">{mod.categoryName}</p>}
+          {mod.tags && mod.tags.length > 0 && (
+            <div className="flex gap-1 mt-0.5 flex-wrap">
+              {mod.tags.map((tag) => (
+                <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">{tag}</span>
+              ))}
+            </div>
+          )}
+          {!mod.tags?.length && (
+            <div className="flex items-center gap-1 mt-0.5">
+              {(() => {
+                const isStandalone = mod.standalone || mod.installPath.startsWith("executables");
+                if (isStandalone) {
+                  return <p className="text-xs text-muted-foreground truncate">{t("library.standalone", "Standalone")}</p>;
+                }
+                return (
+                  <>
+                    {mod.engine && (
+                      <img src={getEngineIcon(mod.engine as EngineSlug)} alt="" className="w-3 h-3 object-contain shrink-0" loading="lazy" />
+                    )}
+                    <p className="text-xs text-muted-foreground truncate">
+                      {mod.engine ? formatEngineName(mod.engine as EngineSlug) : (mod.version ? `v${mod.version}` : "")}
+                    </p>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   if (!selectedMod) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 p-8">
@@ -145,7 +282,8 @@ export function Library() {
     <div className="flex h-full flex-col lg:flex-row">
       {/* Mod List */}
       <div className="w-full lg:w-72 bg-card border-b lg:border-b-0 lg:border-r border-border flex flex-col">
-        <div className="p-3 border-b border-border">
+        <div className="p-3 border-b border-border space-y-2">
+          {/* Header row */}
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm font-semibold text-foreground">
               {t("library.installedMods", "Installed Mods")} <span className="text-muted-foreground font-normal">({installedMods.length})</span>
@@ -158,60 +296,107 @@ export function Library() {
               <FolderPlus className="w-4 h-4" />
             </button>
           </div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {installedMods.map((mod) => (
-            <button
-              key={mod.id}
-              onClick={() => setSelectedModId(mod.id)}
-              className={`w-full text-left p-2.5 rounded-lg transition-all ${
-                selectedMod.id === mod.id
-                  ? "bg-primary/10 border border-primary/20"
-                  : "hover:bg-secondary border border-transparent"
-              }`}
+
+          {/* Collections chips */}
+          {allCollections.length > 0 && (
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+              <button
+                onClick={() => setActiveCollection(null)}
+                className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                  activeCollection === null ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t("library.allMods", "All")}
+              </button>
+              {allCollections.map((col) => (
+                <button
+                  key={col}
+                  onClick={() => setActiveCollection(col === activeCollection ? null : col)}
+                  className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    activeCollection === col ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {col}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Search + sort + group controls */}
+          <div className="flex gap-1.5">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                value={sidebarSearch}
+                onChange={(e) => setSidebarSearch(e.target.value)}
+                placeholder={t("library.search", "Search...")}
+                className="w-full pl-8 pr-7 py-1.5 bg-input-background border border-border rounded-lg text-sm"
+              />
+              {sidebarSearch && (
+                <button
+                  onClick={() => setSidebarSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={t("library.clearSearch", "Clear search")}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              className="px-2 py-1.5 bg-input-background border border-border rounded-lg text-xs text-muted-foreground cursor-pointer"
+              aria-label={t("library.sortBy", "Sort by")}
             >
-              <div className="flex gap-2.5">
-                <img
-                  src={mod.thumbnailUrl ?? "/mod-placeholder.svg"}
-                  alt={mod.modName}
-                  className="w-12 h-12 rounded-lg object-cover shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <h3 className="font-medium text-foreground text-sm truncate">{mod.modName}</h3>
-                    {runningLaunchIds.has(mod.id) && (
-                      <span className="text-[9px] px-1 py-0.5 rounded bg-success/15 text-success shrink-0 flex items-center gap-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse inline-block" />
-                        {t("library.running", "Running")}
-                      </span>
-                    )}
-                    {mod.updateAvailable && (
-                      <span className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary shrink-0">{t("library.update", "Update")}</span>
-                    )}
-                  </div>
-                  {mod.categoryName && <p className="text-xs text-muted-foreground truncate">{mod.categoryName}</p>}
-                  <div className="flex items-center gap-1 mt-0.5">
-                    {(() => {
-                      const isStandalone = mod.standalone || mod.installPath.startsWith("executables");
-                      if (isStandalone) {
-                        return <p className="text-xs text-muted-foreground truncate">{t("library.standalone", "Standalone")}</p>;
-                      }
-                      return (
-                        <>
-                          {mod.engine && (
-                            <img src={getEngineIcon(mod.engine as EngineSlug)} alt="" className="w-3 h-3 object-contain shrink-0" loading="lazy" />
-                          )}
-                          <p className="text-xs text-muted-foreground truncate">
-                            {mod.engine ? formatEngineName(mod.engine as EngineSlug) : (mod.version ? `v${mod.version}` : "")}
-                          </p>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </div>
+              <option value="newest">{t("library.sortNewest", "Newest")}</option>
+              <option value="oldest">{t("library.sortOldest", "Oldest")}</option>
+              <option value="name">{t("library.sortName", "A–Z")}</option>
+              <option value="nameDesc">{t("library.sortNameDesc", "Z–A")}</option>
+              <option value="mostPlayed">{t("library.sortMostPlayed", "Played")}</option>
+              <option value="engine">{t("library.sortEngine", "Engine")}</option>
+              <option value="updates">{t("library.sortUpdates", "Updates")}</option>
+            </select>
+            <button
+              onClick={() => setGroupByEngine((g) => !g)}
+              className={`p-1.5 rounded-lg border transition-colors ${groupByEngine ? "bg-primary/10 border-primary/30 text-primary" : "border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
+              aria-label={t("library.groupByEngine", "Group by engine")}
+              title={t("library.groupByEngine", "Group by engine")}
+            >
+              <Layers className="w-3.5 h-3.5" />
             </button>
-          ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {displayedMods.length === 0 && installedMods.length > 0 && (
+            <p className="text-xs text-muted-foreground text-center py-6 px-3">{t("library.noModsMatch", "No mods match your filter.")}</p>
+          )}
+
+          {groupedMods ? (
+            Array.from(groupedMods.entries()).map(([engineKey, mods]) => {
+              const engineInstall = installedEngines.find((e) => e.slug === engineKey);
+              const groupLabel =
+                engineKey === "__standalone__"
+                  ? t("library.standalone", "Standalone")
+                  : engineKey === "__unknown__"
+                    ? t("library.unknownEngine", "Unknown Engine")
+                    : (engineInstall?.customName ?? engineInstall?.name ?? formatEngineName(engineKey as EngineSlug));
+              return (
+                <div key={engineKey}>
+                  <div className="flex items-center gap-2 px-1 pt-2 pb-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    {engineInstall && (
+                      <img src={engineInstall.customIconUrl ?? getEngineIcon(engineInstall.slug)} alt="" className="w-3 h-3 object-contain" />
+                    )}
+                    <span className="truncate">{groupLabel}</span>
+                    <span className="ml-auto font-normal normal-case">{mods.length}</span>
+                  </div>
+                  {mods.map((mod) => renderModRow(mod))}
+                </div>
+              );
+            })
+          ) : (
+            displayedMods.map((mod) => renderModRow(mod))
+          )}
         </div>
       </div>
 
@@ -768,6 +953,86 @@ export function Library() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Collection management dialog */}
+      {(() => {
+        const targetMod = collectionTargetId ? installedMods.find((m) => m.id === collectionTargetId) : null;
+        return (
+          <Dialog open={Boolean(collectionTargetId)} onOpenChange={(open) => { if (!open) setCollectionTargetId(null); }}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>{t("library.manageCollections", "Manage Collections")}</DialogTitle>
+                <DialogDescription>
+                  {targetMod ? targetMod.modName : ""}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-3 space-y-1">
+                {allCollections.map((col) => {
+                  const isInCollection = Boolean(targetMod?.tags?.includes(col));
+                  return (
+                    <button
+                      key={col}
+                      onClick={() => {
+                        if (!targetMod) return;
+                        const current = targetMod.tags ?? [];
+                        const next = isInCollection ? current.filter((t) => t !== col) : [...current, col];
+                        setModTags(targetMod.id, next);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-secondary text-sm transition-colors"
+                    >
+                      <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isInCollection ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
+                        {isInCollection && <Check className="w-3 h-3" />}
+                      </span>
+                      {col}
+                    </button>
+                  );
+                })}
+                {allCollections.length === 0 && (
+                  <p className="text-xs text-muted-foreground px-1 pb-1">{t("library.noCollections", "No collections yet. Create one below.")}</p>
+                )}
+              </div>
+              {/* New collection input */}
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={newCollectionInput}
+                  onChange={(e) => setNewCollectionInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newCollectionInput.trim() && targetMod) {
+                      const name = newCollectionInput.trim();
+                      const current = targetMod.tags ?? [];
+                      if (!current.includes(name)) setModTags(targetMod.id, [...current, name]);
+                      setNewCollectionInput("");
+                    }
+                  }}
+                  placeholder={t("library.newCollection", "New collection name...")}
+                  className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm"
+                />
+                <button
+                  onClick={() => {
+                    const name = newCollectionInput.trim();
+                    if (!name || !targetMod) return;
+                    const current = targetMod.tags ?? [];
+                    if (!current.includes(name)) setModTags(targetMod.id, [...current, name]);
+                    setNewCollectionInput("");
+                  }}
+                  disabled={!newCollectionInput.trim()}
+                  className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm disabled:opacity-40"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => setCollectionTargetId(null)}
+                  className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                >
+                  {t("library.done", "Done")}
+                </button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 }

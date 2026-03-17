@@ -826,6 +826,20 @@ export class FunkHubService {
     funkHubStorageService.saveInstalledMods(this.installedMods);
   }
 
+  setModEnabled(installedId: string, enabled: boolean): void {
+    this.installedMods = this.installedMods.map((mod) =>
+      mod.id === installedId ? { ...mod, enabled } : mod,
+    );
+    funkHubStorageService.saveInstalledMods(this.installedMods);
+  }
+
+  setModTags(installedId: string, tags: string[]): void {
+    this.installedMods = this.installedMods.map((mod) =>
+      mod.id === installedId ? { ...mod, tags: tags.length > 0 ? tags : undefined } : mod,
+    );
+    funkHubStorageService.saveInstalledMods(this.installedMods);
+  }
+
   async removeInstalledMod(installedId: string, options?: { deleteFiles?: boolean }): Promise<void> {
     const installed = this.installedMods.find((mod) => mod.id === installedId);
     if (!installed) {

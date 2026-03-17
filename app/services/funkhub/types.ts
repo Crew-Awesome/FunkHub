@@ -109,6 +109,8 @@ export interface InstalledMod {
   categoryName?: string;
   screenshotUrls?: string[];
   manual?: boolean;
+  enabled?: boolean;
+  tags?: string[];
   standalone?: boolean;
   launcher?: "native" | "wine" | "wine64" | "proton";
   launcherPath?: string;

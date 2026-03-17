@@ -88,6 +88,8 @@ interface FunkHubContextValue {
   renameEngine: (engineId: string, name: string) => void;
   setEngineCustomIcon: (engineId: string, iconUrl?: string) => void;
   setModCustomImage: (installedId: string, imageUrl?: string) => void;
+  setModEnabled: (installedId: string, enabled: boolean) => void;
+  setModTags: (installedId: string, tags: string[]) => void;
   removeInstalledMod: (installedId: string, options?: { deleteFiles?: boolean }) => Promise<void>;
   updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
@@ -703,6 +705,14 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       },
       setModCustomImage: (installedId, imageUrl) => {
         funkHubService.setModCustomImage(installedId, imageUrl);
+        setInstalledMods(funkHubService.getInstalledMods());
+      },
+      setModEnabled: (installedId, enabled) => {
+        funkHubService.setModEnabled(installedId, enabled);
+        setInstalledMods(funkHubService.getInstalledMods());
+      },
+      setModTags: (installedId, tags) => {
+        funkHubService.setModTags(installedId, tags);
         setInstalledMods(funkHubService.getInstalledMods());
       },
       setDefaultEngine: (engineId) => {
