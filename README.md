@@ -81,7 +81,7 @@ Fast to navigate, easy to use, and built around the GameBanana API.
 - Download and install app updates from within the app
 
 ### Localization
-- UI available in English, Spanish (Latin America), Portuguese (Brazil), and Russian
+- UI available in English, Spanish (Latin America), Portuguese (Brazil), Russian, and Bahasa Indonesia
 - Language selectable at runtime from Settings
 
 ## Supported Engines
