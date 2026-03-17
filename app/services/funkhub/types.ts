@@ -118,6 +118,9 @@ export interface InstalledMod {
   updateAvailable?: boolean;
   latestVersion?: string;
   totalPlayTimeMs?: number;
+  pinned?: boolean;
+  notes?: string;
+  lastLaunchedAt?: number;
 }
 
 export type EngineSlug =

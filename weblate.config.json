@@ -22,7 +22,8 @@
       "en",
       "es-419",
       "ru",
-      "pt-BR"
+      "pt-BR",
+      "id"
     ],
     "commitMessage": "Update translations via Weblate",
     "commitAuthor": "Weblate <noreply@funkhub-translations>",
@@ -30,6 +31,6 @@
     "suggestionVoting": "1",
     "suggestionAutoAccept": "0",
     "pushOnCommit": "1",
-    "languageRegex": "^(en|es[-_]419|ru|pt[-_](BR|br))$"
+    "languageRegex": "^(en|es[-_]419|ru|pt[-_](BR|br)|id)$"
   }
 }

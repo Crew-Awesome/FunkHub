@@ -90,6 +90,10 @@ interface FunkHubContextValue {
   setModCustomImage: (installedId: string, imageUrl?: string) => void;
   setModEnabled: (installedId: string, enabled: boolean) => void;
   setModTags: (installedId: string, tags: string[]) => void;
+  setModPinned: (installedId: string, pinned: boolean) => void;
+  setModNotes: (installedId: string, notes: string) => void;
+  renameInstalledMod: (installedId: string, newName: string) => void;
+  openExternalUrl: (url: string) => Promise<void>;
   removeInstalledMod: (installedId: string, options?: { deleteFiles?: boolean }) => Promise<void>;
   updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
@@ -677,8 +681,11 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
       launchInstalledMod: async (installedId) => {
-        launchStartTimesRef.current.set(installedId, Date.now());
+        const startTime = Date.now();
+        launchStartTimesRef.current.set(installedId, startTime);
         await funkHubService.launchInstalledMod(installedId);
+        funkHubService.setModLastLaunched(installedId, startTime);
+        setInstalledMods(funkHubService.getInstalledMods());
         setRunningLaunchIds((prev) => { const next = new Set(prev); next.add(installedId); return next; });
       },
       updateInstalledModLaunchOptions: async (installedId, options) => {
@@ -714,6 +721,21 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setModTags: (installedId, tags) => {
         funkHubService.setModTags(installedId, tags);
         setInstalledMods(funkHubService.getInstalledMods());
+      },
+      setModPinned: (installedId, pinned) => {
+        funkHubService.setModPinned(installedId, pinned);
+        setInstalledMods(funkHubService.getInstalledMods());
+      },
+      setModNotes: (installedId, notes) => {
+        funkHubService.setModNotes(installedId, notes);
+        setInstalledMods(funkHubService.getInstalledMods());
+      },
+      renameInstalledMod: (installedId, newName) => {
+        funkHubService.renameInstalledMod(installedId, newName);
+        setInstalledMods(funkHubService.getInstalledMods());
+      },
+      openExternalUrl: async (url) => {
+        await funkHubService.openExternalUrl(url);
       },
       setDefaultEngine: (engineId) => {
         funkHubService.setDefaultEngine(engineId);

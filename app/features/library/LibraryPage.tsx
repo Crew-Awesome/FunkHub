@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, Settings2, Square, Clock, ImagePlus, Eye, EyeOff, Search, Layers, Tag, X, Check, Plus } from "lucide-react";
+import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, ChevronDown, Settings2, Square, Clock, ImagePlus, Eye, EyeOff, Search, Layers, Tag, X, Check, Plus, Pin, Copy, RotateCcw, ExternalLink, FileText, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useFunkHub, useI18n } from "../../providers";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
@@ -8,7 +8,7 @@ import { Checkbox } from "../../shared/ui/checkbox";
 import { formatEngineName, type EngineSlug } from "../../services/funkhub";
 import { getEngineIcon } from "../engines/engineIcons";
 
-type SortBy = "newest" | "oldest" | "name" | "nameDesc" | "mostPlayed" | "engine" | "updates";
+type SortBy = "newest" | "oldest" | "name" | "nameDesc" | "mostPlayed" | "recent" | "engine" | "updates";
 
 export function Library() {
   const { t } = useI18n();
@@ -31,6 +31,10 @@ export function Library() {
     setModCustomImage,
     setModEnabled,
     setModTags,
+    setModPinned,
+    setModNotes,
+    renameInstalledMod,
+    openExternalUrl,
     detectWineRuntimes,
   } = useFunkHub();
   const [selectedModId, setSelectedModId] = useState(installedMods[0]?.id);
@@ -40,6 +44,15 @@ export function Library() {
   const [activeCollection, setActiveCollection] = useState<string | null>(null);
   const [collectionTargetId, setCollectionTargetId] = useState<string | null>(null);
   const [newCollectionInput, setNewCollectionInput] = useState("");
+  const [collectionsExpanded, setCollectionsExpanded] = useState(true);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [sidebarWidth, setSidebarWidth] = useState(288);
+  const [contextMenu, setContextMenu] = useState<{ modId: string; x: number; y: number } | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState("");
+  const [notesValue, setNotesValue] = useState("");
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [deleteFilesOnRemove, setDeleteFilesOnRemove] = useState(true);
   const [selectedProfileShots, setSelectedProfileShots] = useState<string[]>([]);
   const [showManualModal, setShowManualModal] = useState(false);
@@ -90,9 +103,12 @@ export function Library() {
       case "newest": mods.sort((a, b) => b.installedAt - a.installedAt); break;
       case "oldest": mods.sort((a, b) => a.installedAt - b.installedAt); break;
       case "mostPlayed": mods.sort((a, b) => (b.totalPlayTimeMs ?? 0) - (a.totalPlayTimeMs ?? 0)); break;
+      case "recent": mods.sort((a, b) => (b.lastLaunchedAt ?? 0) - (a.lastLaunchedAt ?? 0)); break;
       case "engine": mods.sort((a, b) => (a.engine ?? "zzz").localeCompare(b.engine ?? "zzz")); break;
       case "updates": mods.sort((a, b) => Number(b.updateAvailable ?? false) - Number(a.updateAvailable ?? false)); break;
     }
+    // Pinned mods always float to top
+    mods.sort((a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false));
     return mods;
   }, [installedMods, sidebarSearch, sortBy, activeCollection]);
 
@@ -107,6 +123,37 @@ export function Library() {
     }
     return groups;
   }, [displayedMods, groupByEngine]);
+
+  const handleSidebarResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = sidebarRef.current?.offsetWidth ?? sidebarWidth;
+    const onMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(200, Math.min(480, startWidth + (moveEvent.clientX - startX)));
+      setSidebarWidth(newWidth);
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [sidebarWidth]);
+
+  const handleListKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    e.preventDefault();
+    const currentIndex = displayedMods.findIndex((m) => m.id === selectedMod?.id);
+    if (currentIndex === -1) {
+      if (displayedMods.length > 0) setSelectedModId(displayedMods[0].id);
+      return;
+    }
+    const nextIndex = e.key === "ArrowDown"
+      ? Math.min(currentIndex + 1, displayedMods.length - 1)
+      : Math.max(currentIndex - 1, 0);
+    setSelectedModId(displayedMods[nextIndex].id);
+    listRef.current?.children[nextIndex]?.scrollIntoView?.({ block: "nearest" });
+  }, [displayedMods, selectedMod?.id]);
 
   const formatPlayTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -124,6 +171,8 @@ export function Library() {
     setLaunchMode(selectedMod.launcher ?? "native");
     setLaunchPath(selectedMod.launcherPath ?? "");
     setLaunchExecutablePath(selectedMod.executablePath ?? "");
+    setNotesValue(selectedMod.notes ?? "");
+    setIsEditingTitle(false);
   }, [selectedMod?.id]);
 
   useEffect(() => {
@@ -177,11 +226,12 @@ export function Library() {
       tabIndex={0}
       onClick={() => setSelectedModId(mod.id)}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedModId(mod.id); } }}
+      onContextMenu={(e) => { e.preventDefault(); setContextMenu({ modId: mod.id, x: e.clientX, y: e.clientY }); }}
       className={`w-full text-left p-2.5 rounded-lg transition-all cursor-pointer ${
         selectedMod?.id === mod.id
           ? "bg-primary/10 border border-primary/20"
           : "hover:bg-secondary border border-transparent"
-      }`}
+      } ${mod.pinned ? "border-l-2 border-l-primary/40" : ""}`}
     >
       <div className="flex gap-2.5">
         <div className="relative w-10 h-10 shrink-0">
@@ -215,6 +265,14 @@ export function Library() {
               <span className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary shrink-0">{t("library.update", "Update")}</span>
             )}
             <button
+              onClick={(e) => { e.stopPropagation(); setModPinned(mod.id, !mod.pinned); }}
+              className={`shrink-0 p-0.5 rounded transition-colors ${mod.pinned ? "text-primary" : "text-muted-foreground/50 hover:text-muted-foreground"}`}
+              aria-label={mod.pinned ? t("library.unpin", "Unpin mod") : t("library.pin", "Pin mod")}
+              title={mod.pinned ? t("library.unpin", "Unpin mod") : t("library.pin", "Pin mod")}
+            >
+              <Pin className="w-3 h-3" />
+            </button>
+            <button
               onClick={(e) => { e.stopPropagation(); setCollectionTargetId(mod.id); setNewCollectionInput(""); }}
               className="shrink-0 p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
               aria-label={t("library.manageCollections", "Manage collections")}
@@ -223,7 +281,10 @@ export function Library() {
               <Tag className="w-3 h-3" />
             </button>
           </div>
-          {mod.categoryName && !groupByEngine && <p className="text-xs text-muted-foreground truncate">{mod.categoryName}</p>}
+          {mod.categoryName && mod.categoryName !== "Unknown" && !groupByEngine && <p className="text-xs text-muted-foreground truncate">{mod.categoryName}</p>}
+          {mod.lastLaunchedAt && (
+            <p className="text-[9px] text-muted-foreground/60 truncate">{t("library.lastPlayed", "Last played")}: {new Date(mod.lastLaunchedAt).toLocaleDateString()}</p>
+          )}
           {mod.tags && mod.tags.length > 0 && (
             <div className="flex gap-1 mt-0.5 flex-wrap">
               {mod.tags.map((tag) => (
@@ -281,7 +342,7 @@ export function Library() {
   return (
     <div className="flex h-full flex-col lg:flex-row">
       {/* Mod List */}
-      <div className="w-full lg:w-72 bg-card border-b lg:border-b-0 lg:border-r border-border flex flex-col">
+      <div ref={sidebarRef} className="relative w-full bg-card border-b lg:border-b-0 lg:border-r border-border flex flex-col shrink-0" style={{ minWidth: 200, maxWidth: 480, width: sidebarWidth }}>
         <div className="p-3 border-b border-border space-y-2">
           {/* Header row */}
           <div className="flex items-center justify-between gap-2">
@@ -299,26 +360,47 @@ export function Library() {
 
           {/* Collections chips */}
           {allCollections.length > 0 && (
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+            <div>
               <button
-                onClick={() => setActiveCollection(null)}
-                className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                  activeCollection === null ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
+                onClick={() => setCollectionsExpanded((v) => !v)}
+                className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors w-full mb-1"
               >
-                {t("library.allMods", "All")}
+                <ChevronDown className={`w-3 h-3 transition-transform ${collectionsExpanded ? "" : "-rotate-90"}`} />
+                {t("library.collections", "Collections")}
               </button>
-              {allCollections.map((col) => (
-                <button
-                  key={col}
-                  onClick={() => setActiveCollection(col === activeCollection ? null : col)}
-                  className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                    activeCollection === col ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {col}
-                </button>
-              ))}
+              <AnimatePresence initial={false}>
+                {collectionsExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+                      <button
+                        onClick={() => setActiveCollection(null)}
+                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                          activeCollection === null ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {t("library.allMods", "All")}
+                      </button>
+                      {allCollections.map((col) => (
+                        <button
+                          key={col}
+                          onClick={() => setActiveCollection(col === activeCollection ? null : col)}
+                          className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                            activeCollection === col ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {col}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
@@ -353,6 +435,7 @@ export function Library() {
               <option value="name">{t("library.sortName", "A–Z")}</option>
               <option value="nameDesc">{t("library.sortNameDesc", "Z–A")}</option>
               <option value="mostPlayed">{t("library.sortMostPlayed", "Played")}</option>
+              <option value="recent">{t("library.sortRecent", "Recent")}</option>
               <option value="engine">{t("library.sortEngine", "Engine")}</option>
               <option value="updates">{t("library.sortUpdates", "Updates")}</option>
             </select>
@@ -367,7 +450,7 @@ export function Library() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div ref={listRef} className="flex-1 overflow-y-auto p-2 space-y-1" tabIndex={0} onKeyDown={handleListKeyDown} aria-label={t("library.installedMods", "Installed Mods")}>
           {displayedMods.length === 0 && installedMods.length > 0 && (
             <p className="text-xs text-muted-foreground text-center py-6 px-3">{t("library.noModsMatch", "No mods match your filter.")}</p>
           )}
@@ -381,16 +464,40 @@ export function Library() {
                   : engineKey === "__unknown__"
                     ? t("library.unknownEngine", "Unknown Engine")
                     : (engineInstall?.customName ?? engineInstall?.name ?? formatEngineName(engineKey as EngineSlug));
+              const isCollapsed = collapsedGroups.has(engineKey);
+              const toggleGroup = () =>
+                setCollapsedGroups((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(engineKey)) next.delete(engineKey);
+                  else next.add(engineKey);
+                  return next;
+                });
               return (
                 <div key={engineKey}>
-                  <div className="flex items-center gap-2 px-1 pt-2 pb-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <button
+                    onClick={toggleGroup}
+                    className="flex items-center gap-2 w-full px-1 pt-2 pb-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors group/group"
+                  >
+                    <ChevronDown className={`w-3 h-3 transition-transform shrink-0 ${isCollapsed ? "-rotate-90" : ""}`} />
                     {engineInstall && (
-                      <img src={engineInstall.customIconUrl ?? getEngineIcon(engineInstall.slug)} alt="" className="w-3 h-3 object-contain" />
+                      <img src={engineInstall.customIconUrl ?? getEngineIcon(engineInstall.slug)} alt="" className="w-3 h-3 object-contain shrink-0" />
                     )}
                     <span className="truncate">{groupLabel}</span>
                     <span className="ml-auto font-normal normal-case">{mods.length}</span>
-                  </div>
-                  {mods.map((mod) => renderModRow(mod))}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {!isCollapsed && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="overflow-hidden"
+                      >
+                        {mods.map((mod) => renderModRow(mod))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })
@@ -398,6 +505,12 @@ export function Library() {
             displayedMods.map((mod) => renderModRow(mod))
           )}
         </div>
+        {/* Resize handle */}
+        <div
+          onMouseDown={handleSidebarResizeMouseDown}
+          className="hidden lg:block absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-10"
+          aria-hidden
+        />
       </div>
 
       {/* Mod Detail */}
@@ -419,20 +532,59 @@ export function Library() {
                 loading="eager"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-              <button
-                onClick={async () => {
-                  const path = await browseFile({ title: t("library.chooseImage", "Choose Image"), filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }] });
-                  if (path) setModCustomImage(selectedMod.id, `file://${path}`);
-                }}
-                className="absolute top-3 right-3 h-8 w-8 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label={t("library.changeImage", "Change image")}
-                title={t("library.changeImage", "Change image")}
-              >
-                <ImagePlus className="w-4 h-4" />
-              </button>
+              <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                {selectedMod.thumbnailUrl?.startsWith("file://") && (
+                  <button
+                    onClick={() => setModCustomImage(selectedMod.id, undefined)}
+                    className="h-8 w-8 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center"
+                    aria-label={t("library.resetImage", "Reset image")}
+                    title={t("library.resetImage", "Reset image")}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={async () => {
+                    const path = await browseFile({ title: t("library.chooseImage", "Choose Image"), filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }] });
+                    if (path) setModCustomImage(selectedMod.id, `file://${path}`);
+                  }}
+                  className="h-8 w-8 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center"
+                  aria-label={t("library.changeImage", "Change image")}
+                  title={t("library.changeImage", "Change image")}
+                >
+                  <ImagePlus className="w-4 h-4" />
+                </button>
+              </div>
               <div className="absolute bottom-0 left-0 right-0 p-6 flex items-end justify-between gap-4">
                 <div className="min-w-0">
-                  <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight mb-1 drop-shadow-sm">{selectedMod.modName}</h1>
+                  {isEditingTitle ? (
+                    <input
+                      autoFocus
+                      value={editTitleValue}
+                      onChange={(e) => setEditTitleValue(e.target.value)}
+                      onBlur={() => {
+                        const trimmed = editTitleValue.trim();
+                        if (trimmed && trimmed !== selectedMod.modName) renameInstalledMod(selectedMod.id, trimmed);
+                        setIsEditingTitle(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.currentTarget.blur(); }
+                        if (e.key === "Escape") { setIsEditingTitle(false); }
+                      }}
+                      className="text-2xl md:text-3xl font-bold bg-transparent border-b border-primary text-foreground leading-tight mb-1 outline-none w-full"
+                    />
+                  ) : (
+                    <button
+                      className="group/title text-left"
+                      onClick={() => { setEditTitleValue(selectedMod.modName); setIsEditingTitle(true); }}
+                      title={t("library.renameMod", "Click to rename")}
+                    >
+                      <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight mb-1 drop-shadow-sm flex items-center gap-2">
+                        {selectedMod.modName}
+                        <Pencil className="w-4 h-4 opacity-0 group-hover/title:opacity-60 transition-opacity shrink-0" />
+                      </h1>
+                    </button>
+                  )}
                   {selectedMod.author && <p className="text-sm text-muted-foreground">{t("library.by", "by")} {selectedMod.author}</p>}
                 </div>
                 {/* Action cluster */}
@@ -491,6 +643,16 @@ export function Library() {
                   >
                     <FolderOpen className="w-4 h-4" />
                   </button>
+                  {selectedMod.gamebananaUrl && !selectedMod.manual && (
+                    <button
+                      onClick={() => openExternalUrl(selectedMod.gamebananaUrl)}
+                      className="h-9 w-9 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground flex items-center justify-center transition-colors"
+                      aria-label={t("library.viewOnGameBanana", "View on GameBanana")}
+                      title={t("library.viewOnGameBanana", "View on GameBanana")}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </button>
+                  )}
                   {isStandaloneMod && (
                     <button
                       onClick={() => setShowLaunchSettings(true)}
@@ -647,9 +809,70 @@ export function Library() {
                 </div>
               </div>
 
+              {/* Collections in detail */}
+              {allCollections.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h2 className="text-sm font-semibold text-foreground">{t("library.collections", "Collections")}</h2>
+                    <button
+                      onClick={() => { setCollectionTargetId(selectedMod.id); setNewCollectionInput(""); }}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />{t("library.manage", "Manage")}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedMod.tags && selectedMod.tags.length > 0 ? selectedMod.tags.map((tag) => (
+                      <span key={tag} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">
+                        {tag}
+                        <button
+                          onClick={() => setModTags(selectedMod.id, (selectedMod.tags ?? []).filter((t2) => t2 !== tag))}
+                          className="hover:text-foreground ml-0.5"
+                          aria-label={`Remove from ${tag}`}
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
+                    )) : (
+                      <button
+                        onClick={() => { setCollectionTargetId(selectedMod.id); setNewCollectionInput(""); }}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {t("library.addToCollection", "Add to a collection...")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div>
+                <h2 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5" />
+                  {t("library.notes", "Notes")}
+                </h2>
+                <textarea
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  onBlur={() => setModNotes(selectedMod.id, notesValue)}
+                  placeholder={t("library.notesPlaceholder", "Add personal notes about this mod...")}
+                  className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm min-h-16 resize-none text-muted-foreground focus:text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  rows={3}
+                />
+              </div>
+
               {/* Install path — subtle */}
               <div className="text-xs text-muted-foreground border-t border-border pt-4">
-                <span className="font-medium text-foreground/60">{t("library.installedLocation", "Location")}: </span>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="font-medium text-foreground/60">{t("library.installedLocation", "Location")}</span>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(selectedMod.installPath); toast.success(t("library.pathCopied", "Path copied")); }}
+                    className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                    title={t("library.copyPath", "Copy path")}
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
                 <span className="break-all font-mono">{selectedMod.installPath}</span>
               </div>
             </div>
@@ -657,15 +880,69 @@ export function Library() {
         </AnimatePresence>
       </div>
 
-      {/* Refresh FAB */}
-      <button
-        onClick={() => { refreshModUpdates(); toast.success(t("library.checkingUpdates", "Checking for updates...")); }}
-        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 h-10 px-4 rounded-lg bg-card border border-border hover:bg-secondary text-sm flex items-center gap-2 shadow-sm"
-        aria-label={t("library.refreshUpdateStatus", "Refresh update status")}
-      >
-        <RefreshCw className="w-3.5 h-3.5" />
-        {t("library.refreshUpdateStatus", "Refresh Update Status")}
-      </button>
+      {/* FAB cluster */}
+      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col gap-2 items-end">
+        {installedMods.some((m) => m.updateAvailable) && (
+          <button
+            onClick={() => {
+              const toUpdate = installedMods.filter((m) => m.updateAvailable);
+              toUpdate.forEach((m) => installMod(m.modId, m.sourceFileId, undefined, 10));
+              toast.success(t("library.updatingAll", "Queued {{count}} update(s)", { count: toUpdate.length }));
+            }}
+            className="h-10 px-4 rounded-lg bg-primary text-primary-foreground text-sm flex items-center gap-2 shadow-sm hover:bg-primary/90"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            {t("library.updateAll", "Update All")}
+          </button>
+        )}
+        <button
+          onClick={() => { refreshModUpdates(); toast.success(t("library.checkingUpdates", "Checking for updates...")); }}
+          className="h-10 px-4 rounded-lg bg-card border border-border hover:bg-secondary text-sm flex items-center gap-2 shadow-sm"
+          aria-label={t("library.refreshUpdateStatus", "Refresh update status")}
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          {t("library.refreshUpdateStatus", "Refresh Update Status")}
+        </button>
+      </div>
+
+      {/* Right-click context menu */}
+      {contextMenu && (() => {
+        const ctxMod = installedMods.find((m) => m.id === contextMenu.modId);
+        if (!ctxMod) return null;
+        return (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }} />
+            <div
+              className="fixed z-50 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-40 text-sm"
+              style={{ left: contextMenu.x, top: contextMenu.y }}
+            >
+              <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary text-left" onClick={() => { setSelectedModId(ctxMod.id); setContextMenu(null); }}>
+                <Play className="w-3.5 h-3.5" />{runningLaunchIds.has(ctxMod.id) ? t("library.stopMod", "Stop") : t("library.launchMod", "Launch")}
+              </button>
+              <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary text-left" onClick={() => { openFolderPath(ctxMod.installPath); setContextMenu(null); }}>
+                <FolderOpen className="w-3.5 h-3.5" />{t("library.openModFolder", "Open Folder")}
+              </button>
+              <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary text-left" onClick={() => { setModPinned(ctxMod.id, !ctxMod.pinned); setContextMenu(null); }}>
+                <Pin className="w-3.5 h-3.5" />{ctxMod.pinned ? t("library.unpin", "Unpin") : t("library.pin", "Pin")}
+              </button>
+              <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary text-left" onClick={() => { setModEnabled(ctxMod.id, ctxMod.enabled === false); setContextMenu(null); }}>
+                {ctxMod.enabled === false ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                {ctxMod.enabled === false ? t("library.enableMod", "Enable") : t("library.disableMod", "Disable")}
+              </button>
+              <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary text-left" onClick={() => { setCollectionTargetId(ctxMod.id); setNewCollectionInput(""); setContextMenu(null); }}>
+                <Tag className="w-3.5 h-3.5" />{t("library.manageCollections", "Collections")}
+              </button>
+              <div className="border-t border-border my-1" />
+              <button
+                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-destructive/10 text-destructive text-left"
+                onClick={() => { setSelectedModId(ctxMod.id); setShowRemoveConfirm(true); setContextMenu(null); }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />{t("library.remove", "Remove")}
+              </button>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Screenshot lightbox */}
       <Dialog open={previewIndex !== null} onOpenChange={(next) => { if (!next) setPreviewIndex(null); }}>
@@ -970,21 +1247,33 @@ export function Library() {
                 {allCollections.map((col) => {
                   const isInCollection = Boolean(targetMod?.tags?.includes(col));
                   return (
-                    <button
-                      key={col}
-                      onClick={() => {
-                        if (!targetMod) return;
-                        const current = targetMod.tags ?? [];
-                        const next = isInCollection ? current.filter((t) => t !== col) : [...current, col];
-                        setModTags(targetMod.id, next);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-secondary text-sm transition-colors"
-                    >
-                      <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isInCollection ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
-                        {isInCollection && <Check className="w-3 h-3" />}
-                      </span>
-                      {col}
-                    </button>
+                    <div key={col} className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          if (!targetMod) return;
+                          const current = targetMod.tags ?? [];
+                          const next = isInCollection ? current.filter((t) => t !== col) : [...current, col];
+                          setModTags(targetMod.id, next);
+                        }}
+                        className="flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-secondary text-sm transition-colors"
+                      >
+                        <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isInCollection ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
+                          {isInCollection && <Check className="w-3 h-3" />}
+                        </span>
+                        {col}
+                      </button>
+                      <button
+                        onClick={() => {
+                          installedMods.forEach((m) => {
+                            if (m.tags?.includes(col)) setModTags(m.id, (m.tags ?? []).filter((tag) => tag !== col));
+                          });
+                        }}
+                        className="p-1.5 rounded text-muted-foreground/40 hover:text-destructive transition-colors shrink-0"
+                        title={t("library.deleteCollection", "Delete collection")}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
                   );
                 })}
                 {allCollections.length === 0 && (
