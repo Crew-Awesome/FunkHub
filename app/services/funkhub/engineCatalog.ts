@@ -111,6 +111,21 @@ const githubEngineSources: GithubEngineSource[] = [
       },
     ],
   },
+  {
+    slug: "psych-online",
+    name: "Psych Online",
+    description: "Funkin Psych Online engine releases.",
+    repo: "Snirozu/Funkin-Psych-Online",
+    fallbackVersion: "unknown",
+    fallbackReleases: [
+      {
+        platform: "any",
+        version: "latest",
+        sourceUrl: "https://github.com/Snirozu/Funkin-Psych-Online/releases",
+        downloadUrl: "https://github.com/Snirozu/Funkin-Psych-Online/releases",
+      },
+    ],
+  },
 ];
 
 const staticOnlyEngines: EngineDefinition[] = [

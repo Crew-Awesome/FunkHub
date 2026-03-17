@@ -13,6 +13,7 @@ import {
   EngineDefinition,
   EngineHealth,
   EngineSlug,
+  EngineUpdateInfo,
   FunkHubSettings,
   GameBananaModProfile,
   GameBananaModSummary,
@@ -40,6 +41,8 @@ export function formatEngineName(slug: EngineSlug): string {
       return "ALE Psych";
     case "p-slice":
       return "P-Slice";
+    case "psych-online":
+      return "Psych Online";
     default:
       return slug;
   }
@@ -103,6 +106,8 @@ export class FunkHubService {
   private downloadHistory: DownloadTask[] = [];
 
   private updateCache: ModUpdateInfo[] = [];
+
+  private engineUpdateCache: EngineUpdateInfo[] = [];
 
   private settings: FunkHubSettings;
 
@@ -467,6 +472,50 @@ export class FunkHubService {
 
   getModUpdates(): ModUpdateInfo[] {
     return [...this.updateCache];
+  }
+
+  getEngineUpdates(): EngineUpdateInfo[] {
+    return [...this.engineUpdateCache];
+  }
+
+  async refreshEngineUpdates(): Promise<EngineUpdateInfo[]> {
+    const updates: EngineUpdateInfo[] = [];
+    const catalog = await engineCatalogService.getEngineCatalog();
+
+    await Promise.all(this.installedEngines.map(async (installed) => {
+      const catalogEntry = catalog.find((entry) => entry.slug === installed.slug);
+      if (!catalogEntry || catalogEntry.releases.length === 0) {
+        return;
+      }
+
+      const latestRelease = catalogEntry.releases[0];
+      const latestVersion = latestRelease.version;
+      const currentVersion = installed.version;
+
+      if (latestVersion && latestVersion !== "unknown" && latestVersion !== currentVersion) {
+        const cmp = compareVersions(latestVersion, currentVersion);
+        if (cmp > 0) {
+          updates.push({
+            installedId: installed.id,
+            engineSlug: installed.slug,
+            engineName: formatEngineName(installed.slug),
+            currentVersion,
+            latestVersion,
+          });
+        }
+      }
+    }));
+
+    this.engineUpdateCache = updates.sort((a, b) => a.engineName.localeCompare(b.engineName));
+
+    const flagged = new Set(this.engineUpdateCache.map((item) => item.installedId));
+    this.installedEngines = this.installedEngines.map((engine) => ({
+      ...engine,
+      updateAvailable: flagged.has(engine.id),
+    }));
+    funkHubStorageService.saveInstalledEngines(this.installedEngines);
+
+    return this.engineUpdateCache;
   }
 
   async getEngineCatalog(): Promise<EngineDefinition[]> {

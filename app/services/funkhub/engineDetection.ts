@@ -39,5 +39,8 @@ export function detectRequiredEngineFromMetadata(input: {
   if (includesAny(haystack, ["p-slice", "pslice"])) {
     return "p-slice";
   }
+  if (includesAny(haystack, ["psych online", "psych-online", "psychonline", "snirozu"])) {
+    return "psych-online";
+  }
   return undefined;
 }

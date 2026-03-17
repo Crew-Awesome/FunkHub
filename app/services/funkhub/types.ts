@@ -131,7 +131,8 @@ export type EngineSlug =
   | "js-engine"
   | "ale-psych"
   | "p-slice"
-;
+  | "psych-online"
+  ;
 
 export interface EngineRelease {
   platform: "windows" | "macos" | "linux" | "any";
@@ -188,6 +189,7 @@ export interface FunkHubSettings {
   checkAppUpdatesOnStartup: boolean;
   autoDownloadAppUpdates: boolean;
   autoUpdateMods: boolean;
+  autoUpdateEngines: boolean;
   sendAnalytics: boolean;
   showAnimations: boolean;
   gameBananaIntegration: {
@@ -309,6 +311,14 @@ export interface ModUpdateInfo {
   sourceFileId: number;
 }
 
+export interface EngineUpdateInfo {
+  installedId: string;
+  engineSlug: EngineSlug;
+  engineName: string;
+  currentVersion: string;
+  latestVersion: string;
+}
+
 export interface AppUpdateInfo {
   available: boolean;
   currentVersion: string;
@@ -342,6 +352,8 @@ export interface InstalledEngine {
   modsPath: string;
   isDefault: boolean;
   installedAt: number;
+  updateAvailable?: boolean;
+  latestVersion?: string;
 }
 
 export type EngineHealth = "ready" | "missing_binary" | "broken_install";

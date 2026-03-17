@@ -7,6 +7,10 @@ import jsEngineIcon from "../../../styles/assets/engine_js_engine.png";
 import alePsychIcon from "../../../styles/assets/engine_ale_psych.png";
 import pSliceIcon from "../../../styles/assets/engine_p_slice.png";
 
+const remoteIconUrls: Partial<Record<EngineSlug, string>> = {
+  "psych-online": "https://raw.githubusercontent.com/Snirozu/Funkin-Online-Server/refs/heads/main/client/public/images/transwag.png",
+};
+
 const iconByEngine: Record<EngineSlug, string> = {
   psych: psychIcon,
   basegame: basegameIcon,
@@ -15,8 +19,9 @@ const iconByEngine: Record<EngineSlug, string> = {
   "js-engine": jsEngineIcon,
   "ale-psych": alePsychIcon,
   "p-slice": pSliceIcon,
+  "psych-online": "",
 };
 
-export function getEngineIcon(slug: EngineSlug): string {
-  return iconByEngine[slug];
+export function getEngineIcon(slug: EngineSlug): string | undefined {
+  return iconByEngine[slug] || remoteIconUrls[slug];
 }
