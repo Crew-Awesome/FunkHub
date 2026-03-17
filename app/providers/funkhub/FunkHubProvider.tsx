@@ -41,6 +41,8 @@ interface FunkHubContextValue {
   setSelectedCategoryId: (categoryId?: number) => void;
   subfeedSort: SubfeedSort;
   setSubfeedSort: (value: SubfeedSort) => void;
+  categorySort: string;
+  setCategorySort: (value: string) => void;
   discoverPage: number;
   setDiscoverPage: (page: number) => void;
   discoverPerPage: number;
@@ -135,6 +137,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [itchAuth, setItchAuth] = useState<{ connected: boolean; connectedAt?: number; scopes?: string[] }>({ connected: false });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
   const [subfeedSort, setSubfeedSort] = useState<SubfeedSort>("default");
+  const [categorySort, setCategorySort] = useState("Generic_Newest");
   const [discoverPage, setDiscoverPage] = useState(1);
   const discoverPerPage = 24;
   const [hasMoreDiscover, setHasMoreDiscover] = useState(false);
@@ -205,22 +208,23 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
 
       if (selectedCategoryId === undefined) {
         // No search, no category — use Subfeed (Ripe / New / Updated)
+        // Subfeed returns up to ~15 items/page regardless of perPage, so check mods.length > 0
         const mods = await funkHubService.getSubfeed({
           sort: subfeedSort,
           page: discoverPage,
           perPage: discoverPerPage,
         });
         setDiscoverMods(mods);
-        setHasMoreDiscover(mods.length >= discoverPerPage);
+        setHasMoreDiscover(mods.length > 0);
         return;
       }
 
-      // Category selected — use Mod/Index with fixed newest sort
+      // Category selected — use Mod/Index with user-chosen sort
       const mods = await funkHubService.listMods({
         categoryId: selectedCategoryId,
         page: discoverPage,
         perPage: discoverPerPage,
-        sort: "Generic_Newest",
+        sort: categorySort,
         releaseType: browseReleaseType,
         contentRatings: browseContentRatings.length > 0 ? browseContentRatings : undefined,
       });
@@ -230,7 +234,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setDiscoverMods([]);
       setHasMoreDiscover(false);
     }
-  }, [searchQuery, searchOrder, searchFields, selectedCategoryId, subfeedSort, discoverPage, browseReleaseType, browseContentRatings, collectCategoryIds]);
+  }, [searchQuery, searchOrder, searchFields, selectedCategoryId, subfeedSort, categorySort, discoverPage, browseReleaseType, browseContentRatings, collectCategoryIds]);
 
   const refreshModUpdates = useCallback(async () => {
     const updates = await funkHubService.refreshModUpdates();
@@ -480,7 +484,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setDiscoverPage(1);
-  }, [selectedCategoryId, subfeedSort, searchQuery, searchOrder, searchFields, browseReleaseType, browseContentRatings]);
+  }, [selectedCategoryId, subfeedSort, categorySort, searchQuery, searchOrder, searchFields, browseReleaseType, browseContentRatings]);
 
   useEffect(() => {
     if (!window.funkhubDesktop?.onDeepLink || !window.funkhubDesktop?.getPendingDeepLinks) {
@@ -618,6 +622,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setSelectedCategoryId,
       subfeedSort,
       setSubfeedSort,
+      categorySort,
+      setCategorySort,
       discoverPage,
       setDiscoverPage,
       discoverPerPage,
@@ -819,6 +825,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       appUpdateStatus,
       selectedCategoryId,
       subfeedSort,
+      categorySort,
       discoverPage,
       discoverPerPage,
       hasMoreDiscover,

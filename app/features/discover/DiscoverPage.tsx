@@ -21,6 +21,8 @@ export function Discover() {
     setSelectedCategoryId,
     subfeedSort,
     setSubfeedSort,
+    categorySort,
+    setCategorySort,
     discoverPage,
     setDiscoverPage,
     hasMoreDiscover,
@@ -45,6 +47,13 @@ export function Discover() {
     { value: "default", label: "Ripe" },
     { value: "new", label: "New" },
     { value: "updated", label: "Updated" },
+  ];
+
+  const CATEGORY_SORTS = [
+    { value: "Generic_Newest", label: "Newest" },
+    { value: "Generic_MostDownloaded", label: "Most Downloaded" },
+    { value: "Generic_MostLiked", label: "Most Liked" },
+    { value: "Generic_MostViewed", label: "Most Viewed" },
   ];
 
   const PERIOD_ORDER = ["today", "week", "month", "3month", "6month", "year", "alltime"];
@@ -150,7 +159,7 @@ export function Discover() {
               "w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors text-left border",
               selected
                 ? "bg-primary/10 text-primary border-primary/20"
-                : "hover:bg-secondary text-foreground border-transparent",
+                : "text-foreground border-transparent",
             ].join(" ")}
             style={{ paddingLeft: `${12 + depth * 14}px` }}
           >
@@ -173,7 +182,7 @@ export function Discover() {
                 setSelectedCategoryId(category.id);
                 setShowCategoryPanel(false);
               }}
-              className="flex w-full min-w-0 flex-1 items-center justify-start gap-2 text-left"
+              className="flex w-full min-w-0 flex-1 items-center justify-start gap-2 text-left hover:text-primary transition-colors"
             >
               {category.iconUrl ? (
                 <img
@@ -269,6 +278,7 @@ export function Discover() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
+              aria-label={t("discover.searchMods", "Search mods")}
               placeholder={t("discover.searchMods", "Search mods or paste a GameBanana URL...")}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
@@ -288,28 +298,48 @@ export function Discover() {
         {/* Sort + filter bar — browse mode (no search query) */}
         {!searchQuery.trim() && (
           <div className="space-y-2">
-            {/* Subfeed sort pills (only when no category selected) + filter toggle */}
+            {/* Sort pills + filter toggle */}
             <div className="flex gap-2 overflow-x-auto pb-1 items-center">
-              {selectedCategoryId === undefined && SUBFEED_SORTS.map((option) => {
-                const isSelected = subfeedSort === option.value;
-                return (
-                  <motion.button
-                    key={option.value}
-                    onClick={() => setSubfeedSort(option.value)}
-                    whileTap={{ scale: 0.92 }}
-                    animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
-                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                    className={`
-                      px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0
-                      ${isSelected
-                        ? "bg-primary/10 text-primary border border-primary/20"
-                        : "bg-card hover:bg-secondary text-muted-foreground border border-border"}
-                    `}
-                  >
-                    {option.label}
-                  </motion.button>
-                );
-              })}
+              {selectedCategoryId === undefined
+                ? SUBFEED_SORTS.map((option) => {
+                    const isSelected = subfeedSort === option.value;
+                    return (
+                      <motion.button
+                        key={option.value}
+                        onClick={() => setSubfeedSort(option.value)}
+                        whileTap={{ scale: 0.92 }}
+                        animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
+                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0 border ${
+                          isSelected
+                            ? "bg-primary/10 text-primary border-primary/20"
+                            : "bg-card hover:bg-secondary text-muted-foreground border-border"
+                        }`}
+                      >
+                        {option.label}
+                      </motion.button>
+                    );
+                  })
+                : CATEGORY_SORTS.map((option) => {
+                    const isSelected = categorySort === option.value;
+                    return (
+                      <motion.button
+                        key={option.value}
+                        onClick={() => setCategorySort(option.value)}
+                        whileTap={{ scale: 0.92 }}
+                        animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
+                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0 border ${
+                          isSelected
+                            ? "bg-primary/10 text-primary border-primary/20"
+                            : "bg-card hover:bg-secondary text-muted-foreground border-border"
+                        }`}
+                      >
+                        {option.label}
+                      </motion.button>
+                    );
+                  })
+              }
               <button
                 type="button"
                 onClick={() => setShowBrowseFilters((v) => !v)}
@@ -569,6 +599,23 @@ export function Discover() {
             <div className="mb-4 text-sm text-muted-foreground inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5">
               <UserCircle2 className="w-4 h-4" />
               {t("discover.filteredByUser", "Filtered by user")}: <span className="text-foreground">{usernameFilter}</span>
+            </div>
+          )}
+          {!loading && visibleMods.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+              <p className="text-muted-foreground text-sm">
+                {searchQuery.trim()
+                  ? t("discover.noResults", "No mods match your search.")
+                  : t("discover.noMods", "No mods found.")}
+              </p>
+              {(browseReleaseType || browseContentRatings.length > 0) && (
+                <button
+                  onClick={() => { setBrowseReleaseType(undefined as unknown as ReleaseType); setBrowseContentRatings([]); }}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {t("discover.clearFilters", "Clear filters")}
+                </button>
+              )}
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
