@@ -19,6 +19,7 @@ import {
   ReleaseType,
   SearchField,
   SearchSortOrder,
+  type SubfeedSort,
 } from "../../services/funkhub";
 import { parseFunkHubDeepLink } from "../../services/funkhub/deepLink";
 import { modInstallerService } from "../../services/funkhub/installer";
@@ -26,10 +27,9 @@ import { normalizeLocale, translate } from "../../i18n";
 
 interface FunkHubContextValue {
   loading: boolean;
-  trendingMods: GameBananaModSummary[];
+  bestOfMods: GameBananaModSummary[];
   discoverMods: GameBananaModSummary[];
   categories: CategoryNode[];
-  modSortOptions: Array<{ alias: string; title: string }>;
   installedMods: InstalledMod[];
   modUpdates: ModUpdateInfo[];
   downloads: DownloadTask[];
@@ -39,8 +39,8 @@ interface FunkHubContextValue {
   itchAuth: { connected: boolean; connectedAt?: number; scopes?: string[] };
   selectedCategoryId?: number;
   setSelectedCategoryId: (categoryId?: number) => void;
-  discoverSort: string;
-  setDiscoverSort: (value: string) => void;
+  subfeedSort: SubfeedSort;
+  setSubfeedSort: (value: SubfeedSort) => void;
   discoverPage: number;
   setDiscoverPage: (page: number) => void;
   discoverPerPage: number;
@@ -123,9 +123,8 @@ const FunkHubContext = createContext<FunkHubContextValue | undefined>(undefined)
 
 export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
-  const [trendingMods, setTrendingMods] = useState<GameBananaModSummary[]>([]);
+  const [bestOfMods, setBestOfMods] = useState<GameBananaModSummary[]>([]);
   const [discoverMods, setDiscoverMods] = useState<GameBananaModSummary[]>([]);
-  const [modSortOptions, setModSortOptions] = useState<Array<{ alias: string; title: string }>>([]);
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [downloads, setDownloads] = useState<DownloadTask[]>(funkHubService.getDownloadHistory());
   const [enginesCatalog, setEnginesCatalog] = useState<EngineDefinition[]>([]);
@@ -135,7 +134,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<FunkHubSettings>(funkHubService.getSettings());
   const [itchAuth, setItchAuth] = useState<{ connected: boolean; connectedAt?: number; scopes?: string[] }>({ connected: false });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
-  const [discoverSort, setDiscoverSort] = useState("Generic_Newest");
+  const [subfeedSort, setSubfeedSort] = useState<SubfeedSort>("default");
   const [discoverPage, setDiscoverPage] = useState(1);
   const discoverPerPage = 24;
   const [hasMoreDiscover, setHasMoreDiscover] = useState(false);
@@ -204,11 +203,24 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      if (selectedCategoryId === undefined) {
+        // No search, no category — use Subfeed (Ripe / New / Updated)
+        const mods = await funkHubService.getSubfeed({
+          sort: subfeedSort,
+          page: discoverPage,
+          perPage: discoverPerPage,
+        });
+        setDiscoverMods(mods);
+        setHasMoreDiscover(mods.length >= discoverPerPage);
+        return;
+      }
+
+      // Category selected — use Mod/Index with fixed newest sort
       const mods = await funkHubService.listMods({
         categoryId: selectedCategoryId,
         page: discoverPage,
         perPage: discoverPerPage,
-        sort: discoverSort,
+        sort: "Generic_Newest",
         releaseType: browseReleaseType,
         contentRatings: browseContentRatings.length > 0 ? browseContentRatings : undefined,
       });
@@ -218,7 +230,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setDiscoverMods([]);
       setHasMoreDiscover(false);
     }
-  }, [searchQuery, searchOrder, searchFields, selectedCategoryId, discoverSort, discoverPage, browseReleaseType, browseContentRatings, collectCategoryIds]);
+  }, [searchQuery, searchOrder, searchFields, selectedCategoryId, subfeedSort, discoverPage, browseReleaseType, browseContentRatings, collectCategoryIds]);
 
   const refreshModUpdates = useCallback(async () => {
     const updates = await funkHubService.refreshModUpdates();
@@ -422,26 +434,16 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     try {
-      const [trending, categoryTree, catalog, sorts] = await Promise.all([
+      const [bestOf, categoryTree, catalog] = await Promise.all([
         funkHubService.getTrendingMods(),
         funkHubService.getFunkHubCategories(),
         funkHubService.getEngineCatalog(),
-        funkHubService.getModSortOptions(),
         funkHubService.syncDesktopSettings(),
       ]);
 
-      setTrendingMods(trending);
+      setBestOfMods(bestOf);
       setCategories(categoryTree);
       setEnginesCatalog(catalog);
-      const filteredSorts = sorts.filter((sort) => ["Generic_Newest", "Generic_MostDownloaded", "Generic_MostLiked", "Generic_MostViewed"].includes(sort.alias));
-      setModSortOptions(filteredSorts.length > 0
-        ? filteredSorts
-        : [
-          { alias: "Generic_Newest", title: "Newest" },
-          { alias: "Generic_MostDownloaded", title: "Most Downloaded" },
-          { alias: "Generic_MostLiked", title: "Most Liked" },
-          { alias: "Generic_MostViewed", title: "Most Viewed" },
-        ]);
       setInstalledMods(funkHubService.getInstalledMods());
       setInstalledEngines(funkHubService.getInstalledEngines());
       await funkHubService.reconcileDiskState();
@@ -478,7 +480,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setDiscoverPage(1);
-  }, [selectedCategoryId, discoverSort, searchQuery, searchOrder, searchFields, browseReleaseType, browseContentRatings]);
+  }, [selectedCategoryId, subfeedSort, searchQuery, searchOrder, searchFields, browseReleaseType, browseContentRatings]);
 
   useEffect(() => {
     if (!window.funkhubDesktop?.onDeepLink || !window.funkhubDesktop?.getPendingDeepLinks) {
@@ -602,10 +604,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const value = useMemo<FunkHubContextValue>(
     () => ({
       loading,
-      trendingMods,
+      bestOfMods,
       discoverMods,
       categories,
-      modSortOptions,
       installedMods,
       modUpdates,
       downloads,
@@ -615,8 +616,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       itchAuth,
       selectedCategoryId,
       setSelectedCategoryId,
-      discoverSort,
-      setDiscoverSort,
+      subfeedSort,
+      setSubfeedSort,
       discoverPage,
       setDiscoverPage,
       discoverPerPage,
@@ -802,10 +803,9 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     }),
     [
       loading,
-      trendingMods,
+      bestOfMods,
       discoverMods,
       categories,
-      modSortOptions,
       installedMods,
       modUpdates,
       downloads,
@@ -818,7 +818,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       appUpdateChecking,
       appUpdateStatus,
       selectedCategoryId,
-      discoverSort,
+      subfeedSort,
       discoverPage,
       discoverPerPage,
       hasMoreDiscover,

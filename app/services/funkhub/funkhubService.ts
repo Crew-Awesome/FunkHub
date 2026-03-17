@@ -23,6 +23,7 @@ import {
   ListModsParams,
   ModUpdateInfo,
   SearchModsParams,
+  SubfeedParams,
 } from "./types";
 
 export function formatEngineName(slug: EngineSlug): string {
@@ -667,6 +668,10 @@ export class FunkHubService {
 
   async listMods(params?: ListModsParams): Promise<GameBananaModSummary[]> {
     return gameBananaApiService.listMods(params);
+  }
+
+  async getSubfeed(params?: SubfeedParams): Promise<GameBananaModSummary[]> {
+    return gameBananaApiService.getSubfeed(params);
   }
 
   async getModSortOptions(): Promise<Array<{ alias: string; title: string }>> {

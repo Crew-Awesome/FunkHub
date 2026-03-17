@@ -9,11 +9,11 @@ import { formatEngineName, type EngineSlug } from "../../services/funkhub";
 export function Home() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const { loading, trendingMods, installedMods, installMod, launchInstalledMod } = useFunkHub();
+  const { loading, bestOfMods, installedMods, installMod, launchInstalledMod } = useFunkHub();
   const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
 
-  const featuredMod = trendingMods[0];
-  const recommendedMods = trendingMods.slice(1, 5);
+  const featuredMod = bestOfMods[0];
+  const recommendedMods = bestOfMods.slice(1, 5);
 
   return (
     <div className="p-8 space-y-10">

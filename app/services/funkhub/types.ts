@@ -54,6 +54,15 @@ export interface GameBananaModSummary {
   submitter?: GameBananaMember;
   game?: { id: number; name: string };
   rootCategory?: Pick<GameBananaCategory, "id" | "name" | "profileUrl" | "iconUrl">;
+  period?: string;
+}
+
+export type SubfeedSort = "default" | "new" | "updated";
+
+export interface SubfeedParams {
+  sort?: SubfeedSort;
+  page?: number;
+  perPage?: number;
 }
 
 export interface GameBananaCredit {

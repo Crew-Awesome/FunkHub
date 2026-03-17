@@ -7,6 +7,7 @@ import {
   GameBananaModSummary,
   ListModsParams,
   SearchModsParams,
+  type SubfeedParams,
 } from "./types";
 import { detectRequiredEngineFromMetadata } from "./engineDetection";
 
@@ -393,9 +394,32 @@ export class GameBananaApiService {
       url,
     });
 
+    // TopSubs response has no _aGame field, so game.id would be 0 — do not filter by game id.
+    // The endpoint is already scoped to FNF.
     const normalized = payload
-      .map(normalizeSummary)
-      .filter((mod) => mod.modelName === "Mod" && mod.game?.id === FNF_GAME_ID);
+      .filter((record) => String(record._sModelName ?? "Mod") === "Mod")
+      .map((record) => ({
+        ...normalizeSummary(record),
+        period: typeof record._sPeriod === "string" ? record._sPeriod : undefined,
+      }));
+    this.prefetchThumbnails(normalized);
+    return normalized;
+  }
+
+  async getSubfeed({ sort = "default", page = 1, perPage = 15 }: SubfeedParams = {}): Promise<GameBananaModSummary[]> {
+    const url = new URL(`${APIV11_BASE}/Game/${FNF_GAME_ID}/Subfeed`);
+    url.searchParams.set("_sSort", sort);
+    url.searchParams.set("_nPage", String(page));
+    url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
+    const cacheKey = `subfeed:${url.toString()}`;
+    const payload = await this.fetchJsonCached<{ _aRecords?: Record<string, unknown>[] }>({
+      key: cacheKey,
+      cache: this.listCache,
+      ttlMs: LIST_CACHE_TTL_MS,
+      url: url.toString(),
+    });
+    const records = payload._aRecords ?? [];
+    const normalized = records.map(normalizeSummary).filter((mod) => mod.modelName === "Mod");
     this.prefetchThumbnails(normalized);
     return normalized;
   }
