@@ -134,7 +134,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [installedEngines, setInstalledEngines] = useState<InstalledEngine[]>(funkHubService.getInstalledEngines());
   const [settings, setSettings] = useState<FunkHubSettings>(funkHubService.getSettings());
   const [itchAuth, setItchAuth] = useState<{ connected: boolean; connectedAt?: number; scopes?: string[] }>({ connected: false });
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(8694);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
   const [discoverSort, setDiscoverSort] = useState("Generic_Newest");
   const [discoverPage, setDiscoverPage] = useState(1);
   const discoverPerPage = 24;

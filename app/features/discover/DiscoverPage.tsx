@@ -65,17 +65,11 @@ export function Discover() {
   };
 
   useEffect(() => {
-    const allExpanded: number[] = [];
-    const collectAll = (nodes: CategoryNode[]) => {
-      for (const node of nodes) {
-        if (node.children.length > 0) {
-          allExpanded.push(node.id);
-          collectAll(node.children);
-        }
-      }
-    };
-    collectAll(categories);
-    setExpandedCategoryIds(allExpanded);
+    const rootExpanded: number[] = [];
+    for (const node of categories) {
+      rootExpanded.push(node.id);
+    }
+    setExpandedCategoryIds(rootExpanded);
   }, [categories]);
 
   const usernameFilter = useMemo(() => {
@@ -197,12 +191,12 @@ export function Discover() {
       <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-1">
         <button
           onClick={() => {
-            setSelectedCategoryId(8694);
+            setSelectedCategoryId(undefined);
             setShowCategoryPanel(false);
           }}
           className={[
             "w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors text-left border",
-            selectedCategoryId === 8694
+            selectedCategoryId === undefined
               ? "bg-primary/10 text-primary border-primary/20"
               : "hover:bg-secondary text-foreground border-transparent",
           ].join(" ")}
