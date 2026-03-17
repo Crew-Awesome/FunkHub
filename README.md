@@ -18,6 +18,26 @@ Fast to navigate, easy to use, and built around the GameBanana API.
 
 - Discord: https://discord.gg/cdP7JhDv4u
 
+## Help Translate FunkHub
+
+<p align="center">
+  <a href="https://funkhub-translations.duckdns.org/">
+    <img src="assets/art/weblate-logo.png" alt="Weblate" width="200" />
+  </a>
+</p>
+
+<p align="center">
+  <strong>FunkHub needs your help to reach more players!</strong><br>
+  We use <a href="https://funkhub-translations.duckdns.org/">Weblate</a> for community translations — no coding required.<br>
+  If you speak another language, please consider contributing a translation!
+</p>
+
+<p align="center">
+  <a href="https://funkhub-translations.duckdns.org/">
+    <img src="https://img.shields.io/badge/translate-on%20Weblate-green?style=for-the-badge&logo=weblate" alt="Translate on Weblate" />
+  </a>
+</p>
+
 ## Features
 
 ### Discover & Install
@@ -61,9 +81,8 @@ Fast to navigate, easy to use, and built around the GameBanana API.
 - Download and install app updates from within the app
 
 ### Localization
-- UI available in English, Spanish (Latin America), Portuguese (Brazil), Russian, and Bahasa Indonesia
+- UI available in English, Spanish (Latin America), Portuguese (Brazil), and Russian
 - Language selectable at runtime from Settings
-- Community translation portal: https://funkhub-translations.duckdns.org/
 
 ## Supported Engines
 
