@@ -138,6 +138,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added SECURITY.md
 - PR/Issue templates
 
+## [v0.1.3] - 2026-03-15
+
+### Changed
+- `.github/workflows/build.yml` updated for version tagging
+- `.github/workflows/release.yml` updated for version handling
+
 ## [v0.1.2] - 2026-03-15
 
 ### Added
