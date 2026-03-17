@@ -108,6 +108,11 @@ export function Updates() {
                   ? t("updates.latestVersion", `You're on the latest version (v${appUpdate.currentVersion}).`)
                   : t("updates.noCheckYet", "No app update check has been run yet.")}
             </p>
+            {!appUpdateChecking && !appUpdate && !settings.checkAppUpdatesOnStartup && (
+              <p className="text-xs text-warning mt-1">
+                {t("updates.autoCheckDisabled", "Startup check is off — updates won't be found automatically.")}
+              </p>
+            )}
           </div>
         )}
         {appUpdateError && <p className="mt-2 text-xs text-destructive">{appUpdateError}</p>}

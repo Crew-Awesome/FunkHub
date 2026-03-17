@@ -6,6 +6,8 @@ import { getEngineIcon } from "./engineIcons";
 import { useFunkHub, useI18n } from "../../providers";
 import { detectClientPlatform, pickBestReleaseForPlatform, formatEngineName, type EngineSlug, type EngineRelease } from "../../services/funkhub";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
+import { useEngineWizard } from "./useEngineWizard";
+import { useEngineManage } from "./useEngineManage";
 
 export function Engines() {
   const { t } = useI18n();
@@ -34,31 +36,36 @@ export function Engines() {
     detectWineRuntimes,
     scanCommonEnginePaths,
   } = useFunkHub();
+  const wizard = useEngineWizard();
+  const {
+    wizardStep, setWizardStep,
+    wizardEngineSlug, setWizardEngineSlug,
+    wizardVersion, setWizardVersion,
+    installingSlug, setInstallingSlug,
+    installError, setInstallError,
+    scannedPaths, setScannedPaths,
+    scanningPaths, setScanningPaths,
+    platformWarning, setPlatformWarning,
+    resetWizard,
+  } = wizard;
+
+  const manage = useEngineManage();
+  const {
+    manageEngineId, setManageEngineId,
+    manageLauncher, setManageLauncher,
+    manageLauncherPath, setManageLauncherPath,
+    manageExecutablePath, setManageExecutablePath,
+    manageCustomName, setManageCustomName,
+    manageCustomIconUrl, setManageCustomIconUrl,
+    detectedRuntimes, setDetectedRuntimes,
+    openManage,
+    closeManage,
+  } = manage;
+
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [installingSlug, setInstallingSlug] = useState<string | null>(null);
-  const [installError, setInstallError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyEngineId, setBusyEngineId] = useState<string | null>(null);
   const [confirmUninstall, setConfirmUninstall] = useState<{ id: string; name: string; version: string; path: string } | null>(null);
-  const [manageEngineId, setManageEngineId] = useState<string | null>(null);
-  const [manageLauncher, setManageLauncher] = useState<"native" | "wine" | "wine64" | "proton">("native");
-  const [manageLauncherPath, setManageLauncherPath] = useState("");
-  const [manageExecutablePath, setManageExecutablePath] = useState("");
-  const [manageCustomName, setManageCustomName] = useState("");
-  const [manageCustomIconUrl, setManageCustomIconUrl] = useState("");
-  const [selectedReleaseBySlug, setSelectedReleaseBySlug] = useState<Record<string, string>>({});
-  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
-  const [wizardEngineSlug, setWizardEngineSlug] = useState<EngineSlug | null>(null);
-  const [wizardVersion, setWizardVersion] = useState<string | null>(null);
-  const [scannedPaths, setScannedPaths] = useState<string[] | null>(null);
-  const [scanningPaths, setScanningPaths] = useState(false);
-  const [detectedRuntimes, setDetectedRuntimes] = useState<Array<{ type: "wine" | "wine64" | "proton"; path: string; label: string }> | null>(null);
-  const [platformWarning, setPlatformWarning] = useState<{
-    slug: EngineSlug;
-    releaseUrl: string;
-    releaseVersion: string;
-    message: string;
-  } | null>(null);
 
   useEffect(() => {
     refreshEngineHealth().catch((error) => {
@@ -129,12 +136,14 @@ export function Engines() {
   const handleManage = (engineId: string) => {
     const override = getLaunchOverride(engineId);
     const engine = installedEngines.find((entry) => entry.id === engineId);
-    setManageEngineId(engineId);
-    setManageLauncher(override.launcher);
-    setManageLauncherPath(override.launcherPath ?? "");
-    setManageExecutablePath(override.executablePath ?? "");
-    setManageCustomName(engine?.customName ?? "");
-    setManageCustomIconUrl(engine?.customIconUrl ?? "");
+    openManage({
+      engineId,
+      launcher: override.launcher,
+      launcherPath: override.launcherPath,
+      executablePath: override.executablePath,
+      customName: engine?.customName,
+      customIconUrl: engine?.customIconUrl,
+    });
   };
 
   const handleUpdate = async (engineId: string) => {
@@ -190,7 +199,7 @@ export function Engines() {
     });
     renameEngine(manageEngineId, manageCustomName);
     setEngineCustomIcon(manageEngineId, manageCustomIconUrl.trim() || undefined);
-    setManageEngineId(null);
+    closeManage();
   };
 
   const browseLauncherPath = async () => {
@@ -264,9 +273,7 @@ export function Engines() {
   const getSelectedRelease = (engineSlug: EngineSlug) => {
     const releases = getInstallableReleases(engineSlug);
     if (releases.length === 0) return undefined;
-    const selectedUrl = selectedReleaseBySlug[engineSlug];
-    const selected = selectedUrl ? releases.find((release) => release.downloadUrl === selectedUrl) : undefined;
-    return selected ?? pickBestReleaseForPlatform(releases, currentPlatform) ?? releases[0];
+    return pickBestReleaseForPlatform(releases, currentPlatform) ?? releases[0];
   };
 
   // ── 3-step wizard ──────────────────────────────────────────────────────────
@@ -674,7 +681,7 @@ export function Engines() {
           </div>
         )}
 
-        <Dialog open={showAddDialog} onOpenChange={(next) => { setShowAddDialog(next); if (next) { setWizardStep(1); setWizardEngineSlug(null); setWizardVersion(null); } }}>
+        <Dialog open={showAddDialog} onOpenChange={(next) => { if (next) resetWizard(); setShowAddDialog(next); }}>
           <DialogContent className="max-h-[88vh] w-[min(96vw,900px)] max-w-none overflow-y-auto">
             {addEnginePanel}
           </DialogContent>
@@ -691,7 +698,7 @@ export function Engines() {
           <p className="text-sm text-muted-foreground mt-1">Game engine installs used to run mods</p>
         </div>
         <button
-          onClick={() => { setShowAddDialog(true); setWizardStep(1); setWizardEngineSlug(null); setWizardVersion(null); }}
+          onClick={() => { resetWizard(); setShowAddDialog(true); }}
           className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
         >
           <Plus className="w-4 h-4" />
@@ -767,7 +774,7 @@ export function Engines() {
       </Dialog>
 
       {/* Manage Dialog */}
-      <Dialog open={Boolean(manageEngineId)} onOpenChange={(next) => { if (!next) setManageEngineId(null); }}>
+      <Dialog open={Boolean(manageEngineId)} onOpenChange={(next) => { if (!next) closeManage(); }}>
         <DialogContent className="max-w-xl">
           {(() => {
             const engine = installedEngines.find((entry) => entry.id === manageEngineId);
@@ -824,7 +831,7 @@ export function Engines() {
                     <div className="flex flex-wrap gap-2">
                       {!engine.isDefault && (
                         <button
-                          onClick={() => { setDefaultEngine(engine.id); setManageEngineId(null); }}
+                          onClick={() => { setDefaultEngine(engine.id); closeManage(); }}
                           className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-secondary"
                         >
                           {t("engines.setDefault", "Set Default")}
@@ -940,7 +947,7 @@ export function Engines() {
                     {t("engines.uninstall", "Uninstall")}
                   </button>
                   <div className="flex gap-2">
-                    <button onClick={() => setManageEngineId(null)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">
+                    <button onClick={() => closeManage()} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">
                       {t("engines.close", "Close")}
                     </button>
                     <button onClick={saveManageOverrides} className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm">
@@ -977,7 +984,7 @@ export function Engines() {
                 if (!confirmUninstall) return;
                 const target = confirmUninstall;
                 setConfirmUninstall(null);
-                setManageEngineId(null);
+                closeManage();
                 await handleUninstall(target.id);
               }}
               className="px-3 py-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive text-sm"
