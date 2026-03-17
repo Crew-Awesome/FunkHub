@@ -18,19 +18,33 @@
     "template": "app/i18n/locales/en.json",
     "newBase": "app/i18n/locales/en.json",
     "newLanguageMode": "add",
+    "languageCodeStyle": "bcp",
+    "languageRegex": "^(en|es[-_]419|ru|pt[-_](BR|br)|id|ja|zh[-_](Hans|hans)|zh[-_](Hant|hant)|fr|de|ko|tr|pl|nl|it|ar|vi|th)$",
     "allowedLanguages": [
       "en",
       "es-419",
       "ru",
       "pt-BR",
-      "id"
+      "id",
+      "ja",
+      "zh-Hans",
+      "zh-Hant",
+      "fr",
+      "de",
+      "ko",
+      "tr",
+      "pl",
+      "nl",
+      "it",
+      "ar",
+      "vi",
+      "th"
     ],
     "commitMessage": "Update translations via Weblate",
     "commitAuthor": "Weblate <noreply@funkhub-translations>",
-    "enableSuggestions": "1",
-    "suggestionVoting": "1",
-    "suggestionAutoAccept": "0",
-    "pushOnCommit": "1",
-    "languageRegex": "^(en|es[-_]419|ru|pt[-_](BR|br)|id)$"
+    "enableSuggestions": true,
+    "suggestionVoting": true,
+    "suggestionAutoAccept": 0,
+    "pushOnCommit": true
   }
 }

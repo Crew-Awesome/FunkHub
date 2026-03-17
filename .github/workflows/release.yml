@@ -52,7 +52,7 @@ jobs:
           bun-version: latest
 
       - name: Cache Bun dependencies
-        uses: actions/cache@d4323d4df104b026a6aa633fef7e2b4e9bb6f0a8 # v4.2.2
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
         with:
           path: |
             ~/.bun/install/cache
