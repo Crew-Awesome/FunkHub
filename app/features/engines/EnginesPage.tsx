@@ -61,7 +61,9 @@ export function Engines() {
   } | null>(null);
 
   useEffect(() => {
-    refreshEngineHealth().catch(() => undefined);
+    refreshEngineHealth().catch((error) => {
+      console.warn("[Engines] Initial health check failed:", error instanceof Error ? error.message : error);
+    });
   }, []);
 
   const availableEngines = enginesCatalog;
@@ -279,6 +281,12 @@ export function Engines() {
           <DialogHeader>
             <DialogTitle>{t("engines.addEngine", "Add Engine")}</DialogTitle>
             <DialogDescription>{t("engines.addEngineDesc", "Choose an engine to install.")}</DialogDescription>
+            <div className="flex items-center gap-1.5 mt-3">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className={`h-1 flex-1 rounded-full transition-colors ${step === 1 ? "bg-primary" : "bg-secondary"}`} />
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">{t("engines.step", "Step")} {wizardStep} {t("engines.of3", "of 3")}</p>
           </DialogHeader>
 
           <div className="space-y-3 mt-2">
@@ -302,7 +310,7 @@ export function Engines() {
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-foreground">{engine.name}</span>
                           {installedCount > 0 && (
-                            <span className="text-[11px] text-muted-foreground">{installedCount} installed</span>
+                            <span className="text-[11px] text-muted-foreground">{t("engines.installedCount", "{{n}} installed", { n: installedCount })}</span>
                           )}
                         </div>
                         {engine.description && (
@@ -417,6 +425,12 @@ export function Engines() {
               {wizardEngine.name}
             </DialogTitle>
             <DialogDescription>{t("engines.chooseVersion", "Choose a version to install.")}</DialogDescription>
+            <div className="flex items-center gap-1.5 mt-3">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className={`h-1 flex-1 rounded-full transition-colors ${step <= 2 ? "bg-primary" : "bg-secondary"}`} />
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">{t("engines.step", "Step")} {wizardStep} {t("engines.of3", "of 3")}</p>
           </DialogHeader>
 
           <div className="space-y-1.5 mt-2">
@@ -474,6 +488,12 @@ export function Engines() {
               {wizardEngine.name} · {formatVersionLabel(wizardVersion)}
             </DialogTitle>
             <DialogDescription>{t("engines.chooseFile", "Choose a file to download.")}</DialogDescription>
+            <div className="flex items-center gap-1.5 mt-3">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className={`h-1 flex-1 rounded-full transition-colors ${step <= 3 ? "bg-primary" : "bg-secondary"}`} />
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">{t("engines.step", "Step")} {wizardStep} {t("engines.of3", "of 3")}</p>
           </DialogHeader>
 
           <div className="space-y-1.5 mt-2">

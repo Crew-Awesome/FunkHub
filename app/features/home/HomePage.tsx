@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Play, Compass, Cpu, Download, RefreshCw, Package, ChevronRight, Square } from "lucide-react";
 import { useNavigate } from "react-router";
 import { ModCard, ModVisualizerModal } from "../mods";
@@ -18,6 +18,7 @@ function formatDuration(ms: number | undefined): string {
 export function Home() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
   const {
     loading,
     bestOfMods,
@@ -28,7 +29,9 @@ export function Home() {
     launchInstalledMod,
     runningLaunchIds,
     getEngineHealth,
+    settings,
   } = useFunkHub();
+  const shouldAnimate = (settings?.showAnimations ?? true) && !prefersReducedMotion;
 
   const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
 
@@ -97,12 +100,6 @@ export function Home() {
             {t("home.empty.noEngineHint", "You need at least one engine installed before mods can run.")}
           </p>
         )}
-
-        <ModVisualizerModal
-          modId={selectedModId}
-          open={Boolean(selectedModId)}
-          onClose={() => setSelectedModId(undefined)}
-        />
       </div>
     );
   }
@@ -140,7 +137,7 @@ export function Home() {
       {heroMod && (
         <motion.div
           className="relative h-64 md:h-80 rounded-2xl overflow-hidden"
-          initial={{ opacity: 0, y: 16 }}
+          initial={shouldAnimate ? { opacity: 0, y: 16 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
@@ -217,7 +214,7 @@ export function Home() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <button
           onClick={() => navigate("/library")}
-          className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left hover:bg-secondary transition-colors group"
+          className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left hover:bg-secondary transition-colors group focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           <Package className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
           <div className="min-w-0">
@@ -228,7 +225,7 @@ export function Home() {
 
         <button
           onClick={() => navigate("/engines")}
-          className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left hover:bg-secondary transition-colors group"
+          className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left hover:bg-secondary transition-colors group focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           <Cpu className={`w-4 h-4 shrink-0 transition-colors ${brokenEngines.length > 0 ? "text-warning" : "text-muted-foreground group-hover:text-foreground"}`} />
           <div className="min-w-0">
@@ -243,13 +240,13 @@ export function Home() {
 
         <button
           onClick={() => navigate("/downloads")}
-          className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors group ${
+          className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors group focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none ${
             activeDownloads.length > 0
               ? "border-primary/20 bg-primary/5 hover:bg-primary/10"
               : "border-border bg-card hover:bg-secondary"
           }`}
         >
-          <Download className={`w-4 h-4 shrink-0 ${activeDownloads.length > 0 ? "text-primary animate-bounce" : "text-muted-foreground group-hover:text-foreground"}`} />
+          <Download className={`w-4 h-4 shrink-0 ${activeDownloads.length > 0 ? "text-primary animate-pulse" : "text-muted-foreground group-hover:text-foreground"}`} />
           <div className="min-w-0">
             <p className="text-xl font-bold text-foreground leading-none">{activeDownloads.length}</p>
             <p className={`text-xs mt-0.5 ${activeDownloads.length > 0 ? "text-primary" : "text-muted-foreground"}`}>
@@ -260,7 +257,7 @@ export function Home() {
 
         <button
           onClick={() => navigate("/updates")}
-          className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors group ${
+          className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors group focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none ${
             pendingUpdates > 0
               ? "border-warning/20 bg-warning/5 hover:bg-warning/10"
               : "border-border bg-card hover:bg-secondary"
@@ -302,40 +299,37 @@ export function Home() {
                   <motion.div
                     key={mod.id}
                     className="shrink-0 w-36 snap-start"
-                    initial={{ opacity: 0, x: 16 }}
+                    initial={shouldAnimate ? { opacity: 0, x: 16 } : false}
                     animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
                     transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.25) }}
                   >
-                    <div className="group relative rounded-xl overflow-hidden border border-border bg-card cursor-pointer">
-                      <div className="aspect-square overflow-hidden bg-secondary">
-                        <img
-                          src={mod.thumbnailUrl ?? "/mod-placeholder.svg"}
-                          alt={mod.modName}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
+                    <article className="group relative rounded-xl overflow-hidden border border-border bg-card">
+                      <button
+                        aria-label={`${isRunning ? t("home.stop", "Stop") : t("home.play", "Play")} ${mod.modName}`}
+                        onClick={() => isRunning ? navigate("/library") : launchInstalledMod(mod.id)}
+                        className="relative block w-full aspect-square overflow-hidden bg-secondary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:outline-none"
+                      >
+                        <img src={mod.thumbnailUrl ?? "/mod-placeholder.svg"} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
-                        <button
-                          aria-label={`${t("home.play", "Play")} ${mod.modName}`}
-                          onClick={() => launchInstalledMod(mod.id)}
-                          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${isRunning ? "bg-warning" : "bg-primary"}`}>
-                            {isRunning
-                              ? <Square className="w-4 h-4 text-white" fill="currentColor" />
-                              : <Play className="w-4 h-4 text-white ml-0.5" fill="currentColor" />}
+                            {isRunning ? <Square className="w-4 h-4 text-white" fill="currentColor" /> : <Play className="w-4 h-4 text-white ml-0.5" fill="currentColor" />}
                           </div>
-                        </button>
-                      </div>
-                      <div className="p-2.5">
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setSelectedModId(mod.modId)}
+                        className="w-full p-2.5 text-left hover:bg-secondary/50 transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:outline-none"
+                      >
                         <p className="text-xs font-medium text-foreground line-clamp-1">{mod.modName}</p>
                         {mod.totalPlayTimeMs ? (
                           <p className="text-[10px] text-muted-foreground mt-0.5">{formatDuration(mod.totalPlayTimeMs)}</p>
                         ) : (
                           <p className="text-[10px] text-muted-foreground mt-0.5">{formatEngineName(mod.engine as EngineSlug)}</p>
                         )}
-                      </div>
-                    </div>
+                      </button>
+                    </article>
                   </motion.div>
                 );
               })}
@@ -362,7 +356,7 @@ export function Home() {
             {bestOfMods.slice(0, 5).map((mod, index) => (
               <motion.div
                 key={mod.id}
-                initial={{ opacity: 0, y: 12 }}
+                initial={shouldAnimate ? { opacity: 0, y: 12 } : false}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, delay: Math.min(index * 0.06, 0.3) }}
               >
@@ -384,7 +378,7 @@ export function Home() {
       {/* ── Quick action: no engines installed ───────────────────────────── */}
       {installedEngines.length === 0 && hasContent && (
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={shouldAnimate ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           className="rounded-xl border border-warning/20 bg-warning/5 p-4 flex items-center justify-between gap-4"
         >

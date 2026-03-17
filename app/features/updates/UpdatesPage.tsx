@@ -82,11 +82,18 @@ export function Updates() {
               )}
             </div>
             {isDownloadingAppUpdate && (
-              <p className="text-xs text-muted-foreground">
-                {t("updates.downloadProgress", "Download progress: {{progress}}%", {
-                  progress: Math.max(0, Math.min(100, Math.round(appUpdateStatus?.progress || 0))),
-                })}
-              </p>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground">{t("updates.downloading", "Downloading…")}</span>
+                  <span className="text-xs font-medium text-foreground">{Math.max(0, Math.min(100, Math.round(appUpdateStatus?.progress || 0)))}%</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-300"
+                    style={{ width: `${Math.max(0, Math.min(100, Math.round(appUpdateStatus?.progress || 0)))}%` }}
+                  />
+                </div>
+              </div>
             )}
             {appUpdateReadyToInstall && (
               <p className="text-xs text-muted-foreground">{t("updates.readyToInstall", "Update downloaded. Install and restart to apply it.")}</p>
@@ -113,7 +120,7 @@ export function Updates() {
               key={update.installedId}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
+              transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.2) }}
               className="bg-card border border-border rounded-xl p-6 hover:border-primary/30 transition-all"
             >
               <div className="flex items-center justify-between">
@@ -176,62 +183,68 @@ export function Updates() {
             <label className="flex items-center justify-between cursor-pointer">
               <div>
                 <p className="font-medium text-foreground">{t("updates.autoUpdateMods", "Auto-update mods")}</p>
-                <p className="text-sm text-muted-foreground">
+                <p id="desc-auto-update-mods" className="text-sm text-muted-foreground">
                   {t("updates.autoUpdateModsDesc", "Automatically download and install mod updates")}
                 </p>
               </div>
               <input
                 type="checkbox"
+                aria-describedby="desc-auto-update-mods"
                 checked={settings.autoUpdateMods}
                 onChange={(event) => {
                   updateSettings({ autoUpdateMods: event.target.checked });
                 }}
                 className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
                        checked:bg-primary transition-colors
-                       after:content-[''] after:absolute after:top-1 after:left-1 
+                       after:content-[''] after:absolute after:top-1 after:left-1
                        after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform
-                       checked:after:translate-x-5"
+                       checked:after:translate-x-5
+                       focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               />
             </label>
             <label className="flex items-center justify-between cursor-pointer">
               <div>
                 <p className="font-medium text-foreground">{t("updates.checkOnStartup", "Check for updates on startup")}</p>
-                <p className="text-sm text-muted-foreground">
+                <p id="desc-check-startup" className="text-sm text-muted-foreground">
                   {t("updates.checkOnStartupDesc", "Scan for available updates when FunkHub launches")}
                 </p>
               </div>
               <input
                 type="checkbox"
+                aria-describedby="desc-check-startup"
                 checked={settings.checkAppUpdatesOnStartup}
                 onChange={(event) => {
                   updateSettings({ checkAppUpdatesOnStartup: event.target.checked });
                 }}
                 className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
                        checked:bg-primary transition-colors
-                       after:content-[''] after:absolute after:top-1 after:left-1 
+                       after:content-[''] after:absolute after:top-1 after:left-1
                        after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform
-                       checked:after:translate-x-5"
+                       checked:after:translate-x-5
+                       focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               />
             </label>
 
             <label className="flex items-center justify-between cursor-pointer">
               <div>
                 <p className="font-medium text-foreground">{t("updates.autoOpenUpdate", "Auto-open app update when found")}</p>
-                <p className="text-sm text-muted-foreground">
+                <p id="desc-auto-open-update" className="text-sm text-muted-foreground">
                   {t("updates.autoOpenUpdateDesc", "Opens your platform download link after startup update check")}
                 </p>
               </div>
               <input
                 type="checkbox"
+                aria-describedby="desc-auto-open-update"
                 checked={settings.autoDownloadAppUpdates}
                 onChange={(event) => {
                   updateSettings({ autoDownloadAppUpdates: event.target.checked });
                 }}
                 className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
                        checked:bg-primary transition-colors
-                       after:content-[''] after:absolute after:top-1 after:left-1 
+                       after:content-[''] after:absolute after:top-1 after:left-1
                        after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform
-                       checked:after:translate-x-5"
+                       checked:after:translate-x-5
+                       focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               />
             </label>
           </div>
