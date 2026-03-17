@@ -408,5 +408,6 @@
     "user.loadingSubmissions": "Cargando envíos...",
     "user.noSubmissions": "No se encontraron envíos de este creador.",
     "user.other": "Otro",
-    "user.submissionsByCategory": "Envíos por categoría"
+    "user.submissionsByCategory": "Envíos por categoría",
+    "discover.allMods": "Todos Los Mods"
 }
