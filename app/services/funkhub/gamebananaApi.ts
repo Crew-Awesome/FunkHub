@@ -382,7 +382,8 @@ export class GameBananaApiService {
   }
 
   async getTrendingMods(): Promise<GameBananaModSummary[]> {
-    const url = `${APIV11_BASE}/Game/${FNF_GAME_ID}/TopSubs`;
+    // Request _aPreviewMedia explicitly — TopSubs doesn't include it by default
+    const url = `${APIV11_BASE}/Game/${FNF_GAME_ID}/TopSubs?_csvFields=_idRow,_sModelName,_sName,_sProfileUrl,_sPeriod,_aPreviewMedia,_aSubmitter,_nLikeCount,_nViewCount,_nDownloadCount,_sDescription`;
     const payload = await this.fetchJsonCached<Record<string, unknown>[]>({
       key: "trendingMods",
       cache: this.listCache,

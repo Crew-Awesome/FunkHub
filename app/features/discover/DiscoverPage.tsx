@@ -72,6 +72,8 @@ export function Discover() {
   const [onboardingOpen, setOnboardingOpen] = useState(!settings.firstRunCompleted);
   const [showCategoryPanel, setShowCategoryPanel] = useState(false);
   const [bestOfIndex, setBestOfIndex] = useState(0);
+  const [bestOfStripOffset, setBestOfStripOffset] = useState(0);
+  const STRIP_SIZE = 4;
 
   // Flat list of all bestOfMods sorted by period order (today first, alltime last)
   const bestOfFlat = useMemo(() => {
@@ -295,157 +297,6 @@ export function Discover() {
           </button>
         </div>
 
-        {/* Sort + filter bar — browse mode (no search query) */}
-        {!searchQuery.trim() && (
-          <div className="space-y-2">
-            {/* Sort pills + filter toggle */}
-            <div className="flex gap-2 overflow-x-auto pb-1 items-center">
-              {selectedCategoryId === undefined
-                ? SUBFEED_SORTS.map((option) => {
-                    const isSelected = subfeedSort === option.value;
-                    return (
-                      <motion.button
-                        key={option.value}
-                        onClick={() => setSubfeedSort(option.value)}
-                        whileTap={{ scale: 0.92 }}
-                        animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
-                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0 border ${
-                          isSelected
-                            ? "bg-primary/10 text-primary border-primary/20"
-                            : "bg-card hover:bg-secondary text-muted-foreground border-border"
-                        }`}
-                      >
-                        {option.label}
-                      </motion.button>
-                    );
-                  })
-                : CATEGORY_SORTS.map((option) => {
-                    const isSelected = categorySort === option.value;
-                    return (
-                      <motion.button
-                        key={option.value}
-                        onClick={() => setCategorySort(option.value)}
-                        whileTap={{ scale: 0.92 }}
-                        animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
-                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0 border ${
-                          isSelected
-                            ? "bg-primary/10 text-primary border-primary/20"
-                            : "bg-card hover:bg-secondary text-muted-foreground border-border"
-                        }`}
-                      >
-                        {option.label}
-                      </motion.button>
-                    );
-                  })
-              }
-              <button
-                type="button"
-                onClick={() => setShowBrowseFilters((v) => !v)}
-                className={`ml-auto shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                  showBrowseFilters || browseReleaseType || browseContentRatings.length > 0
-                    ? "bg-primary/10 text-primary border-primary/20"
-                    : "bg-card text-muted-foreground border-border hover:bg-secondary"
-                }`}
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                {t("discover.filters", "Filters")}
-                {(browseReleaseType || browseContentRatings.length > 0) && (
-                  <span className="ml-1 rounded-full bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 leading-none">
-                    {[browseReleaseType ? 1 : 0, browseContentRatings.length > 0 ? 1 : 0].reduce((a, b) => a + b, 0)}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Filter panel */}
-            {showBrowseFilters && (
-              <div className="rounded-xl border border-border bg-card p-4 space-y-4">
-                {/* Release type */}
-                <div>
-                  <p className="text-xs font-medium text-foreground mb-2">{t("discover.releaseType", "Release type")}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {RELEASE_TYPE_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setBrowseReleaseType(opt.value as ReleaseType)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                          browseReleaseType === opt.value
-                            ? "bg-primary/10 text-primary border-primary/20"
-                            : "bg-secondary text-muted-foreground border-transparent hover:border-border"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Content ratings */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-medium text-foreground">
-                      {t("discover.contentRatings", "Content ratings")}
-                      {browseContentRatings.length > 0 && (
-                        <span className="ml-2 text-muted-foreground font-normal">
-                          ({browseContentRatings.length} selected)
-                        </span>
-                      )}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowRatingPicker((v) => !v)}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        {showRatingPicker ? t("discover.hide", "Hide") : t("discover.pick", "Pick ratings")}
-                      </button>
-                      {browseContentRatings.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setBrowseContentRatings([])}
-                          className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-                        >
-                          {t("discover.clearAll", "Clear")}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {showRatingPicker && (
-                    <div className="flex flex-wrap gap-2">
-                      {CONTENT_RATING_OPTIONS.map((opt) => {
-                        const active = browseContentRatings.includes(opt.value as ContentRating);
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => {
-                              setBrowseContentRatings(
-                                active
-                                  ? browseContentRatings.filter((r) => r !== opt.value)
-                                  : [...browseContentRatings, opt.value as ContentRating],
-                              );
-                            }}
-                            className={`px-2.5 py-1 rounded-md text-xs border transition-colors ${
-                              active
-                                ? "bg-primary/10 text-primary border-primary/20"
-                                : "bg-secondary text-muted-foreground border-transparent hover:border-border"
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Search options — search mode */}
         {searchQuery.trim().length >= 2 && (
           <div className="space-y-2 pb-2">
@@ -506,13 +357,16 @@ export function Discover() {
         )}
       </div>
 
-      {/* Best Of hero carousel — only shown in browse mode (no search, no category filter) */}
-      {bestOfFlat.length > 0 && !searchQuery.trim() && selectedCategoryId === undefined && (() => {
+      {/* Best Of hero — shown in browse mode (no search), persists across category changes */}
+      {bestOfFlat.length > 0 && !searchQuery.trim() && (() => {
         const hero = bestOfFlat[bestOfIndex];
         if (!hero) return null;
+        const stripMods = bestOfFlat.slice(bestOfStripOffset, bestOfStripOffset + STRIP_SIZE);
+        const canStripPrev = bestOfStripOffset > 0;
+        const canStripNext = bestOfStripOffset + STRIP_SIZE < bestOfFlat.length;
 
         return (
-          <div className="mb-8 rounded-2xl overflow-hidden border border-border bg-card">
+          <div className="mb-6 rounded-2xl overflow-hidden border border-border bg-card">
             {/* Large hero image */}
             <div
               className="relative h-56 cursor-pointer"
@@ -547,40 +401,54 @@ export function Discover() {
               </div>
             </div>
 
-            {/* Navigation + flat thumbnail strip */}
+            {/* 4-up thumbnail strip with prev/next */}
             <div className="flex items-center gap-2 p-3 bg-card border-t border-border">
               <button
-                onClick={() => setBestOfIndex(Math.max(0, bestOfIndex - 1))}
-                disabled={bestOfIndex === 0}
-                className="shrink-0 w-7 h-7 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
+                onClick={() => {
+                  const newOffset = Math.max(0, bestOfStripOffset - STRIP_SIZE);
+                  setBestOfStripOffset(newOffset);
+                  setBestOfIndex(newOffset);
+                }}
+                disabled={!canStripPrev}
+                className="shrink-0 w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
                 aria-label="Previous"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <div className="flex-1 flex gap-2 overflow-x-auto">
-                {bestOfFlat.map((mod, index) => (
-                  <button
-                    key={mod.id}
-                    onClick={() => setBestOfIndex(index)}
-                    title={mod.period ? `${mod.name} — Best of ${PERIOD_LABELS[mod.period] ?? mod.period}` : mod.name}
-                    className={`relative shrink-0 w-14 h-10 rounded-lg overflow-hidden border-2 transition-all ${
-                      index === bestOfIndex ? "border-primary" : "border-transparent opacity-50 hover:opacity-100"
-                    }`}
-                    aria-label={mod.name}
-                  >
-                    <img
-                      src={mod.thumbnailUrl ?? mod.imageUrl ?? "/mod-placeholder.svg"}
-                      alt={mod.name}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
+
+              <div className="flex-1 grid gap-2" style={{ gridTemplateColumns: `repeat(${STRIP_SIZE}, 1fr)` }}>
+                {stripMods.map((mod) => {
+                  const globalIndex = bestOfFlat.indexOf(mod);
+                  const isSelected = globalIndex === bestOfIndex;
+                  return (
+                    <button
+                      key={mod.id}
+                      onClick={() => setBestOfIndex(globalIndex)}
+                      title={mod.period ? `${mod.name} — Best of ${PERIOD_LABELS[mod.period] ?? mod.period}` : mod.name}
+                      className={`relative w-full h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                        isSelected ? "border-primary" : "border-transparent opacity-60 hover:opacity-100"
+                      }`}
+                      aria-label={mod.name}
+                    >
+                      <img
+                        src={mod.thumbnailUrl ?? mod.imageUrl ?? "/mod-placeholder.svg"}
+                        alt={mod.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </button>
+                  );
+                })}
               </div>
+
               <button
-                onClick={() => setBestOfIndex(Math.min(bestOfFlat.length - 1, bestOfIndex + 1))}
-                disabled={bestOfIndex >= bestOfFlat.length - 1}
-                className="shrink-0 w-7 h-7 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
+                onClick={() => {
+                  const newOffset = Math.min(bestOfFlat.length - STRIP_SIZE, bestOfStripOffset + STRIP_SIZE);
+                  setBestOfStripOffset(newOffset);
+                  setBestOfIndex(newOffset);
+                }}
+                disabled={!canStripNext}
+                className="shrink-0 w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
                 aria-label="Next"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -589,6 +457,132 @@ export function Discover() {
           </div>
         );
       })()}
+
+      {/* Sort + filter bar — browse mode, below Best Of */}
+      {!searchQuery.trim() && (
+        <div className="space-y-2 mb-4">
+          <div className="flex gap-2 overflow-x-auto pb-1 items-center">
+            {selectedCategoryId === undefined
+              ? SUBFEED_SORTS.map((option) => {
+                  const isSelected = subfeedSort === option.value;
+                  return (
+                    <motion.button
+                      key={option.value}
+                      onClick={() => setSubfeedSort(option.value)}
+                      whileTap={{ scale: 0.92 }}
+                      animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
+                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0 border ${
+                        isSelected
+                          ? "bg-primary/10 text-primary border-primary/20"
+                          : "bg-card hover:bg-secondary text-muted-foreground border-border"
+                      }`}
+                    >
+                      {option.label}
+                    </motion.button>
+                  );
+                })
+              : CATEGORY_SORTS.map((option) => {
+                  const isSelected = categorySort === option.value;
+                  return (
+                    <motion.button
+                      key={option.value}
+                      onClick={() => setCategorySort(option.value)}
+                      whileTap={{ scale: 0.92 }}
+                      animate={isSelected ? { scale: [1, 1.08, 1] } : {}}
+                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0 border ${
+                        isSelected
+                          ? "bg-primary/10 text-primary border-primary/20"
+                          : "bg-card hover:bg-secondary text-muted-foreground border-border"
+                      }`}
+                    >
+                      {option.label}
+                    </motion.button>
+                  );
+                })
+            }
+            <button
+              type="button"
+              onClick={() => setShowBrowseFilters((v) => !v)}
+              className={`ml-auto shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                showBrowseFilters || browseReleaseType || browseContentRatings.length > 0
+                  ? "bg-primary/10 text-primary border-primary/20"
+                  : "bg-card text-muted-foreground border-border hover:bg-secondary"
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              {t("discover.filters", "Filters")}
+              {(browseReleaseType || browseContentRatings.length > 0) && (
+                <span className="ml-1 rounded-full bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 leading-none">
+                  {[browseReleaseType ? 1 : 0, browseContentRatings.length > 0 ? 1 : 0].reduce((a, b) => a + b, 0)}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {showBrowseFilters && (
+            <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+              <div>
+                <p className="text-xs font-medium text-foreground mb-2">{t("discover.releaseType", "Release type")}</p>
+                <div className="flex flex-wrap gap-2">
+                  {RELEASE_TYPE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setBrowseReleaseType(opt.value as ReleaseType)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        browseReleaseType === opt.value
+                          ? "bg-primary/10 text-primary border-primary/20"
+                          : "bg-secondary text-muted-foreground border-transparent hover:border-border"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-foreground">
+                    {t("discover.contentRatings", "Content ratings")}
+                    {browseContentRatings.length > 0 && (
+                      <span className="ml-2 text-muted-foreground font-normal">({browseContentRatings.length} selected)</span>
+                    )}
+                  </p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setShowRatingPicker((v) => !v)} className="text-xs text-primary hover:underline">
+                      {showRatingPicker ? t("discover.hide", "Hide") : t("discover.pick", "Pick ratings")}
+                    </button>
+                    {browseContentRatings.length > 0 && (
+                      <button type="button" onClick={() => setBrowseContentRatings([])} className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                        {t("discover.clearAll", "Clear")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {showRatingPicker && (
+                  <div className="flex flex-wrap gap-2">
+                    {CONTENT_RATING_OPTIONS.map((opt) => {
+                      const active = browseContentRatings.includes(opt.value as ContentRating);
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setBrowseContentRatings(active ? browseContentRatings.filter((r) => r !== opt.value) : [...browseContentRatings, opt.value as ContentRating])}
+                          className={`px-2.5 py-1 rounded-md text-xs border transition-colors ${active ? "bg-primary/10 text-primary border-primary/20" : "bg-secondary text-muted-foreground border-transparent hover:border-border"}`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
         <section>

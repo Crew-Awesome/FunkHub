@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { createBrowserRouter, createHashRouter, useNavigate, useRouteError } from "react-router";
 import { Layout } from "./app-shell";
 
+const Home = lazy(() => import("./features/home").then((module) => ({ default: module.Home })));
 const Discover = lazy(() => import("./features/discover").then((module) => ({ default: module.Discover })));
 const Downloads = lazy(() => import("./features/downloads").then((module) => ({ default: module.Downloads })));
 const Engines = lazy(() => import("./features/engines").then((module) => ({ default: module.Engines })));
@@ -44,7 +45,8 @@ export const router = routerFactory([
     Component: Layout,
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true, Component: Discover },
+      { index: true, Component: Home },
+      { path: "home", Component: Home },
       { path: "discover", Component: Discover },
       { path: "library", Component: Library },
       { path: "downloads", Component: Downloads },

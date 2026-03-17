@@ -1,10 +1,11 @@
 import { Link, useLocation } from "react-router";
-import { Search, Library, Download, RefreshCw, Settings as SettingsIcon, Cpu } from "lucide-react";
+import { Search, Library, Download, RefreshCw, Settings as SettingsIcon, Cpu, House } from "lucide-react";
 import { motion } from "motion/react";
 import { useI18n } from "../providers";
 
 const navItems = [
-  { icon: Search, labelKey: "nav.discover", path: "/" },
+  { icon: House, labelKey: "nav.home", path: "/home" },
+  { icon: Search, labelKey: "nav.discover", path: "/discover" },
   { icon: Library, labelKey: "nav.library", path: "/library" },
   { icon: Download, labelKey: "nav.downloads", path: "/downloads" },
   { icon: RefreshCw, labelKey: "nav.updates", path: "/updates" },
