@@ -2,9 +2,184 @@
 
 This changelog tracks release history from Git tags used for GitHub Releases.
 
-Notes:
-- Commit messages in early history are informal; explanations below translate likely intent.
-- Version sections map to release tags.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [v0.5.0] - 2026-03-16
+
+### Release Notes
+
+## FunkHub v0.5.0 — Massive Library Overhaul, Advanced Filtering, and Engine Scanning
+
+This release brings a complete reimagining of the Library page with collections, pinning, and mod organization, advanced search and filtering on the Discover page, automatic engine folder scanning, Wine/Proton runtime detection, and numerous quality-of-life improvements across the app.
+
+**Range:** `v0.4.0..HEAD`  
+**First commit in range:** `c9cd67f`  
+**Latest commit in range:** `ba52f86`
+
+---
+
+### Highlights
+
+#### Library Page Overhaul
+- **Collections/Tags System** — Add tags to mods and organize them into custom collections. Filter your library by collection with one click.
+- **Mod Pinning** — Pin your favorite mods to the top of the library for quick access.
+- **Mod Enable/Disable** — Toggle mods on/off without uninstalling. Disabled mods appear dimmed and won't load when launching.
+- **Mod Custom Images** — Set custom thumbnails for any installed mod.
+- **Mod Notes** — Add personal notes to mods for tracking what you've played, tips, or reminders.
+- **Mod Renaming** — Rename installed mods to anything you want.
+- **Resizable Sidebar** — Drag to resize the mod list sidebar (200px - 480px).
+- **Sidebar Search** — Quick search/filter your installed mods by name or author.
+- **Multiple Sort Options** — Sort by newest, oldest, name, most played, recently played, engine, or available updates. Toggle ascending/descending.
+- **Group by Engine** — Group mods in your library by the engine they require.
+- **Keyboard Navigation** — Arrow keys navigate through your mod list.
+- **Context Menu** — Right-click mods for quick actions.
+
+#### Discover Page Advanced Filtering
+- **Release Type Filter** — Filter mods by Studio, Indie, or Redistribution release types.
+- **Content Rating Filter** — Filter by content ratings (Crude/Profane, Sexual Themes, Violence, etc.)
+- **Search Sorting** — Sort search results by Best Match, Most Popular, Newest, or Recently Updated.
+- **Search Field Selection** — Choose which fields to search: name, description, blurb/tags, submitter, studio, or credits.
+- **Improved Search** — Search now uses GameBanana's native API for better results.
+
+#### Engine Management Improvements
+- **Engine Folder Scanning** — Scan common directories on your computer to find existing engine installations and import them.
+- **Wine/Proton Detection** — Automatically detect Wine, Wine64, and Steam Proton installations for running Windows mods on Linux.
+- **Engine Update Detection** — FunkHub now checks for engine updates automatically. See which engines have newer versions available.
+- **Auto-Update Engines Setting** — New setting to automatically update engines (disabled by default).
+- **Better Icon Management** — Browse for custom engine icons from your local files.
+- **Custom Icon URLs** — Support for local `file://` URLs in addition to remote URLs.
+
+#### Psych Online Engine Support
+- Added support for [Psych Online](https://github.com/Snirozu/Funkin-Psych-Online) engine
+- Auto-detection of Psych Online mods
+
+#### Internationalization
+- Added Indonesian (`id`) language support
+- Improved Spanish, Portuguese (Brazil), and Russian translations
+
+#### Bug Fixes & Stability
+- Fixed cross-device file moves (now uses copy+delete when move isn't possible)
+- Improved search query handling and URL detection
+- Fixed root category name handling for mods without categories
+
+---
+
+### Added
+
+#### Features
+- Collections/tags system for mod organization (`setModTags`, `setModPinned`)
+- Mod enable/disable toggle (`setModEnabled`)
+- Mod custom images (`setModCustomImage`)
+- Mod notes (`setModNotes`)
+- Mod renaming (`renameInstalledMod`)
+- Resizable sidebar with drag handle
+- Sidebar search/filter
+- Multiple sort options: newest, oldest, name, nameDesc, mostPlayed, recent, engine, updates
+- Group by engine toggle
+- Keyboard navigation (arrow keys)
+- Right-click context menu on mods
+- Engine folder scanning (`scanCommonEnginePaths`)
+- Wine/Proton runtime detection (`detectWineRuntimes`)
+- Engine update detection system (`refreshEngineUpdates`, `EngineUpdateInfo`)
+- `autoUpdateEngines` setting
+- Psych Online engine support
+- Indonesian language (`id` locale)
+- Release type filtering (Studio, Indie, Redistribution)
+- Content rating filtering (17 rating types)
+- Search order selection (best_match, popularity, date, udate)
+- Search field selection (name, description, article, attribs, owner, studio, credits)
+- Browse button for custom engine icons
+
+#### Desktop Bridge APIs
+- `detectWineRuntimes()` — Detect Wine, Wine64, and Proton installations
+- `scanCommonEnginePaths()` — Scan common directories for engine folders
+- Local file URL support (`file://`) for custom icons
+- Cross-device file move support (copy+delete fallback)
+
+---
+
+### Changed
+
+#### UI/UX
+- Complete Library page redesign with new sidebar layout
+- Discover page now shows filter panel when browsing categories
+- Improved engine card layout and health indicators
+- Better error handling for missing thumbnails
+- Smoother animations and transitions
+- Support for pinned mods floating to top
+
+#### Search & Discovery
+- Search now uses GameBanana API's native ordering
+- Removed fallback search behavior (now requires exact game match)
+- Better search field specification
+- Improved category filtering integration
+
+#### Installer
+- Directory moves now handle cross-device scenarios
+- Better handling of nested archive structures
+- Improved standalone mod detection
+
+#### App Updates
+- Linux AppImage now supports auto-updates (when APPIMAGE env var is set)
+- Better messaging for Linux update availability
+
+#### Translations
+- Updated Spanish (`es-419`) translations
+- Updated Portuguese Brazil (`pt-BR`) translations
+- Added Indonesian (`id`) translations
+- Improved Russian (`ru`) translations
+- Added translation for new UI strings
+
+---
+
+### Fixed
+
+- Cross-device file move failures now fallback to copy+delete
+- Empty root category names now properly handled
+- Search query URL detection improvements
+- Various translation fallback issues
+- Provider re-render optimization issues
+
+---
+
+### Infrastructure
+
+- Updated GitHub Actions build workflow
+- Added labeler workflow for issue/PR labeling
+- Improved release workflow
+- Weblate sync configuration improvements
+
+---
+
+### Full Commit List (Oldest → Newest)
+
+- `c9cd67f` - REVAMPED CHANGELOG AND README
+- `26e44a6` - REMOVE ACCIDENTAL JSON
+- `15565b7` - Update translations via Weblate
+- `22a8667` - Update translations via Weblate
+- `d640689` - Update translations via Weblate
+- `b32be97` - Update translations via Weblate
+- `219c49a` - Update translations via Weblate
+- `a3ba112` - fixed stuff and worked on 0.5.0
+- `85eed67` - Merge branch 'main' of https://github.com/Crew-Awesome/FunkHub
+- `6921b6d` - uhm
+- `08bf451` - more stuff
+- `8133191` - uhm
+- `5afc2e4` - uhm
+- `5837ffd` - bum
+- `4f950ad` - Update .weblate
+- `1f4a773` - indonisea
+- `708ff64` - Lots of Fixes + Finish Spanish
+- `8ab4706` - uhm
+- `4f5863e` - fix spanish, indonisean, and portugese
+- `ba52f86` - engine updater and
+
+### Compare
+- `https://github.com/Crew-Awesome/FunkHub/compare/v0.4.0...v0.5.0`
+
+---
 
 ## [v0.4.0] - 2026-03-15
 
@@ -94,6 +269,8 @@ This release brings mod playtime tracking, overhauled engine and library pages, 
 ### Compare
 - `https://github.com/Crew-Awesome/FunkHub/compare/v0.3.0...v0.4.0`
 
+---
+
 ## [v0.3.0] - 2026-03-15
 
 ### Public Release Summary (GitHub Release Body)
@@ -150,6 +327,8 @@ This release focuses on internationalization rollout, Weblate automation hardeni
 
 ### Compare
 - `https://github.com/Crew-Awesome/FunkHub/compare/v0.2.0...v0.3.0`
+
+---
 
 ## [v0.2.0] - 2026-03-15
 
@@ -230,6 +409,8 @@ This release focuses on reliability, executable-package support, deep-link insta
 - **Project docs/templates:**  
   `.github/ISSUE_TEMPLATE/*`, `.github/pull_request_template.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `README.md`, `CHANGELOG.md`
 
+---
+
 ## [v0.1.2] - 2026-03-15
 
 ### Summary
@@ -252,6 +433,8 @@ This release focuses on reliability, executable-package support, deep-link insta
 - `6b8b26d` - `fix merge bugs`  
   Fixed settings merge issues (especially nested config objects).
 
+---
+
 ## [v0.1.1] - 2026-03-14
 
 ### Summary
@@ -263,6 +446,8 @@ This release focuses on reliability, executable-package support, deep-link insta
   Updated GitHub release workflow configuration.
 - `a2029cb` - `fixed, hopefully :C`  
   Follow-up release pipeline fixes and stabilization.
+
+---
 
 ## [v0.1.0] - 2026-03-14
 
