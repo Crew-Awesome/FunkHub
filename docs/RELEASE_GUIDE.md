@@ -178,3 +178,144 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - [ ] Removed section (if applicable)
 - [ ] Infrastructure section (if applicable)
 - [ ] Previous version entries intact
+
+---
+
+## Changelog Update Guide
+
+This section explains how to analyze code changes and update the changelog accurately.
+
+### Step 1: Find the Previous Tag
+
+```bash
+# List all tags
+git tag -l
+
+# Find the previous version
+git describe --tags --abbrev=0
+```
+
+### Step 2: Get Commit List
+
+```bash
+# Get commits between versions
+git log v0.4.0..HEAD --oneline
+
+# Get all commits from initial release
+git log v0.1.0..HEAD --oneline
+```
+
+### Step 3: Analyze File Changes
+
+```bash
+# Get summary of changed files
+git diff v0.4.0..HEAD --stat
+
+# Get changes in specific directories
+git diff v0.4.0..HEAD -- app/services/ app/features/ app/providers/ electron/
+
+# Get changes to specific file
+git diff v0.4.0..HEAD -- app/services/funkhub/funkhubService.ts
+```
+
+### Step 4: Analyze Specific Features
+
+For each changed file, read the actual code to understand what was added or modified:
+
+```bash
+# View specific file diff
+git diff v0.4.0..HEAD -- app/features/library/LibraryPage.tsx | head -200
+```
+
+### Step 5: Categorize Changes
+
+Group changes into these categories:
+
+| Category | What goes here |
+|----------|----------------|
+| Added | New features, new functions, new API endpoints, new settings |
+| Changed | Modified features, behavior changes, UI updates |
+| Fixed | Bug fixes, error handling improvements |
+| Removed | Deleted features (temporary, until next release) |
+| Infrastructure | CI/CD, build scripts, dependencies |
+
+### Step 6: Update the Changelog
+
+1. Move Unreleased changes to the new version section
+2. Add the new version with date (YYYY-MM-DD)
+3. Add new Unreleased section for future changes
+
+Example:
+
+```markdown
+## [Unreleased]
+
+## [v0.5.0] - 2026-03-16
+
+### Added
+- New feature one
+- New feature two
+
+### Changed
+- Improved feature
+
+## [v0.4.0] - 2026-03-15
+
+### Added
+- (previous version)
+```
+
+### Common Change Patterns
+
+#### New Feature
+Look for:
+- New functions in service files
+- New state variables in providers
+- New UI components
+- New API endpoints
+
+Example indicators:
+- `export function newFeature()`
+- `const [newState, setNewState] = useState()`
+- `new` in commit message (but don't rely on this)
+
+#### Bug Fix
+Look for:
+- Error handling additions
+- Null/undefined checks
+- Validation improvements
+
+Example indicators:
+- `if (!value) return` added
+- `try/catch` blocks added
+- `.filter()` or `.find()` added
+
+#### UI Changes
+Look for:
+- Component prop changes
+- Style changes
+- New states (loading, error, etc.)
+
+### Commands Quick Reference
+
+```bash
+# Full release workflow
+git tag -l                          # List tags
+git log v0.4.0..HEAD --oneline    # Commits since last release
+git diff v0.4.0..HEAD --stat      # Files changed
+git diff v0.4.0..HEAD -- app/     # App changes only
+git diff v0.4.0..HEAD -- electron/ # Desktop changes only
+
+# Check specific files
+git diff v0.4.0..HEAD -- app/services/funkhub/types.ts
+git diff v0.4.0..HEAD -- app/features/library/LibraryPage.tsx
+```
+
+### Tips
+
+1. Don't trust commit messages - read the actual code
+2. Group related changes together
+3. Keep descriptions short but descriptive
+4. Focus on user-facing changes in release notes
+5. Include infrastructure changes in changelog but not release notes
+6. Use present tense for Added, past tense for Fixed
