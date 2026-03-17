@@ -52,8 +52,11 @@ function resolveImageList(previewMedia: unknown): unknown[] {
   // Shape A: { _aImages: [...] }
   const wrapped = (previewMedia as { _aImages?: unknown[] })._aImages;
   if (Array.isArray(wrapped) && wrapped.length > 0) return wrapped;
-  // Shape B: direct array  (TopSubs and some other endpoints)
+  // Shape B: direct array (TopSubs and some other endpoints)
   if (Array.isArray(previewMedia)) return previewMedia;
+  // Shape C: PHP-style numeric-keyed object {"0": {...}, "1": {...}}
+  const values = Object.values(previewMedia as object);
+  if (values.length > 0 && typeof values[0] === "object" && values[0] !== null) return values;
   return [];
 }
 
@@ -399,8 +402,33 @@ export class GameBananaApiService {
         ...normalizeSummary(record),
         period: typeof record._sPeriod === "string" ? record._sPeriod : undefined,
       }));
-    this.prefetchThumbnails(normalized);
-    return normalized;
+
+    // TopSubs may not include _aPreviewMedia even with _csvFields — hydrate missing images
+    // from individual mod profiles (results are cached so this only runs once per session).
+    const result = await Promise.all(
+      normalized.map(async (mod) => {
+        if (mod.imageUrl || mod.thumbnailUrl) return mod;
+        try {
+          const profile = await this.fetchJsonCached<Record<string, unknown>>({
+            key: `modPreviewMedia:${mod.id}`,
+            cache: this.listCache,
+            ttlMs: LIST_CACHE_TTL_MS,
+            url: `${APIV11_BASE}/Mod/${mod.id}?_csvFields=_aPreviewMedia`,
+          });
+          return {
+            ...mod,
+            imageUrl: firstImageUrl(profile._aPreviewMedia, "_sFile530"),
+            thumbnailUrl: firstImageUrl(profile._aPreviewMedia, "_sFile220"),
+            screenshotUrls: allImageUrls(profile._aPreviewMedia, "_sFile530"),
+          };
+        } catch {
+          return mod;
+        }
+      }),
+    );
+
+    this.prefetchThumbnails(result);
+    return result;
   }
 
   async getSubfeed({ sort = "default", page = 1, perPage = 15 }: SubfeedParams = {}): Promise<GameBananaModSummary[]> {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall, UserCircle2, Layers, SlidersHorizontal } from "lucide-react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
@@ -83,6 +83,33 @@ export function Discover() {
       return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
     });
   }, [bestOfMods]);
+
+  const autoAdvanceRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startAutoAdvance = () => {
+    if (autoAdvanceRef.current) clearInterval(autoAdvanceRef.current);
+    autoAdvanceRef.current = setInterval(() => {
+      setBestOfIndex((prev) => (prev + 1) % Math.max(1, bestOfFlat.length));
+    }, 4000);
+  };
+
+  // Auto-advance on mount and whenever bestOfFlat changes
+  useEffect(() => {
+    if (bestOfFlat.length <= 1) return;
+    startAutoAdvance();
+    return () => { if (autoAdvanceRef.current) clearInterval(autoAdvanceRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bestOfFlat.length]);
+
+  // Scroll strip to keep selected index visible
+  useEffect(() => {
+    if (bestOfIndex < bestOfStripOffset || bestOfIndex >= bestOfStripOffset + STRIP_SIZE) {
+      setBestOfStripOffset(
+        Math.max(0, Math.min(Math.max(0, bestOfFlat.length - STRIP_SIZE), bestOfIndex)),
+      );
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bestOfIndex]);
 
   const needsOnboarding = !settings.firstRunCompleted;
 
@@ -381,6 +408,7 @@ export function Discover() {
                 alt={hero.name}
                 className="w-full h-full object-cover"
                 loading="eager"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/mod-placeholder.svg"; }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
               {hero.period && (
@@ -401,17 +429,13 @@ export function Discover() {
               </div>
             </div>
 
-            {/* 4-up thumbnail strip with prev/next */}
+            {/* Thumbnail strip — arrows scroll viewport by 1, click selects hero */}
             <div className="flex items-center gap-2 p-3 bg-card border-t border-border">
               <button
-                onClick={() => {
-                  const newOffset = Math.max(0, bestOfStripOffset - STRIP_SIZE);
-                  setBestOfStripOffset(newOffset);
-                  setBestOfIndex(newOffset);
-                }}
+                onClick={() => setBestOfStripOffset((prev) => Math.max(0, prev - 1))}
                 disabled={!canStripPrev}
                 className="shrink-0 w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
-                aria-label="Previous"
+                aria-label={t("discover.bestOfPrev", "Previous")}
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -423,18 +447,23 @@ export function Discover() {
                   return (
                     <button
                       key={mod.id}
-                      onClick={() => setBestOfIndex(globalIndex)}
+                      onClick={() => {
+                        setBestOfIndex(globalIndex);
+                        startAutoAdvance(); // reset timer on manual select
+                      }}
                       title={mod.period ? `${mod.name} — Best of ${PERIOD_LABELS[mod.period] ?? mod.period}` : mod.name}
                       className={`relative w-full h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                        isSelected ? "border-primary" : "border-transparent opacity-60 hover:opacity-100"
+                        isSelected ? "border-primary scale-105" : "border-transparent opacity-60 hover:opacity-100"
                       }`}
                       aria-label={mod.name}
+                      aria-pressed={isSelected}
                     >
                       <img
                         src={mod.thumbnailUrl ?? mod.imageUrl ?? "/mod-placeholder.svg"}
                         alt={mod.name}
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/mod-placeholder.svg"; }}
                       />
                     </button>
                   );
@@ -442,14 +471,10 @@ export function Discover() {
               </div>
 
               <button
-                onClick={() => {
-                  const newOffset = Math.min(bestOfFlat.length - STRIP_SIZE, bestOfStripOffset + STRIP_SIZE);
-                  setBestOfStripOffset(newOffset);
-                  setBestOfIndex(newOffset);
-                }}
+                onClick={() => setBestOfStripOffset((prev) => Math.min(Math.max(0, bestOfFlat.length - STRIP_SIZE), prev + 1))}
                 disabled={!canStripNext}
                 className="shrink-0 w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
-                aria-label="Next"
+                aria-label={t("discover.bestOfNext", "Next")}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
