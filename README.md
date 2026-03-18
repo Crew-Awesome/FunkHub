@@ -6,8 +6,6 @@
 
 **A Friday Night Funkin' Mod Launcher**
 
-> **AI Disclosure:** This project includes AI-assisted work. OpenAI Codex and Anthropic Claude were used for bug fixing, UI improvements, and Weblate integration.
-
 [![Build](https://github.com/Crew-Awesome/FunkHub/actions/workflows/build.yml/badge.svg)](https://github.com/Crew-Awesome/FunkHub/actions/workflows/build.yml)
 [![Release](https://github.com/Crew-Awesome/FunkHub/actions/workflows/release.yml/badge.svg)](https://github.com/Crew-Awesome/FunkHub/actions/workflows/release.yml)
 [![Latest Release](https://img.shields.io/github/v/release/Crew-Awesome/FunkHub?display_name=tag)](https://github.com/Crew-Awesome/FunkHub/releases/latest)
@@ -97,6 +95,10 @@ Fast to navigate, easy to use, and built around the GameBanana API.
 | JS Engine | `js-engine` |
 | ALE Psych | `ale-psych` |
 | P-Slice | `p-slice` |
+
+
+
+> **AI Disclosure:** This project includes AI-assisted work. OpenAI Codex and Anthropic Claude were used for bug fixing, UI improvements, and Weblate integration.
 
 ## Screenshots
 
