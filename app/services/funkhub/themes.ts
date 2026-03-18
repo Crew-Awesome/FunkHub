@@ -2,6 +2,22 @@ import type { ThemeDefinition } from "./themeTypes";
 
 function clamp(v: number) { return Math.max(0, Math.min(255, Math.round(v))); }
 
+function luminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lin = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/** Returns white or a dark fallback depending on which has better contrast with `bg`. */
+function pickFg(bg: string, darkFallback: string): string {
+  const L = luminance(bg);
+  const contrastWhite = (1.05) / (L + 0.05);
+  const contrastDark = (luminance(darkFallback) + 0.05) / (L + 0.05);
+  return contrastWhite >= contrastDark ? "#FFFFFF" : darkFallback;
+}
+
 function saturateColor(hex: string, factor: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -60,14 +76,14 @@ function adjustRgbaTowards(color: string, towards: string, amount: number): stri
 }
 
 function createLightColors(primary: string, background: string): ThemeDefinition["colors"]["light"] {
-  const primaryDark = "#1A1512";
+  const primaryFg = pickFg(primary, "#1A1512");
   const foreground = "#2D2520";
   const secondary = adjustColorTowards("#F5EDE6", primary, 0.08);
   const muted = adjustColorTowards("#EDE5DD", primary, 0.05);
   const card = "#FFFFFF";
   const border = adjustRgbaTowards("rgba(45, 37, 32, 0.12)", primary, 0.03);
   const input = adjustRgbaTowards("rgba(45, 37, 32, 0.05)", primary, 0.02);
-  
+
   return {
     background,
     foreground,
@@ -76,14 +92,14 @@ function createLightColors(primary: string, background: string): ThemeDefinition
     popover: card,
     popoverForeground: foreground,
     primary,
-    primaryForeground: primaryDark,
+    primaryForeground: primaryFg,
     secondary,
     secondaryForeground: foreground,
     muted,
     mutedForeground: "#6B5D54",
     accent: primary,
-    accentForeground: primaryDark,
-    destructive: "#D94D3A",
+    accentForeground: primaryFg,
+    destructive: "#C0392B",
     destructiveForeground: "#FFFFFF",
     border,
     input,
@@ -98,21 +114,21 @@ function createLightColors(primary: string, background: string): ThemeDefinition
     sidebar: card,
     sidebarForeground: foreground,
     sidebarPrimary: primary,
-    sidebarPrimaryForeground: primaryDark,
+    sidebarPrimaryForeground: primaryFg,
     sidebarAccent: secondary,
     sidebarAccentForeground: foreground,
     sidebarBorder: border,
     sidebarRing: primary,
     hoverGlow: `rgba(${parseInt(primary.slice(1, 3), 16)}, ${parseInt(primary.slice(3, 5), 16)}, ${parseInt(primary.slice(5, 7), 16)}, 0.15)`,
     warning: "#c2750a",
-    warningForeground: "#fef3c7",
+    warningForeground: "#0C0600",
     success: "#2a7a4b",
     successForeground: "#d1fae5",
   };
 }
 
 function createDarkColors(primary: string, background: string): ThemeDefinition["colors"]["dark"] {
-  const primaryForeground = "#1A1512";
+  const primaryForeground = pickFg(primary, "#1A1512");
   const foreground = "#F5EDE6";
   const secondary = adjustColorTowards(background, primary, 0.15);
   const muted = adjustColorTowards(background, primary, 0.1);
@@ -136,7 +152,7 @@ function createDarkColors(primary: string, background: string): ThemeDefinition[
     mutedForeground: "#A89A8F",
     accent: primary,
     accentForeground: primaryForeground,
-    destructive: "#D94D3A",
+    destructive: "#C0392B",
     destructiveForeground: "#FFFFFF",
     border,
     input,
@@ -158,7 +174,7 @@ function createDarkColors(primary: string, background: string): ThemeDefinition[
     sidebarRing: primary,
     hoverGlow: `rgba(${parseInt(primary.slice(1, 3), 16)}, ${parseInt(primary.slice(3, 5), 16)}, ${parseInt(primary.slice(5, 7), 16)}, 0.2)`,
     warning: "#f59e0b",
-    warningForeground: "#fef3c7",
+    warningForeground: "#0C0600",
     success: "#34d399",
     successForeground: "#052e16",
   };
@@ -176,15 +192,16 @@ function createVibrantColors(primary: string, background: string): ThemeDefiniti
   const border = rgbaOf(vPrimary, 0.14);
   const input = rgbaOf(vPrimary, 0.07);
 
+  const vPrimaryFg = pickFg(vPrimary, "#050302");
   return {
     background: vBg, foreground,
     card, cardForeground: foreground,
     popover, popoverForeground: foreground,
-    primary: vPrimary, primaryForeground: "#050302",
+    primary: vPrimary, primaryForeground: vPrimaryFg,
     secondary, secondaryForeground: foreground,
     muted, mutedForeground: "#8A7E76",
-    accent: vPrimary, accentForeground: "#050302",
-    destructive: "#FF3535", destructiveForeground: "#FFFFFF",
+    accent: vPrimary, accentForeground: vPrimaryFg,
+    destructive: "#E01818", destructiveForeground: "#FFFFFF",
     border, input, inputBackground: card, switchBackground: muted,
     ring: vPrimary,
     chart1: vPrimary,
@@ -193,11 +210,11 @@ function createVibrantColors(primary: string, background: string): ThemeDefiniti
     chart4: saturateColor(adjustColorTowards(vPrimary, "#000000", 0.46), 1.2),
     chart5: saturateColor(adjustColorTowards(vPrimary, "#000000", 0.58), 1.1),
     sidebar: card, sidebarForeground: foreground,
-    sidebarPrimary: vPrimary, sidebarPrimaryForeground: "#050302",
+    sidebarPrimary: vPrimary, sidebarPrimaryForeground: vPrimaryFg,
     sidebarAccent: secondary, sidebarAccentForeground: foreground,
     sidebarBorder: border, sidebarRing: vPrimary,
     hoverGlow: rgbaOf(vPrimary, 0.45),
-    warning: saturateColor("#F59E0B", 1.4), warningForeground: "#1A1512",
+    warning: saturateColor("#F59E0B", 1.4), warningForeground: "#0C0600",
     success: saturateColor("#34D399", 1.4), successForeground: "#052E16",
   };
 }
@@ -217,10 +234,10 @@ function createPastelColors(primary: string, _background: string): ThemeDefiniti
     background: pBg, foreground,
     card, cardForeground: foreground,
     popover: card, popoverForeground: foreground,
-    primary: pPrimary, primaryForeground: "#2A201C",
+    primary: pPrimary, primaryForeground: pickFg(pPrimary, "#2A201C"),
     secondary, secondaryForeground: foreground,
-    muted, mutedForeground: "#8A7E78",
-    accent: pPrimary, accentForeground: "#2A201C",
+    muted, mutedForeground: "#5A5250",
+    accent: pPrimary, accentForeground: pickFg(pPrimary, "#2A201C"),
     destructive: "#E89E9B", destructiveForeground: "#2E0D0C",
     border, input, inputBackground: card, switchBackground: muted,
     ring: pPrimary,
@@ -230,7 +247,7 @@ function createPastelColors(primary: string, _background: string): ThemeDefiniti
     chart4: mixColors(pPrimary, "#FFFFFF", 0.65),
     chart5: mixColors(pPrimary, "#FFFFFF", 0.78),
     sidebar: card, sidebarForeground: foreground,
-    sidebarPrimary: pPrimary, sidebarPrimaryForeground: "#2A201C",
+    sidebarPrimary: pPrimary, sidebarPrimaryForeground: pickFg(pPrimary, "#2A201C"),
     sidebarAccent: secondary, sidebarAccentForeground: foreground,
     sidebarBorder: border, sidebarRing: pPrimary,
     hoverGlow: rgbaOf(pPrimary, 0.18),
@@ -250,10 +267,10 @@ function createFocusColors(primary: string, _background: string): ThemeDefinitio
     background: "#0F0F0E", foreground,
     card, cardForeground: foreground,
     popover, popoverForeground: foreground,
-    primary: fPrimary, primaryForeground: "#0C0B0A",
-    secondary: "#1A1917", secondaryForeground: "#6A6460",
-    muted: "#151413", mutedForeground: "#5C5752",
-    accent: fPrimary, accentForeground: "#0C0B0A",
+    primary: fPrimary, primaryForeground: pickFg(fPrimary, "#0C0B0A"),
+    secondary: "#1A1917", secondaryForeground: "#7A7470",
+    muted: "#151413", mutedForeground: "#7A7470",
+    accent: fPrimary, accentForeground: pickFg(fPrimary, "#0C0B0A"),
     destructive: "#7A3C3C", destructiveForeground: "#E8D0D0",
     border: "rgba(200, 192, 185, 0.06)",
     input: "rgba(200, 192, 185, 0.04)",
@@ -265,11 +282,11 @@ function createFocusColors(primary: string, _background: string): ThemeDefinitio
     chart4: mixColors(fPrimary, "#5A5A5A", 0.65),
     chart5: mixColors(fPrimary, "#5A5A5A", 0.78),
     sidebar: card, sidebarForeground: foreground,
-    sidebarPrimary: fPrimary, sidebarPrimaryForeground: "#0C0B0A",
-    sidebarAccent: "#1A1917", sidebarAccentForeground: "#6A6460",
+    sidebarPrimary: fPrimary, sidebarPrimaryForeground: pickFg(fPrimary, "#0C0B0A"),
+    sidebarAccent: "#1A1917", sidebarAccentForeground: "#7A7470",
     sidebarBorder: "rgba(200, 192, 185, 0.06)", sidebarRing: fPrimary,
     hoverGlow: rgbaOf(fPrimary, 0.12),
-    warning: mixColors("#F59E0B", "#5A5A5A", 0.45), warningForeground: "#F0E8D8",
+    warning: mixColors("#F59E0B", "#5A5A5A", 0.45), warningForeground: "#0C0600",
     success: mixColors("#34D399", "#5A5A5A", 0.45), successForeground: "#D0ECD8",
   };
 }
@@ -460,11 +477,11 @@ export const THEMES: ThemeDefinition[] = [
     name: "Gamebanana Yellow",
     hue: "50",
     colors: {
-      light: createLightColors("#FFE900", "#FFFFE6"),
-      dark: createDarkColors("#FFE900", "#1A1A0F"),
-      vibrant: createVibrantColors("#FFE900", "#1A1A0F"),
-      pastel: createPastelColors("#FFE900", "#1A1A0F"),
-      focus: createFocusColors("#FFE900", "#1A1A0F"),
+      light: createLightColors("#FFF336", "#FFFFE6"),
+      dark: createDarkColors("#FFF336", "#1A1A0F"),
+      vibrant: createVibrantColors("#FFF336", "#1A1A0F"),
+      pastel: createPastelColors("#FFF336", "#1A1A0F"),
+      focus: createFocusColors("#FFF336", "#1A1A0F"),
     },
   },
 ];
