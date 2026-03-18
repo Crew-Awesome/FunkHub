@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Download, Clock3, User, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Clock3, User, ExternalLink, ChevronLeft, ChevronRight, Tag } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
 import { modInstallerService, detectRequiredEngineFromMetadata } from "../../services/funkhub";
 import type { GameBananaMember, GameBananaModProfile } from "../../services/funkhub";
@@ -130,7 +130,11 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
       .filter((entry): entry is string => Boolean(entry && entry.trim()));
     return Array.from(new Set(merged));
   }, [profile]);
-  const categoryLabel = profile?.rootCategory?.name ?? profile?.category?.name ?? profile?.superCategory?.name;
+  const categoryBreadcrumb = profile
+    ? [profile.superCategory, profile.rootCategory, profile.category].filter(
+        (c, i, arr) => c?.name && arr.findIndex((x) => x?.name === c.name) === i,
+      )
+    : [];
   const selectedEngine = installedEngines.find((engine) => engine.id === selectedEngineId);
   const installAsExecutable = installMode === "executable";
   const detectedEngineSlug = profile
@@ -190,7 +194,25 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
               <section className="min-h-0 overflow-y-auto pr-1">
                 <div className="rounded-xl border border-border bg-card p-4">
                   <h3 className="text-2xl font-bold text-foreground">{profile.name}</h3>
-                  {categoryLabel && <p className="mt-1 text-sm text-muted-foreground">{categoryLabel}</p>}
+                  {categoryBreadcrumb.length > 0 && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1">
+                      <Tag className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      {categoryBreadcrumb.map((cat, i) => (
+                        <span key={cat!.id ?? cat!.name} className="flex items-center gap-1">
+                          {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground/60" />}
+                          {cat!.iconUrl && (
+                            <img src={cat!.iconUrl} alt="" className="h-4 w-4 rounded-sm object-contain" loading="lazy" />
+                          )}
+                          <span className={[
+                            "text-sm",
+                            i === categoryBreadcrumb.length - 1 ? "font-medium text-primary" : "text-muted-foreground",
+                          ].join(" ")}>
+                            {cat!.name}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-4 overflow-hidden rounded-xl border border-border bg-secondary/30">
