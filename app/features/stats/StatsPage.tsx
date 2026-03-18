@@ -5,17 +5,9 @@ import {
   Package,
   Clock,
   Cpu,
-  Music,
-  Star,
-  Zap,
-  Trophy,
-  Flame,
-  Target,
   Shield,
-  Tag,
+  Target,
   RefreshCw,
-  Play,
-  Layers,
   Calendar,
 } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
@@ -26,25 +18,9 @@ import {
   computeMostPlayed,
   computeRecentlyPlayed,
   computeEngineGroups,
-  computeAchievements,
   formatPlayTime,
   formatRelativeTime,
 } from "./statsUtils";
-
-const ACHIEVEMENT_ICONS: Record<string, React.ElementType> = {
-  first_steps: Star,
-  collector: Package,
-  hoarder: Layers,
-  legend: Trophy,
-  first_launch: Play,
-  time_flies: Clock,
-  dedicated: Flame,
-  obsessed: Zap,
-  engine_master: Cpu,
-  up_to_date: RefreshCw,
-  variety_pack: Music,
-  tagging_along: Tag,
-};
 
 export function Stats() {
   const { t } = useI18n();
@@ -110,9 +86,6 @@ export function Stats() {
   const mostPlayed = computeMostPlayed(installedMods);
   const recentlyPlayed = computeRecentlyPlayed(installedMods);
   const engineGroups = computeEngineGroups(installedMods);
-  const achievements = computeAchievements(installedMods, installedEngines, modUpdates.length);
-
-  const unlockedCount = achievements.filter((a) => a.unlocked).length;
 
   return (
     <div className="p-6 md:p-8 space-y-8 overflow-y-auto">
@@ -270,47 +243,6 @@ export function Stats() {
           </div>
         </motion.section>
       )}
-
-      {/* ── Achievements ──────────────────────────────────────────────────── */}
-      <motion.section
-        initial={shouldAnimate ? { opacity: 0, y: 12 } : false}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.2 }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-foreground">{t("stats.achievements.title", "Achievements")}</h2>
-          <span className="text-xs text-muted-foreground">{unlockedCount} / {achievements.length} {t("stats.achievements.unlocked", "unlocked")}</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {achievements.map((achievement) => {
-            const Icon = ACHIEVEMENT_ICONS[achievement.id] ?? Star;
-            return (
-              <div
-                key={achievement.id}
-                className={`rounded-xl border p-3 flex flex-col gap-2 transition-colors ${
-                  achievement.unlocked
-                    ? "border-primary/20 bg-primary/5"
-                    : "border-border bg-card opacity-50"
-                }`}
-              >
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                  achievement.unlocked ? "bg-primary/15" : "bg-secondary"
-                }`}>
-                  <Icon className={`w-5 h-5 ${achievement.unlocked ? "text-primary" : "text-muted-foreground"}`} />
-                </div>
-                <div>
-                  <p className={`text-xs font-semibold leading-tight ${achievement.unlocked ? "text-foreground" : "text-muted-foreground"}`}>
-                    {t(`stats.achievement.${achievement.id}.name`, achievement.id)}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                    {t(`stats.achievement.${achievement.id}.desc`, "")}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </motion.section>
 
       {/* ── Library health ────────────────────────────────────────────────── */}
       <motion.section
