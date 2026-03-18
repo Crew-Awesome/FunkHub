@@ -220,6 +220,15 @@ export const THEMES: ThemeDefinition[] = [
       dark: { primary: "#64748B", accent: "#64748B", ring: "#64748B", background: "#1A1E24", sidebarPrimary: "#64748B", sidebar: "#1A1E24", hoverGlow: "rgba(148, 163, 184, 0.32)", chart1: "#64748B", chart2: "#475569", chart3: "#94A3B8", chart4: "#CBD5E1", chart5: "#E2E8F0" },
     },
   }),
+  createTheme({
+    id: "gamebanana",
+    name: "Gamebanana Yellow",
+    hue: "50",
+    colors: {
+      light: { primary: "#FFE900", accent: "#FFE900", ring: "#FFE900", background: "#FFFFE6", sidebarPrimary: "#FFE900", sidebar: "#FFFFE6", hoverGlow: "rgba(255, 233, 0, 0.32)", chart1: "#FFE900", chart2: "#FACC15", chart3: "#FDE047", chart4: "#FEF08A", chart5: "#FEF9C3" },
+      dark: { primary: "#FFE900", accent: "#FFE900", ring: "#FFE900", background: "#1A1A0F", sidebarPrimary: "#FFE900", sidebar: "#1A1A0F", hoverGlow: "rgba(255, 233, 0, 0.40)", chart1: "#FFE900", chart2: "#FACC15", chart3: "#FDE047", chart4: "#FEF08A", chart5: "#FEF9C3" },
+    },
+  }),
 ];
 
 export function getThemeById(id: string): ThemeDefinition {
