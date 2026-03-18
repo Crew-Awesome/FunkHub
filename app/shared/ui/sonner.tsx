@@ -2,11 +2,11 @@ import { useTheme } from "../../providers";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme } = useTheme();
+  const { effectiveMode } = useTheme();
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={effectiveMode as ToasterProps["theme"]}
       className="toaster group"
       position="top-right"
       richColors

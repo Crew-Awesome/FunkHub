@@ -1,56 +1,10 @@
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is([data-mode="dark"] *));
 
 :root {
   --font-size: 16px;
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   
-  /* Light Theme - Warm colors */
-  --background: #FAF8F5;
-  --foreground: #2D2520;
-  --card: #FFFFFF;
-  --card-foreground: #2D2520;
-  --popover: #FFFFFF;
-  --popover-foreground: #2D2520;
-  --primary: #E8743B;
-  --primary-foreground: #1A1512;
-  --secondary: #F5EDE6;
-  --secondary-foreground: #2D2520;
-  --muted: #EDE5DD;
-  --muted-foreground: #6B5D54;
-  --accent: #E8743B;
-  --accent-foreground: #1A1512;
-  --destructive: #D94D3A;
-  --destructive-foreground: #ffffff;
-  --border: rgba(45, 37, 32, 0.12);
-  --input: rgba(45, 37, 32, 0.05);
-  --input-background: #FFFFFF;
-  --switch-background: #EDE5DD;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --ring: #E8743B;
-  --chart-1: #E8743B;
-  --chart-2: #D97E4A;
-  --chart-3: #F4A261;
-  --chart-4: #E76F51;
-  --chart-5: #E9C46A;
-  --radius: 0.75rem;
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #2D2520;
-  --sidebar-primary: #E8743B;
-  --sidebar-primary-foreground: #1A1512;
-  --sidebar-accent: #F5EDE6;
-  --sidebar-accent-foreground: #2D2520;
-  --sidebar-border: rgba(45, 37, 32, 0.12);
-  --sidebar-ring: #E8743B;
-  --hover-glow: rgba(232, 116, 59, 0.24);
-  --warning: #c2750a;
-  --warning-foreground: #fef3c7;
-  --success: #2a7a4b;
-  --success-foreground: #d1fae5;
-}
-
-.dark {
-  /* Dark Theme - Warm colors */
+  /* Default fallback values (funkhub dark) */
   --background: #1A1512;
   --foreground: #F5EDE6;
   --card: #231C18;
@@ -66,7 +20,7 @@
   --accent: #E8743B;
   --accent-foreground: #1A1512;
   --destructive: #D94D3A;
-  --destructive-foreground: #ffffff;
+  --destructive-foreground: #FFFFFF;
   --border: rgba(245, 237, 230, 0.08);
   --input: rgba(245, 237, 230, 0.05);
   --input-background: #2D251F;
@@ -77,6 +31,7 @@
   --chart-3: #F4A261;
   --chart-4: #E76F51;
   --chart-5: #E9C46A;
+  --radius: 0.75rem;
   --sidebar: #231C18;
   --sidebar-foreground: #F5EDE6;
   --sidebar-primary: #E8743B;
@@ -92,6 +47,62 @@
   --success-foreground: #052e16;
 }
 
+/* Light mode base overrides */
+[data-mode="light"] {
+  --background: #FAF8F5;
+  --foreground: #2D2520;
+  --card: #FFFFFF;
+  --card-foreground: #2D2520;
+  --popover: #FFFFFF;
+  --popover-foreground: #2D2520;
+  --primary-foreground: #1A1512;
+  --secondary: #F5EDE6;
+  --secondary-foreground: #2D2520;
+  --muted: #EDE5DD;
+  --muted-foreground: #6B5D54;
+  --accent-foreground: #1A1512;
+  --border: rgba(45, 37, 32, 0.12);
+  --input: rgba(45, 37, 32, 0.05);
+  --input-background: #FFFFFF;
+  --switch-background: #EDE5DD;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #2D2520;
+  --sidebar-primary-foreground: #1A1512;
+  --sidebar-accent: #F5EDE6;
+  --sidebar-accent-foreground: #2D2520;
+  --sidebar-border: rgba(45, 37, 32, 0.12);
+  --hover-glow: rgba(232, 116, 59, 0.24);
+}
+
+/* Mode modifiers */
+[data-mode="vibrant"] {
+  --primary: color-mix(in srgb, var(--primary) 115%, white);
+  --accent: color-mix(in srgb, var(--accent) 115%, white);
+  --chart-1: color-mix(in srgb, var(--chart-1) 115%, white);
+  --chart-2: color-mix(in srgb, var(--chart-2) 115%, white);
+  --hover-glow: color-mix(in srgb, var(--hover-glow) 130%, white);
+}
+
+[data-mode="pastel"] {
+  --primary: color-mix(in srgb, var(--primary) 70%, white);
+  --accent: color-mix(in srgb, var(--accent) 70%, white);
+  --secondary: color-mix(in srgb, var(--secondary) 80%, white);
+  --muted: color-mix(in srgb, var(--muted) 85%, white);
+  --chart-1: color-mix(in srgb, var(--chart-1) 70%, white);
+  --chart-2: color-mix(in srgb, var(--chart-2) 70%, white);
+  --chart-3: color-mix(in srgb, var(--chart-3) 70%, white);
+}
+
+[data-mode="focus"] {
+  --primary: color-mix(in srgb, var(--primary) 50%, oklch(50% 0 0));
+  --accent: color-mix(in srgb, var(--accent) 40%, oklch(50% 0 0));
+  --secondary: color-mix(in srgb, var(--secondary) 50%, var(--background));
+  --muted: color-mix(in srgb, var(--muted) 60%, var(--background));
+  --hover-glow: transparent;
+  --chart-1: color-mix(in srgb, var(--chart-1) 50%, oklch(50% 0 0));
+}
+
+/* Tailwind theme mapping */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -144,6 +155,7 @@
 
   body {
     @apply bg-background text-foreground;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   * {
@@ -170,11 +182,6 @@
   *::-webkit-scrollbar-thumb:hover {
     background: color-mix(in srgb, var(--primary) 82%, transparent);
   }
-
-  /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
 
   html {
     font-size: var(--font-size);

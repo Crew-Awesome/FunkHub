@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Folder, Download, Palette, Sliders, Info, MessageCircle, FolderOpen, Link2, Copy, Trash2, RotateCcw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useFunkHub, useI18n, useTheme } from "../../providers";
+import { ThemePicker } from "../../shared/ui/ThemePicker";
+import { ModePicker } from "../../shared/ui/ModePicker";
 import type { SupportedLocale } from "../../i18n";
 
 const ITCH_OAUTH_CLIENT_ID = "4f345ebf07699f30d702a69fd6dca358";
@@ -462,28 +464,22 @@ export function Settings() {
               </div>
 
               <div className="space-y-4">
-                <label className="flex items-center justify-between cursor-pointer">
-                  <div>
-                    <p className="font-medium text-foreground">{t("settings.darkTheme", "Dark Theme")}</p>
-                    <p id="desc-dark-theme" className="text-sm text-muted-foreground">
-                      {theme === "dark"
-                        ? t("settings.darkModeEnabled", "Dark mode is enabled")
-                        : t("settings.lightModeEnabled", "Light mode is enabled")}
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    aria-describedby="desc-dark-theme"
-                    checked={theme === "dark"}
-                    onChange={toggleTheme}
-                    className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
-                             checked:bg-primary transition-colors
-                             after:content-[''] after:absolute after:top-1 after:left-1
-                             after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform
-                             checked:after:translate-x-5"
-                  />
-                </label>
+                <div>
+                  <p className="font-medium text-foreground">{t("settings.theme", "Theme")}</p>
+                  <p className="text-sm text-muted-foreground">{t("settings.themeDesc", "Choose your preferred color theme")}</p>
+                </div>
+                <ThemePicker />
+              </div>
 
+              <div className="space-y-4">
+                <div>
+                  <p className="font-medium text-foreground">{t("settings.mode", "Mode")}</p>
+                  <p className="text-sm text-muted-foreground">{t("settings.modeDesc", "Choose display mode")}</p>
+                </div>
+                <ModePicker />
+              </div>
+
+              <div className="space-y-4">
                 <label className="flex items-center justify-between cursor-pointer">
                   <div>
                     <p className="font-medium text-foreground">{t("settings.showAnimations", "Show animations")}</p>
