@@ -10,6 +10,7 @@ const Library = lazy(() => import("./features/library").then((module) => ({ defa
 const Settings = lazy(() => import("./features/settings").then((module) => ({ default: module.Settings })));
 const Stats = lazy(() => import("./features/stats").then((module) => ({ default: module.Stats })));
 const Updates = lazy(() => import("./features/updates").then((module) => ({ default: module.Updates })));
+const Achievements = lazy(() => import("./features/achievements").then((module) => ({ default: module.Achievements })));
 
 function RouteErrorPage() {
   const error = useRouteError() as { status?: number; statusText?: string; message?: string } | undefined;
@@ -55,6 +56,7 @@ export const router = routerFactory([
       { path: "engines", Component: Engines },
       { path: "settings", Component: Settings },
       { path: "stats", Component: Stats },
+      { path: "achievements", Component: Achievements },
       { path: "*", Component: Discover },
     ],
   },

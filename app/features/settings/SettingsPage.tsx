@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
-import { Folder, Download, Palette, Sliders, Info, MessageCircle, FolderOpen, Link2, Copy } from "lucide-react";
+import { Folder, Download, Palette, Sliders, Info, MessageCircle, FolderOpen, Link2, Copy, Trash2, RotateCcw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useFunkHub, useI18n, useTheme } from "../../providers";
 import type { SupportedLocale } from "../../i18n";
@@ -14,12 +14,26 @@ export function Settings() {
     settings,
     itchAuth,
     installedEngines,
+    installedMods,
+    downloads,
     setDefaultEngine,
     updateSettings,
     browseFolder,
     openFolderPath,
     connectItch,
     disconnectItch,
+    clearAllData,
+    clearAllMods,
+    clearAllEngines,
+    clearAllDownloads,
+    resetSettings,
+    clearTheme,
+    clearCompletedDownloads,
+    clearFailedDownloads,
+    clearActiveDownloads,
+    clearDisabledMods,
+    clearUnpinnedMods,
+    clearAllPlayTime,
   } = useFunkHub();
   const [gameDirectory, setGameDirectory] = useState(settings.gameDirectory);
   const [downloadsDirectory, setDownloadsDirectory] = useState(settings.downloadsDirectory);
@@ -569,6 +583,239 @@ export function Settings() {
                              checked:after:translate-x-5"
                   />
                 </label>
+              </div>
+            </section>
+
+            {/* Data Management */}
+            <section className="bg-card border border-border rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-destructive" />
+                </div>
+                <h2 className="text-xl font-semibold text-foreground">{t("settings.dataManagement", "Data Management")}</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border">
+                  <div className="flex-1 min-w-0 mr-4">
+                    <p className="font-medium text-foreground">{t("settings.clearMods", "Clear All Mods")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("settings.clearModsDesc", "Remove {{count}} installed mods from library", { count: installedMods.length })}
+                    </p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      if (window.confirm(t("settings.confirmClearMods", "Are you sure you want to remove all installed mods? This cannot be undone."))) {
+                        clearAllMods();
+                        toast.success(t("settings.modsCleared", "All mods cleared"));
+                      }
+                    }}
+                    disabled={installedMods.length === 0}
+                    className="shrink-0 px-4 py-2 bg-destructive/15 hover:bg-destructive/25 text-destructive rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </motion.button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border">
+                  <div className="flex-1 min-w-0 mr-4">
+                    <p className="font-medium text-foreground">{t("settings.clearEngines", "Clear All Engines")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("settings.clearEnginesDesc", "Remove {{count}} installed engines", { count: installedEngines.length })}
+                    </p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      if (window.confirm(t("settings.confirmClearEngines", "Are you sure you want to remove all installed engines? This cannot be undone."))) {
+                        clearAllEngines();
+                        toast.success(t("settings.enginesCleared", "All engines cleared"));
+                      }
+                    }}
+                    disabled={installedEngines.length === 0}
+                    className="shrink-0 px-4 py-2 bg-destructive/15 hover:bg-destructive/25 text-destructive rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </motion.button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border">
+                  <div className="flex-1 min-w-0 mr-4">
+                    <p className="font-medium text-foreground">{t("settings.clearDownloads", "Clear Download History")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("settings.clearDownloadsDesc", "Clear {{count}} download tasks", { count: downloads.length })}
+                    </p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      if (window.confirm(t("settings.confirmClearDownloads", "Are you sure you want to clear the download history?"))) {
+                        clearAllDownloads();
+                        toast.success(t("settings.downloadsCleared", "Download history cleared"));
+                      }
+                    }}
+                    disabled={downloads.length === 0}
+                    className="shrink-0 px-4 py-2 bg-destructive/15 hover:bg-destructive/25 text-destructive rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </motion.button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border">
+                  <div className="flex-1 min-w-0 mr-4">
+                    <p className="font-medium text-foreground">{t("settings.resetSettings", "Reset Settings")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("settings.resetSettingsDesc", "Restore all settings to default values")}
+                    </p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      if (window.confirm(t("settings.confirmResetSettings", "Are you sure you want to reset all settings to defaults?"))) {
+                        resetSettings();
+                        toast.success(t("settings.settingsReset", "Settings reset to defaults"));
+                      }
+                    }}
+                    className="shrink-0 px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </motion.button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border">
+                  <div className="flex-1 min-w-0 mr-4">
+                    <p className="font-medium text-foreground">{t("settings.clearTheme", "Clear Theme Preference")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("settings.clearThemeDesc", "Reset to system theme")}
+                    </p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      clearTheme();
+                      toast.success(t("settings.themeCleared", "Theme preference cleared"));
+                    }}
+                    className="shrink-0 px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </motion.button>
+                </div>
+
+                {/* Downloads Sub-options */}
+                <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("settings.downloads", "Downloads")}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        clearActiveDownloads();
+                        toast.success(t("settings.activeDownloadsCleared", "Active downloads cleared"));
+                      }}
+                      className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium text-left"
+                    >
+                      {t("settings.clearActive", "Clear Active ({{count}})", { count: downloads.filter(d => ["queued", "downloading", "installing"].includes(d.status)).length })}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        clearCompletedDownloads();
+                        toast.success(t("settings.completedDownloadsCleared", "Completed downloads cleared"));
+                      }}
+                      className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium text-left"
+                    >
+                      {t("settings.clearCompleted", "Clear Completed ({{count}})", { count: downloads.filter(d => d.status === "completed").length })}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        clearFailedDownloads();
+                        toast.success(t("settings.failedDownloadsCleared", "Failed downloads cleared"));
+                      }}
+                      className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium text-left"
+                    >
+                      {t("settings.clearFailed", "Clear Failed ({{count}})", { count: downloads.filter(d => d.status === "failed").length })}
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Mods Sub-options */}
+                <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("settings.mods", "Mods")}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        if (window.confirm(t("settings.confirmClearDisabled", "Remove all disabled mods?"))) {
+                          clearDisabledMods();
+                          toast.success(t("settings.disabledModsCleared", "Disabled mods cleared"));
+                        }
+                      }}
+                      className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium text-left"
+                    >
+                      {t("settings.clearDisabled", "Clear Disabled ({{count}})", { count: installedMods.filter(m => m.enabled === false).length })}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        if (window.confirm(t("settings.confirmClearUnpinned", "Remove all unpinned mods?"))) {
+                          clearUnpinnedMods();
+                          toast.success(t("settings.unpinnedModsCleared", "Unpinned mods cleared"));
+                        }
+                      }}
+                      className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium text-left"
+                    >
+                      {t("settings.clearUnpinned", "Clear Unpinned ({{count}})", { count: installedMods.filter(m => !m.pinned).length })}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        if (window.confirm(t("settings.confirmClearPlayTime", "Reset all play time data?"))) {
+                          clearAllPlayTime();
+                          toast.success(t("settings.playTimeCleared", "All play time data reset"));
+                        }
+                      }}
+                      className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium text-left"
+                    >
+                      {t("settings.clearPlayTime", "Reset Play Time")}
+                    </motion.button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+                  <div className="flex-1 min-w-0 mr-4">
+                    <p className="font-medium text-destructive">{t("settings.clearAllData", "Clear All Data")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("settings.clearAllDataDesc", "Remove all mods, engines, downloads and reset settings")}
+                    </p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      if (window.confirm(t("settings.confirmClearAllData", "WARNING: This will remove ALL data including mods, engines, and settings. This cannot be undone! Are you absolutely sure?"))) {
+                        if (window.confirm(t("settings.confirmClearAllData2", "Are you REALLY sure? This is irreversible."))) {
+                          clearAllData();
+                        }
+                      }
+                    }}
+                    className="shrink-0 px-4 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg text-sm font-medium flex items-center gap-2"
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                    {t("settings.clearAll", "Clear All")}
+                  </motion.button>
+                </div>
               </div>
             </section>
           </motion.div>

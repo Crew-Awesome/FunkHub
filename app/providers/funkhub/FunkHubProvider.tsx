@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { funkHubService } from "../../services/funkhub";
+import { computeAchievements } from "../../features/stats/statsUtils";
+import { showAchievementToast } from "../../shared/ui/AchievementToast";
 import {
   ALL_SEARCH_FIELDS,
   AppUpdateInfo,
@@ -23,6 +25,7 @@ import {
 } from "../../services/funkhub";
 import { parseFunkHubDeepLink } from "../../services/funkhub/deepLink";
 import { modInstallerService } from "../../services/funkhub/installer";
+import { funkHubStorageService, DEFAULT_SETTINGS } from "../../services/funkhub/storage";
 import { normalizeLocale, translate } from "../../i18n";
 
 interface FunkHubContextValue {
@@ -119,6 +122,19 @@ interface FunkHubContextValue {
   clearModPlayTime: (installedId: string) => void;
   detectWineRuntimes: () => Promise<Array<{ type: "wine" | "wine64" | "proton"; path: string; label: string }>>;
   scanCommonEnginePaths: () => Promise<string[]>;
+  clearAllData: () => Promise<void>;
+  clearAllMods: () => Promise<void>;
+  clearAllEngines: () => Promise<void>;
+  clearAllDownloads: () => Promise<void>;
+  resetSettings: () => Promise<void>;
+  clearTheme: () => Promise<void>;
+  clearCompletedDownloads: () => Promise<void>;
+  clearFailedDownloads: () => Promise<void>;
+  clearActiveDownloads: () => Promise<void>;
+  clearDisabledMods: () => Promise<void>;
+  clearUnpinnedMods: () => Promise<void>;
+  clearAllPlayTime: () => Promise<void>;
+  clearAchievements: () => Promise<void>;
 }
 
 const FunkHubContext = createContext<FunkHubContextValue | undefined>(undefined);
@@ -146,6 +162,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [searchFields, setSearchFields] = useState<SearchField[]>(ALL_SEARCH_FIELDS);
   const [browseReleaseType, setBrowseReleaseType] = useState<ReleaseType>("");
   const [browseContentRatings, setBrowseContentRatings] = useState<ContentRating[]>([]);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Set<string>>(new Set());
   const processedDeepLinksRef = useRef<Map<string, number>>(new Map());
   const processingDeepLinksRef = useRef<Set<string>>(new Set());
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | undefined>(undefined);
@@ -467,6 +484,32 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshAll();
   }, [refreshAll]);
+
+  useEffect(() => {
+    if (loading) return;
+    
+    const currentAchievements = computeAchievements(installedMods, installedEngines, modUpdates.length);
+    const newlyUnlocked = currentAchievements.filter(
+      (a) => a.unlocked && !unlockedAchievements.has(a.id)
+    );
+
+    for (const achievement of newlyUnlocked) {
+      const name = achievement.id.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      showAchievementToast(achievement.id, name);
+      const newSet = new Set([...unlockedAchievements, achievement.id]);
+      setUnlockedAchievements(newSet);
+      funkHubStorageService.saveUnlockedAchievements([...newSet]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, installedMods.length, installedEngines.length, modUpdates.length]);
+
+  // Load achievements from storage on mount
+  useEffect(() => {
+    const saved = funkHubStorageService.getUnlockedAchievements();
+    if (saved.length > 0) {
+      setUnlockedAchievements(new Set(saved));
+    }
+  }, []);
 
   useEffect(() => {
     const unsubscribe = funkHubService.subscribeDownloads((tasks) => {
@@ -805,6 +848,61 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       scanCommonEnginePaths: async () => {
         const result = await window.funkhubDesktop?.scanCommonEnginePaths?.();
         return result?.paths ?? [];
+      },
+      clearAllData: async () => {
+        funkHubStorageService.clearAllData();
+        setInstalledMods([]);
+        setInstalledEngines([]);
+        setDownloads([]);
+        setSettings(DEFAULT_SETTINGS);
+        window.location.reload();
+      },
+      clearAllMods: async () => {
+        funkHubStorageService.clearMods();
+        setInstalledMods([]);
+      },
+      clearAllEngines: async () => {
+        funkHubStorageService.clearEngines();
+        setInstalledEngines([]);
+      },
+      clearAllDownloads: async () => {
+        funkHubStorageService.clearDownloads();
+        setDownloads([]);
+      },
+      resetSettings: async () => {
+        funkHubStorageService.clearSettings();
+        setSettings(DEFAULT_SETTINGS);
+      },
+      clearTheme: async () => {
+        funkHubStorageService.clearTheme();
+      },
+      clearCompletedDownloads: async () => {
+        funkHubStorageService.clearDownloadsByStatus("completed");
+        setDownloads(funkHubService.getDownloadHistory());
+      },
+      clearFailedDownloads: async () => {
+        funkHubStorageService.clearDownloadsByStatus("failed");
+        setDownloads(funkHubService.getDownloadHistory());
+      },
+      clearActiveDownloads: async () => {
+        funkHubStorageService.clearDownloadsByStatus("active");
+        setDownloads(funkHubService.getDownloadHistory());
+      },
+      clearDisabledMods: async () => {
+        funkHubStorageService.clearDisabledMods();
+        setInstalledMods(funkHubStorageService.getInstalledMods());
+      },
+      clearUnpinnedMods: async () => {
+        funkHubStorageService.clearUnpinnedMods();
+        setInstalledMods(funkHubStorageService.getInstalledMods());
+      },
+      clearAllPlayTime: async () => {
+        funkHubStorageService.clearModPlayTime();
+        setInstalledMods(funkHubStorageService.getInstalledMods());
+      },
+      clearAchievements: async () => {
+        funkHubStorageService.clearAchievements();
+        setUnlockedAchievements(new Set());
       },
     }),
     [

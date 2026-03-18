@@ -5,6 +5,8 @@ const STORAGE_KEYS = {
   installedEngines: "funkhub-installed-engines",
   downloadHistory: "funkhub-download-history",
   settings: "funkhub-settings",
+  theme: "funkhub-theme",
+  achievements: "funkhub-achievements",
 } as const;
 
 const DEFAULT_SETTINGS: FunkHubSettings = {
@@ -85,6 +87,92 @@ export class FunkHubStorageService {
 
   saveSettings(settings: FunkHubSettings): void {
     localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+  }
+
+  clearAllData(): void {
+    Object.values(STORAGE_KEYS).forEach((key) => {
+      localStorage.removeItem(key);
+    });
+  }
+
+  clearMods(): void {
+    localStorage.removeItem(STORAGE_KEYS.installedMods);
+  }
+
+  clearEngines(): void {
+    localStorage.removeItem(STORAGE_KEYS.installedEngines);
+  }
+
+  clearDownloads(): void {
+    localStorage.removeItem(STORAGE_KEYS.downloadHistory);
+  }
+
+  clearSettings(): void {
+    localStorage.removeItem(STORAGE_KEYS.settings);
+  }
+
+  clearTheme(): void {
+    localStorage.removeItem(STORAGE_KEYS.theme);
+  }
+
+  clearDownloadsByStatus(status: "completed" | "failed" | "active"): void {
+    const all = this.getDownloadHistory();
+    const filtered = all.filter((task) => {
+      if (status === "completed") return task.status !== "completed";
+      if (status === "failed") return task.status !== "failed";
+      if (status === "active") return !["queued", "downloading", "installing"].includes(task.status);
+      return true;
+    });
+    this.saveDownloadHistory(filtered);
+  }
+
+  clearDisabledMods(): void {
+    const mods = this.getInstalledMods();
+    const enabled = mods.filter((mod) => mod.enabled !== false);
+    this.saveInstalledMods(enabled);
+  }
+
+  clearUnpinnedMods(): void {
+    const mods = this.getInstalledMods();
+    const pinned = mods.filter((mod) => mod.pinned === true);
+    this.saveInstalledMods(pinned);
+  }
+
+  clearModPlayTime(): void {
+    const mods = this.getInstalledMods();
+    const reset = mods.map((mod) => ({
+      ...mod,
+      totalPlayTimeMs: 0,
+      lastLaunchedAt: undefined,
+    }));
+    this.saveInstalledMods(reset);
+  }
+
+  clearModUpdates(): void {
+    const mods = this.getInstalledMods();
+    const reset = mods.map((mod) => ({
+      ...mod,
+      latestFileId: mod.sourceFileId,
+    }));
+    this.saveInstalledMods(reset);
+  }
+
+  clearAchievements(): void {
+    localStorage.removeItem(STORAGE_KEYS.achievements);
+  }
+
+  getUnlockedAchievements(): string[] {
+    const value = localStorage.getItem(STORAGE_KEYS.achievements);
+    if (!value) return [];
+    try {
+      return JSON.parse(value) as string[];
+    } catch {
+      return [];
+    }
+  }
+
+  saveUnlockedAchievements(achievements: string[]): void {
+    localStorage.setItem(STORAGE_KEYS.achievements, JSON.stringify(achievements));
   }
 }
 

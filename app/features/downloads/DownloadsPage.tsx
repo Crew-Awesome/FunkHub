@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { RotateCcw, X, Download, CheckCircle2, AlertCircle, Clock, Zap } from "lucide-react";
+import { RotateCcw, X, Download, CheckCircle2, AlertCircle, Clock, Zap, Trash2 } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
 
 function formatBytes(bytes: number | undefined): string {
@@ -29,7 +29,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function Downloads() {
   const { t } = useI18n();
-  const { downloads, cancelDownload, retryDownload, clearDownloads } = useFunkHub();
+  const { downloads, cancelDownload, retryDownload, clearDownloads, clearActiveDownloads, clearCompletedDownloads, clearFailedDownloads } = useFunkHub();
   const activeDownloads = downloads.filter((task) => task.status === "queued" || task.status === "downloading" || task.status === "installing");
   const completedDownloads = downloads.filter((task) => task.status === "completed");
   const failedDownloads = downloads.filter((task) => task.status === "failed");
@@ -56,14 +56,48 @@ export function Downloads() {
           )}
         </div>
         {hasAny && (
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={clearDownloads}
-            className="px-3 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-sm text-foreground transition-colors"
-          >
-            {t("downloads.clear", "Clear All")}
-          </motion.button>
+          <div className="flex items-center gap-2">
+            {/* Granular clear options */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={clearActiveDownloads}
+              disabled={activeDownloads.length === 0}
+              title={t("downloads.clearActive", "Clear Active")}
+              className="px-2.5 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-xs text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {t("downloads.clearActiveShort", "Active ({{count}})", { count: activeDownloads.length })}
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={clearCompletedDownloads}
+              disabled={completedDownloads.length === 0}
+              title={t("downloads.clearCompleted", "Clear Completed")}
+              className="px-2.5 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-xs text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {t("downloads.clearCompletedShort", "Done ({{count}})", { count: completedDownloads.length })}
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={clearFailedDownloads}
+              disabled={failedDownloads.length === 0}
+              title={t("downloads.clearFailed", "Clear Failed")}
+              className="px-2.5 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-xs text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {t("downloads.clearFailedShort", "Failed ({{count}})", { count: failedDownloads.length })}
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={clearDownloads}
+              title={t("downloads.clear", "Clear All")}
+              className="px-3 py-2 rounded-lg border border-destructive/30 bg-destructive/10 hover:bg-destructive/20 text-xs text-destructive transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </motion.button>
+          </div>
         )}
       </motion.div>
 

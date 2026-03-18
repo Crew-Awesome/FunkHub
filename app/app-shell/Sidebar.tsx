@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router";
-import { Search, Library, Download, RefreshCw, Settings as SettingsIcon, Cpu, House, BarChart2 } from "lucide-react";
+import { Search, Library, Download, RefreshCw, Settings as SettingsIcon, Cpu, House, BarChart2, Trophy } from "lucide-react";
 import { motion } from "motion/react";
 import { useI18n } from "../providers";
 
@@ -10,6 +10,7 @@ const navItems = [
   { icon: Download, labelKey: "nav.downloads", path: "/downloads" },
   { icon: RefreshCw, labelKey: "nav.updates", path: "/updates" },
   { icon: Cpu, labelKey: "nav.engines", path: "/engines" },
+  { icon: Trophy, labelKey: "nav.achievements", path: "/achievements" },
   { icon: BarChart2, labelKey: "nav.stats", path: "/stats" },
 ];
 
