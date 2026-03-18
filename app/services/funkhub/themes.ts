@@ -32,6 +32,19 @@ function mixColors(c1: string, c2: string, w1: number): string {
   return `#${clamp(r1 * w1 + r2 * (1 - w1)).toString(16).padStart(2, "0")}${clamp(g1 * w1 + g2 * (1 - w1)).toString(16).padStart(2, "0")}${clamp(b1 * w1 + b2 * (1 - w1)).toString(16).padStart(2, "0")}`;
 }
 
+/** Darkens `color` until it achieves ≥ 4.5:1 contrast on white (WCAG AA for text). */
+function ensureContrastOnWhite(color: string): string {
+  const targetL = 1.05 / 4.5 - 0.05; // ≈ 0.183
+  if (luminance(color) <= targetL) return color;
+  let lo = 0, hi = 1; // lo = passes threshold, hi = fails
+  for (let i = 0; i < 20; i++) {
+    const mid = (lo + hi) / 2;
+    if (luminance(mixColors(color, "#000000", mid)) <= targetL) lo = mid;
+    else hi = mid;
+  }
+  return mixColors(color, "#000000", lo);
+}
+
 function rgbaOf(hex: string, a: number): string {
   return `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${a})`;
 }
@@ -76,7 +89,8 @@ function adjustRgbaTowards(color: string, towards: string, amount: number): stri
 }
 
 function createLightColors(primary: string, background: string): ThemeDefinition["colors"]["light"] {
-  const primaryFg = pickFg(primary, "#1A1512");
+  const p = ensureContrastOnWhite(primary); // WCAG AA-safe (≥4.5:1 on white) for text/UI use
+  const primaryFg = pickFg(p, "#1A1512");
   const foreground = "#2D2520";
   const secondary = adjustColorTowards("#F5EDE6", primary, 0.08);
   const muted = adjustColorTowards("#EDE5DD", primary, 0.05);
@@ -91,13 +105,13 @@ function createLightColors(primary: string, background: string): ThemeDefinition
     cardForeground: foreground,
     popover: card,
     popoverForeground: foreground,
-    primary,
+    primary: p,
     primaryForeground: primaryFg,
     secondary,
     secondaryForeground: foreground,
     muted,
     mutedForeground: "#6B5D54",
-    accent: primary,
+    accent: p,
     accentForeground: primaryFg,
     destructive: "#C0392B",
     destructiveForeground: "#FFFFFF",
@@ -105,21 +119,21 @@ function createLightColors(primary: string, background: string): ThemeDefinition
     input,
     inputBackground: card,
     switchBackground: muted,
-    ring: primary,
-    chart1: primary,
-    chart2: adjustColorTowards(primary, "#", -0.15),
-    chart3: adjustColorTowards(primary, "#", -0.25),
-    chart4: adjustColorTowards(primary, "#", -0.35),
-    chart5: adjustColorTowards(primary, "#", -0.45),
+    ring: p,
+    chart1: p,
+    chart2: adjustColorTowards(p, "#", -0.15),
+    chart3: adjustColorTowards(p, "#", -0.25),
+    chart4: adjustColorTowards(p, "#", -0.35),
+    chart5: adjustColorTowards(p, "#", -0.45),
     sidebar: card,
     sidebarForeground: foreground,
-    sidebarPrimary: primary,
+    sidebarPrimary: p,
     sidebarPrimaryForeground: primaryFg,
     sidebarAccent: secondary,
     sidebarAccentForeground: foreground,
     sidebarBorder: border,
-    sidebarRing: primary,
-    hoverGlow: `rgba(${parseInt(primary.slice(1, 3), 16)}, ${parseInt(primary.slice(3, 5), 16)}, ${parseInt(primary.slice(5, 7), 16)}, 0.15)`,
+    sidebarRing: p,
+    hoverGlow: `rgba(${parseInt(p.slice(1, 3), 16)}, ${parseInt(p.slice(3, 5), 16)}, ${parseInt(p.slice(5, 7), 16)}, 0.15)`,
     warning: "#c2750a",
     warningForeground: "#0C0600",
     success: "#2a7a4b",
@@ -219,42 +233,6 @@ function createVibrantColors(primary: string, background: string): ThemeDefiniti
   };
 }
 
-/** Pastel — soft & airy. Near-white backgrounds, gentle washed-out accents. */
-function createPastelColors(primary: string, _background: string): ThemeDefinition["colors"]["pastel"] {
-  const pPrimary = mixColors(primary, "#FFFFFF", 0.5);
-  const pBg = adjustColorTowards("#FAFAF8", primary, 0.04);
-  const foreground = "#2E2825";
-  const card = "#FFFFFF";
-  const secondary = adjustColorTowards("#F2EDE8", primary, 0.07);
-  const muted = adjustColorTowards("#EAE5DF", primary, 0.05);
-  const border = adjustRgbaTowards("rgba(46, 40, 37, 0.10)", primary, 0.02);
-  const input = adjustRgbaTowards("rgba(46, 40, 37, 0.04)", primary, 0.01);
-
-  return {
-    background: pBg, foreground,
-    card, cardForeground: foreground,
-    popover: card, popoverForeground: foreground,
-    primary: pPrimary, primaryForeground: pickFg(pPrimary, "#2A201C"),
-    secondary, secondaryForeground: foreground,
-    muted, mutedForeground: "#5A5250",
-    accent: pPrimary, accentForeground: pickFg(pPrimary, "#2A201C"),
-    destructive: "#E89E9B", destructiveForeground: "#2E0D0C",
-    border, input, inputBackground: card, switchBackground: muted,
-    ring: pPrimary,
-    chart1: pPrimary,
-    chart2: mixColors(pPrimary, "#FFFFFF", 0.3),
-    chart3: mixColors(pPrimary, "#FFFFFF", 0.5),
-    chart4: mixColors(pPrimary, "#FFFFFF", 0.65),
-    chart5: mixColors(pPrimary, "#FFFFFF", 0.78),
-    sidebar: card, sidebarForeground: foreground,
-    sidebarPrimary: pPrimary, sidebarPrimaryForeground: pickFg(pPrimary, "#2A201C"),
-    sidebarAccent: secondary, sidebarAccentForeground: foreground,
-    sidebarBorder: border, sidebarRing: pPrimary,
-    hoverGlow: rgbaOf(pPrimary, 0.18),
-    warning: mixColors("#F59E0B", "#FFFFFF", 0.5), warningForeground: "#3D2A00",
-    success: mixColors("#34D399", "#FFFFFF", 0.5), successForeground: "#0D2E1A",
-  };
-}
 
 /** Focus — minimal dark. Near-monochrome, very muted accents for distraction-free use. */
 function createFocusColors(primary: string, _background: string): ThemeDefinition["colors"]["focus"] {
@@ -268,8 +246,8 @@ function createFocusColors(primary: string, _background: string): ThemeDefinitio
     card, cardForeground: foreground,
     popover, popoverForeground: foreground,
     primary: fPrimary, primaryForeground: pickFg(fPrimary, "#0C0B0A"),
-    secondary: "#1A1917", secondaryForeground: "#7A7470",
-    muted: "#151413", mutedForeground: "#7A7470",
+    secondary: "#1A1917", secondaryForeground: "#808080",
+    muted: "#151413", mutedForeground: "#808080",
     accent: fPrimary, accentForeground: pickFg(fPrimary, "#0C0B0A"),
     destructive: "#7A3C3C", destructiveForeground: "#E8D0D0",
     border: "rgba(200, 192, 185, 0.06)",
@@ -283,7 +261,7 @@ function createFocusColors(primary: string, _background: string): ThemeDefinitio
     chart5: mixColors(fPrimary, "#5A5A5A", 0.78),
     sidebar: card, sidebarForeground: foreground,
     sidebarPrimary: fPrimary, sidebarPrimaryForeground: pickFg(fPrimary, "#0C0B0A"),
-    sidebarAccent: "#1A1917", sidebarAccentForeground: "#7A7470",
+    sidebarAccent: "#1A1917", sidebarAccentForeground: "#808080",
     sidebarBorder: "rgba(200, 192, 185, 0.06)", sidebarRing: fPrimary,
     hoverGlow: rgbaOf(fPrimary, 0.12),
     warning: mixColors("#F59E0B", "#5A5A5A", 0.45), warningForeground: "#0C0600",
@@ -300,7 +278,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#E8743B", "#FAF8F5"),
       dark: createDarkColors("#E8743B", "#1A1512"),
       vibrant: createVibrantColors("#E8743B", "#1A1512"),
-      pastel: createPastelColors("#E8743B", "#1A1512"),
       focus: createFocusColors("#E8743B", "#1A1512"),
     },
   },
@@ -312,7 +289,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#A855F7", "#FAF6FF"),
       dark: createDarkColors("#A855F7", "#1A1520"),
       vibrant: createVibrantColors("#A855F7", "#1A1520"),
-      pastel: createPastelColors("#A855F7", "#1A1520"),
       focus: createFocusColors("#A855F7", "#1A1520"),
     },
   },
@@ -324,7 +300,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#EC4899", "#FFF6FA"),
       dark: createDarkColors("#EC4899", "#1F1520"),
       vibrant: createVibrantColors("#EC4899", "#1F1520"),
-      pastel: createPastelColors("#EC4899", "#1F1520"),
       focus: createFocusColors("#EC4899", "#1F1520"),
     },
   },
@@ -336,7 +311,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#3B82F6", "#F0F6FF"),
       dark: createDarkColors("#3B82F6", "#151F2A"),
       vibrant: createVibrantColors("#3B82F6", "#151F2A"),
-      pastel: createPastelColors("#3B82F6", "#151F2A"),
       focus: createFocusColors("#3B82F6", "#151F2A"),
     },
   },
@@ -348,7 +322,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#22C55E", "#F0FFF4"),
       dark: createDarkColors("#22C55E", "#152A1A"),
       vibrant: createVibrantColors("#22C55E", "#152A1A"),
-      pastel: createPastelColors("#22C55E", "#152A1A"),
       focus: createFocusColors("#22C55E", "#152A1A"),
     },
   },
@@ -360,7 +333,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#EF4444", "#FFF5F5"),
       dark: createDarkColors("#EF4444", "#2A1515"),
       vibrant: createVibrantColors("#EF4444", "#2A1515"),
-      pastel: createPastelColors("#EF4444", "#2A1515"),
       focus: createFocusColors("#EF4444", "#2A1515"),
     },
   },
@@ -372,7 +344,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#7C3AED", "#FAF8FF"),
       dark: createDarkColors("#7C3AED", "#1A1528"),
       vibrant: createVibrantColors("#7C3AED", "#1A1528"),
-      pastel: createPastelColors("#7C3AED", "#1A1528"),
       focus: createFocusColors("#7C3AED", "#1A1528"),
     },
   },
@@ -384,7 +355,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#14B8A6", "#F0FFFA"),
       dark: createDarkColors("#14B8A6", "#152A28"),
       vibrant: createVibrantColors("#14B8A6", "#152A28"),
-      pastel: createPastelColors("#14B8A6", "#152A28"),
       focus: createFocusColors("#14B8A6", "#152A28"),
     },
   },
@@ -396,7 +366,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#10B981", "#F0FFF4"),
       dark: createDarkColors("#10B981", "#152A20"),
       vibrant: createVibrantColors("#10B981", "#152A20"),
-      pastel: createPastelColors("#10B981", "#152A20"),
       focus: createFocusColors("#10B981", "#152A20"),
     },
   },
@@ -408,7 +377,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#F43F5E", "#FFF0F3"),
       dark: createDarkColors("#F43F5E", "#281520"),
       vibrant: createVibrantColors("#F43F5E", "#281520"),
-      pastel: createPastelColors("#F43F5E", "#281520"),
       focus: createFocusColors("#F43F5E", "#281520"),
     },
   },
@@ -420,7 +388,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#F59E0B", "#FFFBF0"),
       dark: createDarkColors("#F59E0B", "#28200A"),
       vibrant: createVibrantColors("#F59E0B", "#28200A"),
-      pastel: createPastelColors("#F59E0B", "#28200A"),
       focus: createFocusColors("#F59E0B", "#28200A"),
     },
   },
@@ -432,7 +399,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#A78BFA", "#F8F5FF"),
       dark: createDarkColors("#A78BFA", "#1E1A28"),
       vibrant: createVibrantColors("#A78BFA", "#1E1A28"),
-      pastel: createPastelColors("#A78BFA", "#1E1A28"),
       focus: createFocusColors("#A78BFA", "#1E1A28"),
     },
   },
@@ -444,7 +410,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#3B82F6", "#F0F5FF"),
       dark: createDarkColors("#3B82F6", "#0F1A2A"),
       vibrant: createVibrantColors("#3B82F6", "#0F1A2A"),
-      pastel: createPastelColors("#3B82F6", "#0F1A2A"),
       focus: createFocusColors("#3B82F6", "#0F1A2A"),
     },
   },
@@ -456,7 +421,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#FF7F50", "#FFF5F0"),
       dark: createDarkColors("#FF7F50", "#2A1A15"),
       vibrant: createVibrantColors("#FF7F50", "#2A1A15"),
-      pastel: createPastelColors("#FF7F50", "#2A1A15"),
       focus: createFocusColors("#FF7F50", "#2A1A15"),
     },
   },
@@ -468,7 +432,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#64748B", "#F5F7FA"),
       dark: createDarkColors("#64748B", "#1A1E24"),
       vibrant: createVibrantColors("#64748B", "#1A1E24"),
-      pastel: createPastelColors("#64748B", "#1A1E24"),
       focus: createFocusColors("#64748B", "#1A1E24"),
     },
   },
@@ -480,7 +443,6 @@ export const THEMES: ThemeDefinition[] = [
       light: createLightColors("#FFF336", "#FFFFE6"),
       dark: createDarkColors("#FFF336", "#1A1A0F"),
       vibrant: createVibrantColors("#FFF336", "#1A1A0F"),
-      pastel: createPastelColors("#FFF336", "#1A1A0F"),
       focus: createFocusColors("#FFF336", "#1A1A0F"),
     },
   },

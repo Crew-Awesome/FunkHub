@@ -1,17 +1,16 @@
 import { useTheme, AVAILABLE_MODES } from "../../providers/ThemeProvider";
-import { Sun, Moon, RefreshCw, Sparkles, Flower, EyeOff } from "lucide-react";
+import { Sun, Moon, RefreshCw, Sparkles, EyeOff } from "lucide-react";
 
 const ICONS = {
   Sun,
   Moon,
   CircleArrow: RefreshCw,
   Sparkles,
-  Flower,
   EyeMinus: EyeOff,
 };
 
 const BASE_MODES = ["light", "dark", "auto"] as const;
-const EFFECT_MODES = ["vibrant", "pastel", "focus"] as const;
+const EFFECT_MODES = ["vibrant", "focus"] as const;
 
 export function ModePicker({ className }: { className?: string }) {
   const { mode, setMode } = useTheme();
@@ -73,7 +72,7 @@ export function ModePicker({ className }: { className?: string }) {
         <div className="flex-1 h-px bg-border" />
       </div>
 
-      {/* Effect Modes: Vibrant / Pastel / Focus */}
+      {/* Effect Modes: Vibrant / Focus */}
       <div className="flex flex-wrap gap-2">
         {EFFECT_MODES.map((m) => {
           const modeInfo = AVAILABLE_MODES.find((am) => am.id === m);

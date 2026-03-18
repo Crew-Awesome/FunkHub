@@ -1,7 +1,7 @@
-export type ThemeMode = "light" | "dark" | "auto" | "vibrant" | "pastel" | "focus";
+export type ThemeMode = "light" | "dark" | "auto" | "vibrant" | "focus";
 export type BaseMode = "light" | "dark";
 /** Resolved color-set key — every mode maps to one of these */
-export type ColorSetKey = "light" | "dark" | "vibrant" | "pastel" | "focus";
+export type ColorSetKey = "light" | "dark" | "vibrant" | "focus";
 
 export interface ThemeColors {
   background: string;
@@ -53,7 +53,6 @@ export interface ThemeDefinition {
     light: ThemeColors;
     dark: ThemeColors;
     vibrant: ThemeColors;
-    pastel: ThemeColors;
     focus: ThemeColors;
   };
 }
@@ -77,6 +76,5 @@ export const AVAILABLE_MODES: { id: ThemeMode; name: string; icon: string }[] = 
   { id: "dark", name: "Dark", icon: "Moon" },
   { id: "auto", name: "Auto", icon: "CircleArrow" },
   { id: "vibrant", name: "Vibrant", icon: "Sparkles" },
-  { id: "pastel", name: "Pastel", icon: "Flower" },
   { id: "focus", name: "Focus", icon: "EyeMinus" },
 ];

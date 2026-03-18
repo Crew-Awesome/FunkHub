@@ -22,14 +22,14 @@ function isBaseMode(mode: ThemeMode): mode is BaseMode {
 /** Returns the color-set key for a given mode + baseMode. */
 function resolveColorSet(mode: ThemeMode, baseMode: BaseMode): ColorSetKey {
   if (mode === "auto") return getSystemPreference();
-  if (mode === "vibrant" || mode === "pastel" || mode === "focus") return mode;
+  if (mode === "vibrant" || mode === "focus") return mode;
   return mode as BaseMode;
 }
 
 /** Returns the data-mode value for dark: Tailwind variants.
- *  Pastel is light-like; Vibrant + Focus are dark-like. */
+ *  Vibrant + Focus are dark-like. */
 function resolveDataMode(colorSet: ColorSetKey): BaseMode {
-  return colorSet === "light" || colorSet === "pastel" ? "light" : "dark";
+  return colorSet === "light" ? "light" : "dark";
 }
 
 function applyThemeToRoot(themeId: string, mode: ThemeMode, baseMode: BaseMode) {
@@ -146,7 +146,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [mode]);
 
   const toggleMode = useCallback(() => {
-    const modes: ThemeMode[] = ["light", "dark", "auto", "vibrant", "pastel", "focus"];
+    const modes: ThemeMode[] = ["light", "dark", "auto", "vibrant", "focus"];
     const currentIndex = modes.indexOf(mode);
     const nextIndex = (currentIndex + 1) % modes.length;
     const newMode = modes[nextIndex];
@@ -157,7 +157,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const newBaseMode = baseMode === "dark" ? "light" : "dark";
     setBaseMode(newBaseMode);
     localStorage.setItem(STORAGE_KEYS.baseMode, newBaseMode);
-    // For vibrant/pastel/focus those are standalone modes — toggleTheme switches to light/dark base
+    // For vibrant/focus those are standalone modes — toggleTheme switches to light/dark base
     if (!isBaseMode(mode) && mode !== "auto") {
       setModeState(newBaseMode);
     }
