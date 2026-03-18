@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [v0.6.0] - 2026-03-17
+
+### Added
+- Stats page with overview, recently played, most played, mods by engine, and library health sections
+- Achievements system with 40+ achievements across installs, playtime, engines, downloads, settings, collections, and usage streaks
+- Achievement toast notifications when unlocking
+- Dedicated Achievements page with progress tracking and reset
+- `nav.achievements` nav item in sidebar
+- Best Of hero carousel on Discover page with period picker
+- Subfeed sort pills on Discover (Hot, New, Featured, etc.)
+- Search field selection filter on Discover
+- Sort order filter on Discover
+- Release type filter (Studio, Indie, Redistribution)
+- Content rating filter (17 categories) on Discover
+- 16 color themes: funkhub, purple, pink, blue, green, red, alepsych, ocean, mint, rose, gold, lavender, midnight, coral, slate, gamebanana
+- 6 display modes: light, dark, auto, vibrant, pastel, focus
+- `ThemePicker` and `ModePicker` components in Settings > Appearance
+- Data management section in Settings (clear mods, clear engines, clear download history, clear disabled mods, clear unpinned mods, reset play time, clear all data)
+- Granular download clear buttons (active, completed, failed)
+- Category breadcrumb display in mod detail/visualizer view
+- `useEngineManage` and `useEngineWizard` extracted hooks
+- `docs/RELEASE_GUIDE.md`
+
+### Changed
+- Home page fully redesigned: personal hero with last-played mod, quick-launch strip (pinned/recent), stats bar (active downloads, updates, engines), trending strip
+- Discover page layout and filter UI overhauled
+- Settings Appearance tab updated with theme/mode dropdown pickers
+- Theme system rewritten to use CSS data-attributes (`data-theme`, `data-mode`, `data-effect-mode`)
+- Chart colors replaced with CSS variables for theme awareness
+- Engines page refactored with extracted state hooks
+- Framer Motion animations added across Discover, Downloads, Engines, Home, Stats, and Updates pages
+- GameBanana image hydration improved — missing thumbnails auto-fetched from mod profiles
+- Updated AGENTS.md
+
+### Fixed
+- Vibrant/Pastel/Focus effect modes now correctly apply CSS filters
+- Base mode (light/dark) tracked separately from effect modes — switching does not reset effects
+- Auto mode respects system preference without breaking active effect modes
+- Theme toggle correctly switches between light/dark when an effect mode is active
+
+### Infrastructure
+- Full translation pass for es-419, ru, pt-BR, id: stats, achievements, data management, theme/mode, discover filters, and download controls
+- Weblate contributions for Indonesian (MTGC) and Russian (zokxamong)
+
 ## [v0.5.0] - 2026-03-16
 
 ### Added
