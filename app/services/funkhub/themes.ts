@@ -1,44 +1,89 @@
 import type { ThemeDefinition } from "./themeTypes";
 
+function adjustColorTowards(color: string, towards: string, amount: number): string {
+  const hex = (c: string) => parseInt(c, 16);
+  const r1 = hex(color.slice(1, 3));
+  const g1 = hex(color.slice(3, 5));
+  const b1 = hex(color.slice(5, 7));
+  const r2 = hex(towards.slice(1, 3));
+  const g2 = hex(towards.slice(3, 5));
+  const b2 = hex(towards.slice(5, 7));
+  
+  const r = Math.round(r1 * (1 - amount) + r2 * amount);
+  const g = Math.round(g1 * (1 - amount) + g2 * amount);
+  const b = Math.round(b1 * (1 - amount) + b2 * amount);
+  
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+function adjustRgbaTowards(color: string, towards: string, amount: number): string {
+  if (!color.startsWith("rgba")) return adjustColorTowards(color, towards, amount);
+  
+  const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (!rgbaMatch) return color;
+  
+  const r = parseInt(rgbaMatch[1]);
+  const g = parseInt(rgbaMatch[2]);
+  const b = parseInt(rgbaMatch[3]);
+  const a = rgbaMatch[4] ? parseFloat(rgbaMatch[4]) : 1;
+  
+  const towardsHex = (c: string) => parseInt(c.slice(1, 3), 16);
+  const r2 = towardsHex(towards.slice(1, 3));
+  const g2 = towardsHex(towards.slice(3, 5));
+  const b2 = towardsHex(towards.slice(5, 7));
+  
+  const newR = Math.round(r * (1 - amount) + r2 * amount);
+  const newG = Math.round(g * (1 - amount) + g2 * amount);
+  const newB = Math.round(b * (1 - amount) + b2 * amount);
+  
+  return a < 1 ? `rgba(${newR}, ${newG}, ${newB}, ${a})` : `rgb(${newR}, ${newG}, ${newB})`;
+}
+
 function createLightColors(primary: string, background: string): ThemeDefinition["colors"]["light"] {
   const primaryDark = "#1A1512";
   const foreground = "#2D2520";
+  const secondary = adjustColorTowards("#F5EDE6", primary, 0.08);
+  const muted = adjustColorTowards("#EDE5DD", primary, 0.05);
+  const card = "#FFFFFF";
+  const border = adjustRgbaTowards("rgba(45, 37, 32, 0.12)", primary, 0.03);
+  const input = adjustRgbaTowards("rgba(45, 37, 32, 0.05)", primary, 0.02);
+  
   return {
     background,
     foreground,
-    card: "#FFFFFF",
+    card,
     cardForeground: foreground,
-    popover: "#FFFFFF",
+    popover: card,
     popoverForeground: foreground,
     primary,
     primaryForeground: primaryDark,
-    secondary: "#F5EDE6",
+    secondary,
     secondaryForeground: foreground,
-    muted: "#EDE5DD",
+    muted,
     mutedForeground: "#6B5D54",
     accent: primary,
     accentForeground: primaryDark,
     destructive: "#D94D3A",
     destructiveForeground: "#FFFFFF",
-    border: "rgba(45, 37, 32, 0.12)",
-    input: "rgba(45, 37, 32, 0.05)",
-    inputBackground: "#FFFFFF",
-    switchBackground: "#EDE5DD",
+    border,
+    input,
+    inputBackground: card,
+    switchBackground: muted,
     ring: primary,
     chart1: primary,
-    chart2: primary,
-    chart3: primary,
-    chart4: primary,
-    chart5: primary,
-    sidebar: "#FFFFFF",
+    chart2: adjustColorTowards(primary, "#", -0.15),
+    chart3: adjustColorTowards(primary, "#", -0.25),
+    chart4: adjustColorTowards(primary, "#", -0.35),
+    chart5: adjustColorTowards(primary, "#", -0.45),
+    sidebar: card,
     sidebarForeground: foreground,
     sidebarPrimary: primary,
     sidebarPrimaryForeground: primaryDark,
-    sidebarAccent: "#F5EDE6",
+    sidebarAccent: secondary,
     sidebarAccentForeground: foreground,
-    sidebarBorder: "rgba(45, 37, 32, 0.12)",
+    sidebarBorder: border,
     sidebarRing: primary,
-    hoverGlow: "rgba(0, 0, 0, 0.1)",
+    hoverGlow: `rgba(${parseInt(primary.slice(1, 3), 16)}, ${parseInt(primary.slice(3, 5), 16)}, ${parseInt(primary.slice(5, 7), 16)}, 0.15)`,
     warning: "#c2750a",
     warningForeground: "#fef3c7",
     success: "#2a7a4b",
@@ -49,42 +94,48 @@ function createLightColors(primary: string, background: string): ThemeDefinition
 function createDarkColors(primary: string, background: string): ThemeDefinition["colors"]["dark"] {
   const primaryForeground = "#1A1512";
   const foreground = "#F5EDE6";
+  const secondary = adjustColorTowards("#2D251F", primary, 0.12);
+  const muted = adjustColorTowards("#3A2F28", primary, 0.08);
+  const card = "#231C18";
+  const border = adjustRgbaTowards("rgba(245, 237, 230, 0.08)", primary, 0.04);
+  const input = adjustRgbaTowards("rgba(245, 237, 230, 0.05)", primary, 0.03);
+  
   return {
     background,
     foreground,
-    card: "#231C18",
+    card,
     cardForeground: foreground,
     popover: "#2D251F",
     popoverForeground: foreground,
     primary,
     primaryForeground: primaryForeground,
-    secondary: "#2D251F",
+    secondary,
     secondaryForeground: foreground,
-    muted: "#3A2F28",
+    muted,
     mutedForeground: "#A89A8F",
     accent: primary,
     accentForeground: primaryForeground,
     destructive: "#D94D3A",
     destructiveForeground: "#FFFFFF",
-    border: "rgba(245, 237, 230, 0.08)",
-    input: "rgba(245, 237, 230, 0.05)",
+    border,
+    input,
     inputBackground: "#2D251F",
-    switchBackground: "#3A2F28",
+    switchBackground: muted,
     ring: primary,
     chart1: primary,
-    chart2: primary,
-    chart3: primary,
-    chart4: primary,
-    chart5: primary,
-    sidebar: "#231C18",
+    chart2: adjustColorTowards(primary, "#", -0.15),
+    chart3: adjustColorTowards(primary, "#", -0.25),
+    chart4: adjustColorTowards(primary, "#", -0.35),
+    chart5: adjustColorTowards(primary, "#", -0.45),
+    sidebar: card,
     sidebarForeground: foreground,
     sidebarPrimary: primary,
     sidebarPrimaryForeground: primaryForeground,
-    sidebarAccent: "#2D251F",
+    sidebarAccent: secondary,
     sidebarAccentForeground: foreground,
-    sidebarBorder: "rgba(245, 237, 230, 0.08)",
+    sidebarBorder: border,
     sidebarRing: primary,
-    hoverGlow: "rgba(255, 255, 255, 0.1)",
+    hoverGlow: `rgba(${parseInt(primary.slice(1, 3), 16)}, ${parseInt(primary.slice(3, 5), 16)}, ${parseInt(primary.slice(5, 7), 16)}, 0.2)`,
     warning: "#f59e0b",
     warningForeground: "#fef3c7",
     success: "#34d399",
