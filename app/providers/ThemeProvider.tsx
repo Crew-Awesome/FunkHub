@@ -5,6 +5,7 @@ import { AVAILABLE_MODES, type ThemeMode, type BaseMode, type ThemeContextType }
 const STORAGE_KEYS = {
   theme: "funkhub-theme",
   mode: "funkhub-mode",
+  baseMode: "funkhub-base-mode",
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -14,20 +15,28 @@ function getSystemPreference(): BaseMode {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function resolveEffectiveMode(mode: ThemeMode): BaseMode {
+function isBaseMode(mode: ThemeMode): mode is BaseMode {
+  return mode === "light" || mode === "dark";
+}
+
+function isEffectMode(mode: ThemeMode): boolean {
+  return mode === "vibrant" || mode === "pastel" || mode === "focus";
+}
+
+function resolveEffectiveMode(mode: ThemeMode, baseMode: BaseMode): BaseMode {
   if (mode === "auto") {
     return getSystemPreference();
   }
-  if (mode === "vibrant" || mode === "pastel" || mode === "focus") {
-    return getSystemPreference();
+  if (isEffectMode(mode)) {
+    return baseMode;
   }
   return mode as BaseMode;
 }
 
-function applyThemeToRoot(themeId: string, mode: ThemeMode) {
+function applyThemeToRoot(themeId: string, mode: ThemeMode, baseMode: BaseMode) {
   const root = document.documentElement;
   const theme = getThemeById(themeId);
-  const effectiveMode = resolveEffectiveMode(mode);
+  const effectiveMode = resolveEffectiveMode(mode, baseMode);
   const colors = theme.colors[effectiveMode];
 
   root.setAttribute("data-theme", themeId);
@@ -94,15 +103,35 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return (localStorage.getItem(STORAGE_KEYS.mode) as ThemeMode) || "dark";
   });
 
-  const effectiveMode = useMemo(() => resolveEffectiveMode(mode), [mode]);
+  const [baseMode, setBaseMode] = useState<BaseMode>(() => {
+    if (typeof window === "undefined") return "dark";
+    const saved = localStorage.getItem(STORAGE_KEYS.baseMode) as BaseMode;
+    if (saved) return saved;
+    const currentMode = localStorage.getItem(STORAGE_KEYS.mode) as ThemeMode;
+    if (isBaseMode(currentMode)) return currentMode;
+    return "dark";
+  });
+
+  const effectiveMode = useMemo(() => resolveEffectiveMode(mode, baseMode), [mode, baseMode]);
   const currentTheme = useMemo(() => getThemeById(theme), [theme]);
   const themeHue = currentTheme?.hue || "25";
+
+  const updateMode = useCallback((newMode: ThemeMode) => {
+    if (isBaseMode(newMode)) {
+      setBaseMode(newMode);
+      localStorage.setItem(STORAGE_KEYS.baseMode, newMode);
+    } else if (newMode === "auto") {
+      setBaseMode(getSystemPreference());
+      localStorage.setItem(STORAGE_KEYS.baseMode, getSystemPreference());
+    }
+    setModeState(newMode);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.theme, theme);
     localStorage.setItem(STORAGE_KEYS.mode, mode);
-    applyThemeToRoot(theme, mode);
-  }, [theme, mode]);
+    applyThemeToRoot(theme, mode, baseMode);
+  }, [theme, mode, baseMode]);
 
   useEffect(() => {
     if (mode !== "auto") return;
@@ -120,15 +149,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const modes: ThemeMode[] = ["light", "dark", "auto", "vibrant", "pastel", "focus"];
     const currentIndex = modes.indexOf(mode);
     const nextIndex = (currentIndex + 1) % modes.length;
-    setModeState(modes[nextIndex]);
-  }, [mode]);
+    const newMode = modes[nextIndex];
+    updateMode(newMode);
+  }, [mode, updateMode]);
 
   const toggleTheme = useCallback(() => {
-    const modes: ThemeMode[] = ["light", "dark"];
-    const currentIndex = modes.indexOf(effectiveMode);
-    const nextIndex = (currentIndex + 1) % modes.length;
-    setModeState(modes[nextIndex]);
-  }, [effectiveMode]);
+    const newBaseMode = baseMode === "dark" ? "light" : "dark";
+    setBaseMode(newBaseMode);
+    localStorage.setItem(STORAGE_KEYS.baseMode, newBaseMode);
+    if (isEffectMode(mode)) {
+      setModeState(newBaseMode);
+    }
+  }, [baseMode, mode]);
 
   const cycleMode = useCallback(() => {
     toggleMode();
@@ -140,7 +172,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     effectiveMode,
     themeHue,
     setTheme,
-    setMode: setModeState,
+    setMode: updateMode,
     toggleTheme,
     toggleMode,
     cycleMode,
