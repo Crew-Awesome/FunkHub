@@ -80,12 +80,12 @@ export function AchievementUnlock({ id, name, description, onDismiss }: Achievem
           transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
           className="shrink-0"
         >
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg shadow-primary/30">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent/70 flex items-center justify-center shadow-lg shadow-primary/30">
             <motion.div
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Icon className="w-7 h-7 text-white" />
+              <Icon className="w-7 h-7 text-primary-foreground" />
             </motion.div>
           </div>
         </motion.div>
@@ -97,8 +97,8 @@ export function AchievementUnlock({ id, name, description, onDismiss }: Achievem
             transition={{ delay: 0.3 }}
             className="flex items-center gap-2 mb-1"
           >
-            <Sparkles className="w-4 h-4 text-yellow-500" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-yellow-500">
+            <Sparkles className="w-4 h-4 text-warning" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-warning">
               Achievement Unlocked!
             </span>
           </motion.div>
@@ -129,7 +129,7 @@ export function AchievementUnlock({ id, name, description, onDismiss }: Achievem
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
         transition={{ delay: 0.5, duration: 0.3 }}
-        className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-yellow-400 to-primary"
+        className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-warning to-primary"
       />
     </motion.div>
   );

@@ -342,7 +342,7 @@ export function Home() {
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${isRunning ? "bg-warning" : "bg-primary"}`}>
-                            {isRunning ? <Square className="w-4 h-4 text-white" fill="currentColor" /> : <Play className="w-4 h-4 text-white ml-0.5" fill="currentColor" />}
+                            {isRunning ? <Square className="w-4 h-4 text-warning-foreground" fill="currentColor" /> : <Play className="w-4 h-4 text-primary-foreground ml-0.5" fill="currentColor" />}
                           </div>
                         </div>
                       </button>

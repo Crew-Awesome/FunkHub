@@ -200,7 +200,7 @@ export function Achievements() {
               
               <div className="flex items-center gap-2 text-sm">
                 {selectedAchievement.unlocked ? (
-                  <span className="flex items-center gap-1.5 text-green-500">
+                  <span className="flex items-center gap-1.5 text-success">
                     <Check className="w-4 h-4" />
                     Unlocked
                   </span>
