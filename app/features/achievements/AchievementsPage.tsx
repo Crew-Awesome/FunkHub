@@ -1,7 +1,15 @@
-import { motion } from "motion/react";
-import { Trophy, Star, Package, Clock, Zap, Cpu, Layers, RefreshCw, Music, Flame, Tag, Trash2, Lock, Check, Download, Settings, Palette, Link2, Calendar, Flame as FlameIcon, Hash, Folder, FileText, Play, Repeat, Gauge, Sparkles, TrendingUp, Target, MousePointer } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { Trophy, Star, Package, Clock, Zap, Cpu, Layers, RefreshCw, Music, Flame, Tag, Trash2, Lock, Check, Download, Settings, Palette, Link2, Calendar, Flame as FlameIcon, Hash, Folder, FileText, Play, Repeat, Gauge, Sparkles, TrendingUp, Target, MousePointer, X, Info } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
 import { computeAchievements, type Achievement } from "../stats/statsUtils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../../shared/ui/dialog";
 
 const ACHIEVEMENT_ICONS: Record<string, React.ElementType> = {
   first_steps: Star,
@@ -57,9 +65,29 @@ const ACHIEVEMENT_ICONS: Record<string, React.ElementType> = {
 export function Achievements() {
   const { t } = useI18n();
   const { installedMods, installedEngines, modUpdates, downloads, clearAchievements } = useFunkHub();
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
   
   const achievements: Achievement[] = computeAchievements(installedMods, installedEngines, modUpdates.length, downloads);
   const unlockedCount = achievements.filter((a: Achievement) => a.unlocked).length;
+
+  const getAchievementProgress = (achievement: Achievement): string => {
+    const id = achievement.id;
+    const progressMap: Record<string, string> = {
+      first_steps: `${installedMods.length}/1`,
+      collector: `${installedMods.length}/10`,
+      hoarder: `${installedMods.length}/25`,
+      legend: `${installedMods.length}/50`,
+      mod_machine: `${installedMods.length}/100`,
+      launcher: `${installedMods.length >= 10 ? "10+" : installedMods.length}/10`,
+      regular: `${installedMods.length >= 50 ? "50+" : installedMods.length}/50`,
+      century: `${installedMods.length >= 100 ? "100+" : installedMods.length}/100`,
+      thousand: `${installedMods.length >= 1000 ? "1000+" : installedMods.length}/1000`,
+      engine_master: `${installedEngines.length}/2`,
+      engine_collector: `${installedEngines.length}/4`,
+      engine_hopper: `${new Set(installedMods.map(m => m.engine)).size}/3`,
+    };
+    return progressMap[id] || "";
+  };
 
   return (
     <div className="p-6 md:p-8 max-w-4xl mx-auto">
@@ -79,6 +107,7 @@ export function Achievements() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {achievements.map((achievement: Achievement, index: number) => {
           const Icon = ACHIEVEMENT_ICONS[achievement.id] ?? Trophy;
+          const progress = getAchievementProgress(achievement);
           
           return (
             <motion.div
@@ -86,10 +115,13 @@ export function Achievements() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.03, duration: 0.25 }}
-              className={`relative rounded-lg border p-3 transition-colors ${
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setSelectedAchievement(achievement)}
+              className={`relative rounded-lg border p-3 cursor-pointer transition-all ${
                 achievement.unlocked
-                  ? "bg-card border-border"
-                  : "bg-secondary/20 border-border/50"
+                  ? "bg-card border-border hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
+                  : "bg-secondary/20 border-border/50 hover:bg-secondary/30 hover:border-border"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -116,10 +148,85 @@ export function Achievements() {
                   </p>
                 </div>
               </div>
+              
+              {progress && !achievement.unlocked && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Progress: {progress}
+                </div>
+              )}
             </motion.div>
           );
         })}
       </div>
+
+      {/* Achievement detail modal */}
+      <Dialog open={selectedAchievement !== null} onOpenChange={(open) => { if (!open) setSelectedAchievement(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              {selectedAchievement && (
+                <>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    selectedAchievement.unlocked
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground"
+                  }`}>
+                    {selectedAchievement.unlocked ? (
+                      <Check className="w-5 h-5" />
+                    ) : (
+                      <Lock className="w-4 h-4" />
+                    )}
+                  </div>
+                  <span className="text-lg">
+                    {selectedAchievement ? t(`stats.achievement.${selectedAchievement.id}.name`, selectedAchievement.id.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")) : ""}
+                  </span>
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Achievement details
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedAchievement && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
+              <p className="text-sm text-muted-foreground">
+                {t(`stats.achievement.${selectedAchievement.id}.desc`, "Complete challenges to unlock this achievement.")}
+              </p>
+              
+              <div className="flex items-center gap-2 text-sm">
+                {selectedAchievement.unlocked ? (
+                  <span className="flex items-center gap-1.5 text-green-500">
+                    <Check className="w-4 h-4" />
+                    Unlocked
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-muted-foreground">
+                    <Lock className="w-4 h-4" />
+                    Locked
+                  </span>
+                )}
+              </div>
+              
+              {!selectedAchievement.unlocked && getAchievementProgress(selectedAchievement) && (
+                <div className="p-3 rounded-lg bg-secondary/50">
+                  <p className="text-xs text-muted-foreground mb-1">Progress</p>
+                  <p className="text-sm font-medium">{getAchievementProgress(selectedAchievement)}</p>
+                </div>
+              )}
+              
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Info className="w-3 h-3" />
+                Click elsewhere to close
+              </p>
+            </motion.div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Empty state if no achievements yet */}
       {unlockedCount === 0 && (
