@@ -689,10 +689,16 @@ export function Library() {
                 <div>
                   <h2 className="text-sm font-semibold text-foreground mb-3">{t("library.screenshots", "Screenshots")}</h2>
                   <div className="relative rounded-xl overflow-hidden border border-border aspect-video bg-secondary">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewIndex(carouselIndex)}
+                      className="absolute inset-0 w-full h-full cursor-zoom-in"
+                      aria-label={t("library.viewFullscreen", "View fullscreen")}
+                    />
                     <img
                       src={selectedProfileShots[carouselIndex]}
                       alt={`${selectedMod.modName} screenshot ${carouselIndex + 1}`}
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-contain pointer-events-none"
                     />
                     {selectedProfileShots.length > 1 && (
                       <>
@@ -734,7 +740,7 @@ export function Library() {
                           key={`${shot}-${i}`}
                           type="button"
                           aria-label={`Screenshot ${i + 1}`}
-                          onClick={() => { setCarouselIndex(i); setPreviewIndex(i); }}
+                          onClick={() => setCarouselIndex(i)}
                           className={`shrink-0 h-14 w-20 rounded-lg overflow-hidden border-2 transition-all ${i === carouselIndex ? "border-primary" : "border-transparent hover:border-border"}`}
                         >
                           <img src={shot} alt="" className="w-full h-full object-cover" loading="lazy" />
