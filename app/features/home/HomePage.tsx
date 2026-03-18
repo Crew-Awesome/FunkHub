@@ -66,10 +66,19 @@ export function Home() {
 
   if (!loading && !hasContent) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-6">
-        <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col items-center justify-center h-full p-8 text-center gap-6"
+      >
+        <motion.div
+          animate={{ y: [0, -5, 0] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+          className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center"
+        >
           <Package className="w-8 h-8 text-muted-foreground" />
-        </div>
+        </motion.div>
 
         <div>
           <h1 className="text-2xl font-bold text-foreground mb-2">{t("home.empty.title", "No mods installed yet")}</h1>
@@ -79,20 +88,24 @@ export function Home() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/discover")}
             className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             <Compass className="w-4 h-4" />
             {t("home.empty.discover", "Browse Mods")}
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/engines")}
             className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 py-3.5 text-sm font-semibold text-foreground hover:bg-secondary transition-colors"
           >
             <Cpu className="w-4 h-4" />
             {t("home.empty.engines", "Set Up Engines")}
-          </button>
+          </motion.button>
         </div>
 
         {installedEngines.length === 0 && (
@@ -100,7 +113,7 @@ export function Home() {
             {t("home.empty.noEngineHint", "You need at least one engine installed before mods can run.")}
           </p>
         )}
-      </div>
+      </motion.div>
     );
   }
 

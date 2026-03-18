@@ -27,9 +27,16 @@ export function Updates() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="flex items-center justify-between mb-6"
+      >
         <h1 className="text-3xl font-bold text-foreground">{t("updates.title", "Updates")}</h1>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={async () => {
             await refreshModUpdates();
             await checkAppUpdate();
@@ -38,10 +45,15 @@ export function Updates() {
         >
           <RefreshCw className={`w-4 h-4 ${appUpdateChecking ? "animate-spin" : ""}`} />
           {t("updates.check", "Check for Updates")}
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
-      <div className="mb-6 bg-card border border-border rounded-xl p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        className="mb-6 bg-card border border-border rounded-xl p-6"
+      >
         <h3 className="font-semibold text-foreground mb-2">{t("updates.appUpdate", "FunkHub App Update")}</h3>
         {appUpdate?.available ? (
           <div className="space-y-3">
@@ -116,7 +128,7 @@ export function Updates() {
           </div>
         )}
         {appUpdateError && <p className="mt-2 text-xs text-destructive">{appUpdateError}</p>}
-      </div>
+      </motion.div>
 
       {modUpdates.length > 0 ? (
         <div className="space-y-3">
@@ -147,42 +159,60 @@ export function Updates() {
                     </div>
                   </div>
                 </div>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => installMod(update.modId, update.sourceFileId, undefined, 10)}
                   className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" />
                    {t("updates.update", "Update")}
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           ))}
 
           <div className="mt-6">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               onClick={() => {
                 modUpdates.forEach((update) => installMod(update.modId, update.sourceFileId, undefined, 10));
               }}
               className="w-full px-6 py-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg font-medium transition-colors"
             >
                {t("updates.updateAll", "Update All")} ({modUpdates.length})
-            </button>
+            </motion.button>
           </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center justify-center py-20"
+        >
+          <motion.div
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center mb-4"
+          >
             <RefreshCw className="w-10 h-10 text-muted-foreground" />
-          </div>
+          </motion.div>
           <h3 className="text-xl font-semibold text-foreground mb-2">{t("updates.allUpToDate", "All mods are up to date!")}</h3>
           <p className="text-muted-foreground text-center max-w-md">
             {t("updates.noneAvailable", "There are no updates available for your installed mods at this time.")}
           </p>
-        </div>
+        </motion.div>
       )}
 
       {/* Update Settings */}
-      <div className="mt-8 bg-card border border-border rounded-xl p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="mt-8 bg-card border border-border rounded-xl p-6"
+      >
         <h3 className="font-semibold text-foreground mb-4">{t("updates.settings", "Update Settings")}</h3>
         <div className="space-y-3">
             <label className="flex items-center justify-between cursor-pointer">
@@ -253,7 +283,7 @@ export function Updates() {
               />
             </label>
           </div>
-        </div>
-      </div>
+        </motion.div>
+    </div>
   );
 }

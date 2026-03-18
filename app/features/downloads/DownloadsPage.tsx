@@ -37,7 +37,12 @@ export function Downloads() {
 
   return (
     <div className="p-6 md:p-8 max-w-3xl mx-auto">
-      <div className="mb-6 flex items-center justify-between gap-3">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="mb-6 flex items-center justify-between gap-3"
+      >
         <div>
           <h1 className="text-3xl font-bold text-foreground">{t("downloads.title", "Downloads")}</h1>
           {hasAny && (
@@ -51,14 +56,16 @@ export function Downloads() {
           )}
         </div>
         {hasAny && (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={clearDownloads}
             className="px-3 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-sm text-foreground transition-colors"
           >
             {t("downloads.clear", "Clear All")}
-          </button>
+          </motion.button>
         )}
-      </div>
+      </motion.div>
 
       {/* Active Downloads */}
       {activeDownloads.length > 0 && (
@@ -191,13 +198,15 @@ export function Downloads() {
                     <p className="text-sm font-medium text-foreground truncate">{download.fileName}</p>
                     <p className="text-xs text-destructive/80 mt-0.5 truncate">{download.error || download.message || t("downloads.failedGeneric", "Download failed")}</p>
                   </div>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => retryDownload(download.id)}
                     className="h-8 px-3 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs inline-flex items-center gap-1.5 shrink-0 transition-colors"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     {t("downloads.retry", "Retry")}
-                  </button>
+                  </motion.button>
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -207,19 +216,28 @@ export function Downloads() {
 
       {/* Empty state */}
       {!hasAny && (
-        <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <div className="relative">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center justify-center py-24 gap-4"
+        >
+          <motion.div
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+            className="relative"
+          >
             <div className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center">
               <Clock className="w-9 h-9 text-muted-foreground" />
             </div>
-          </div>
+          </motion.div>
           <div className="text-center">
             <h3 className="text-lg font-semibold text-foreground mb-1">{t("downloads.noneActive", "Nothing downloading")}</h3>
             <p className="text-sm text-muted-foreground max-w-xs">
               {t("downloads.noneActiveDesc", "Install mods from Discover and your downloads will appear here.")}
             </p>
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall, UserCircle2, Layers, SlidersHorizontal } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { ModCard, ModVisualizerModal, UserProfileModal } from "../mods";
 import { useFunkHub, useI18n } from "../../providers";
@@ -73,7 +73,10 @@ export function Discover() {
   const [showCategoryPanel, setShowCategoryPanel] = useState(false);
   const [bestOfIndex, setBestOfIndex] = useState(0);
   const [bestOfStripOffset, setBestOfStripOffset] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [progress, setProgress] = useState(0);
   const STRIP_SIZE = 4;
+  const AUTO_ADVANCE_MS = 4000;
 
   // Flat list of all bestOfMods sorted by period order (today first, alltime last)
   const bestOfFlat = useMemo(() => {
@@ -85,21 +88,66 @@ export function Discover() {
   }, [bestOfMods]);
 
   const autoAdvanceRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progressRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
+
+  const goToNext = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setBestOfIndex((prev) => (prev + 1) % Math.max(1, bestOfFlat.length));
+    resetProgress();
+    setTimeout(() => setIsTransitioning(false), 300);
+  };
+
+  const goToPrev = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setBestOfIndex((prev) => (prev - 1 + bestOfFlat.length) % Math.max(1, bestOfFlat.length));
+    resetProgress();
+    setTimeout(() => setIsTransitioning(false), 300);
+  };
+
+  const resetProgress = () => {
+    setProgress(0);
+    if (progressRef.current) cancelAnimationFrame(progressRef.current);
+    const startTime = performance.now();
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const newProgress = Math.min(100, (elapsed / AUTO_ADVANCE_MS) * 100);
+      setProgress(newProgress);
+      if (newProgress < 100) {
+        progressRef.current = requestAnimationFrame(animate);
+      }
+    };
+    progressRef.current = requestAnimationFrame(animate);
+  };
 
   const startAutoAdvance = () => {
     if (autoAdvanceRef.current) clearInterval(autoAdvanceRef.current);
+    resetProgress();
     autoAdvanceRef.current = setInterval(() => {
-      setBestOfIndex((prev) => (prev + 1) % Math.max(1, bestOfFlat.length));
-    }, 4000);
+      if (!isTransitioning) {
+        setBestOfIndex((prev) => (prev + 1) % Math.max(1, bestOfFlat.length));
+      }
+    }, AUTO_ADVANCE_MS);
   };
 
   // Auto-advance on mount and whenever bestOfFlat changes
   useEffect(() => {
     if (bestOfFlat.length <= 1) return;
     startAutoAdvance();
-    return () => { if (autoAdvanceRef.current) clearInterval(autoAdvanceRef.current); };
+    return () => {
+      if (autoAdvanceRef.current) clearInterval(autoAdvanceRef.current);
+      if (progressRef.current) cancelAnimationFrame(progressRef.current);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bestOfFlat.length]);
+
+  // Reset progress on auto-advance
+  useEffect(() => {
+    if (bestOfFlat.length <= 1) return;
+    resetProgress();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bestOfIndex]);
 
   // Scroll strip to keep selected index visible
   useEffect(() => {
@@ -389,75 +437,123 @@ export function Discover() {
         const hero = bestOfFlat[bestOfIndex];
         if (!hero) return null;
         const stripMods = bestOfFlat.slice(bestOfStripOffset, bestOfStripOffset + STRIP_SIZE);
-        const canStripPrev = bestOfStripOffset > 0;
-        const canStripNext = bestOfStripOffset + STRIP_SIZE < bestOfFlat.length;
 
         return (
-          <div className="mb-6 rounded-2xl overflow-hidden border border-border bg-card">
-            {/* Large hero image */}
-            <div
-              className="relative h-56 cursor-pointer"
-              onClick={() => setSelectedModId(hero.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === "Enter" && setSelectedModId(hero.id)}
-              aria-label={`View ${hero.name}`}
-            >
-              <img
-                src={hero.imageUrl ?? hero.thumbnailUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
-                alt={hero.name}
-                className="w-full h-full object-cover"
-                loading="eager"
-                onError={(e) => {
-                  const img = e.currentTarget;
-                  img.onerror = null;
-                  img.src = `${import.meta.env.BASE_URL}mod-placeholder.svg`;
-                }}
-              />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-6 rounded-2xl overflow-hidden border border-border bg-card"
+          >
+            {/* Large hero image with crossfade */}
+            <div className="relative h-56 cursor-pointer overflow-hidden" role="button" tabIndex={0} onClick={() => setSelectedModId(hero.id)} onKeyDown={(e) => e.key === "Enter" && setSelectedModId(hero.id)} aria-label={`View ${hero.name}`}>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={hero.id}
+                  initial={{ opacity: 0, scale: 1.05 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute inset-0"
+                >
+                  <img
+                    src={hero.imageUrl ?? hero.thumbnailUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
+                    alt={hero.name}
+                    className="w-full h-full object-cover"
+                    loading="eager"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      img.onerror = null;
+                      img.src = `${import.meta.env.BASE_URL}mod-placeholder.svg`;
+                    }}
+                  />
+                </motion.div>
+              </AnimatePresence>
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
               {hero.period && (
-                <div className="absolute top-3 left-3">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute top-3 left-3"
+                >
                   <span className="bg-primary/90 text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full backdrop-blur-sm">
                     Best of {PERIOD_LABELS[hero.period] ?? hero.period}
                   </span>
-                </div>
+                </motion.div>
               )}
+              {/* Progress bar for auto-advance */}
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+                <motion.div
+                  className="h-full bg-primary"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.1, ease: "linear" }}
+                />
+              </div>
               <div className="absolute bottom-4 left-4 right-4">
-                <h3 className="text-white font-bold text-lg leading-tight line-clamp-1">{hero.name}</h3>
+                <motion.h3
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="text-white font-bold text-lg leading-tight line-clamp-1"
+                >
+                  {hero.name}
+                </motion.h3>
                 {hero.description && (
-                  <p className="text-white/70 text-xs mt-1 line-clamp-2">{hero.description}</p>
+                  <motion.p
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-white/70 text-xs mt-1 line-clamp-2"
+                  >
+                    {hero.description}
+                  </motion.p>
                 )}
                 {hero.likeCount !== undefined && (
-                  <span className="text-white/60 text-xs mt-1.5 inline-block">♥ {hero.likeCount.toLocaleString()}</span>
+                  <motion.span
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-white/60 text-xs mt-1.5 inline-block"
+                  >
+                    ♥ {hero.likeCount.toLocaleString()}
+                  </motion.span>
                 )}
               </div>
             </div>
 
             {/* Thumbnail strip — arrows scroll viewport by 1, click selects hero */}
             <div className="flex items-center gap-2 p-3 bg-card border-t border-border">
-              <button
-                onClick={() => setBestOfStripOffset((prev) => Math.max(0, prev - 1))}
-                disabled={!canStripPrev}
-                className="shrink-0 w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={goToPrev}
+                className="shrink-0 w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
                 aria-label={t("discover.bestOfPrev", "Previous")}
               >
                 <ChevronLeft className="w-4 h-4" />
-              </button>
+              </motion.button>
 
               <div className="flex-1 grid gap-2" style={{ gridTemplateColumns: `repeat(${STRIP_SIZE}, 1fr)` }}>
-                {stripMods.map((mod) => {
-                  const globalIndex = bestOfFlat.indexOf(mod);
+                {stripMods.map((mod, idx) => {
+                  const globalIndex = bestOfStripOffset + idx;
                   const isSelected = globalIndex === bestOfIndex;
                   return (
-                    <button
+                    <motion.button
                       key={mod.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.05, duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                      whileHover={{ scale: isSelected ? 1.05 : 1.08, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => {
                         setBestOfIndex(globalIndex);
-                        startAutoAdvance(); // reset timer on manual select
+                        resetProgress();
                       }}
                       title={mod.period ? `${mod.name} — Best of ${PERIOD_LABELS[mod.period] ?? mod.period}` : mod.name}
                       className={`relative w-full h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                        isSelected ? "border-primary scale-105" : "border-transparent opacity-60 hover:opacity-100"
+                        isSelected ? "border-primary shadow-lg shadow-primary/20" : "border-transparent opacity-60 hover:opacity-100 hover:border-primary/50"
                       }`}
                       aria-label={mod.name}
                       aria-pressed={isSelected}
@@ -473,21 +569,22 @@ export function Discover() {
                           img.src = `${import.meta.env.BASE_URL}mod-placeholder.svg`;
                         }}
                       />
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
 
-              <button
-                onClick={() => setBestOfStripOffset((prev) => Math.min(Math.max(0, bestOfFlat.length - STRIP_SIZE), prev + 1))}
-                disabled={!canStripNext}
-                className="shrink-0 w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={goToNext}
+                className="shrink-0 w-8 h-8 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
                 aria-label={t("discover.bestOfNext", "Next")}
               >
                 <ChevronRight className="w-4 h-4" />
-              </button>
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
         );
       })()}
 

@@ -70,10 +70,19 @@ export function Stats() {
   // ─── Empty state ───────────────────────────────────────────────────────────
   if (!hasContent) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-6">
-        <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col items-center justify-center h-full p-8 text-center gap-6"
+      >
+        <motion.div
+          animate={{ y: [0, -5, 0] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+          className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center"
+        >
           <BarChart2 className="w-8 h-8 text-muted-foreground" />
-        </div>
+        </motion.div>
         <div>
           <h1 className="text-2xl font-bold text-foreground mb-2">
             {t("stats.empty.title", "No stats yet")}
@@ -82,14 +91,16 @@ export function Stats() {
             {t("stats.empty.desc", "Install some mods and play them to start tracking your stats.")}
           </p>
         </div>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => navigate("/discover")}
           className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           <Package className="w-4 h-4" />
           {t("stats.empty.cta", "Browse Mods")}
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
     );
   }
 
@@ -105,10 +116,14 @@ export function Stats() {
 
   return (
     <div className="p-6 md:p-8 space-y-8 overflow-y-auto">
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      >
         <h1 className="text-3xl font-bold text-foreground">{t("stats.title", "My Stats")}</h1>
         <p className="text-muted-foreground text-sm mt-1">{t("stats.subtitle", "A summary of your mod activity.")}</p>
-      </div>
+      </motion.div>
 
       {/* ── Overview cards ────────────────────────────────────────────────── */}
       <motion.div

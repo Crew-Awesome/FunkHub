@@ -602,24 +602,41 @@ export function Engines() {
   if (!hasEngines) {
     return (
       <div className="p-4 md:p-6 lg:p-8">
-        <div className="mb-6 flex items-center justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-6 flex items-center justify-between"
+        >
           <h1 className="text-3xl font-bold text-foreground">{t("engines.instances", "Instances")}</h1>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setShowAddDialog(true)}
             className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
           >
             <Plus className="w-4 h-4" />
             {t("engines.addEngine", "Add Engine")}
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
-        <div className="text-center py-16 mb-8">
-          <Cpu className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          className="text-center py-16 mb-8"
+        >
+          <motion.div
+            animate={{ y: [0, -5, 0] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Cpu className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+          </motion.div>
           <h2 className="text-xl font-semibold text-foreground mb-2">{t("engines.noneInstalled", "No engines installed")}</h2>
           <p className="text-muted-foreground text-sm max-w-xs mx-auto">
             {t("engines.noneInstalledDesc", "Install or import an engine to start playing mods.")}
           </p>
-        </div>
+        </motion.div>
 
         {availableEngines.length > 0 && (
           <div>
