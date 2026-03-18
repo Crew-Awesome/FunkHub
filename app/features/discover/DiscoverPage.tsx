@@ -552,7 +552,7 @@ export function Discover() {
                         resetProgress();
                       }}
                       title={mod.period ? `${mod.name} — Best of ${PERIOD_LABELS[mod.period] ?? mod.period}` : mod.name}
-                      className={`relative w-full h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                      className={`relative w-full aspect-video rounded-lg overflow-hidden border-2 transition-all ${
                         isSelected ? "border-primary shadow-lg shadow-primary/20" : "border-transparent opacity-60 hover:opacity-100 hover:border-primary/50"
                       }`}
                       aria-label={mod.name}
