@@ -125,10 +125,29 @@ export interface Achievement {
   unlocked: boolean;
 }
 
+export interface AchievementData {
+  totalLaunches: number;
+  totalDownloads: number;
+  deepLinksUsed: number;
+  settingsChanged: number;
+  themesTried: string[];
+  lastActiveDate: number;
+  currentStreak: number;
+  longestStreak: number;
+  categoriesBrowsed: Set<string>;
+}
+
+interface DownloadTask {
+  status: string;
+  totalBytes?: number;
+}
+
 export function computeAchievements(
   mods: InstalledMod[],
   engines: InstalledEngine[],
   pendingUpdates: number,
+  downloads: DownloadTask[] = [],
+  achievementData?: AchievementData,
 ): Achievement[] {
   const totalPlayMs = computeTotalPlayTime(mods);
 
@@ -137,20 +156,90 @@ export function computeAchievements(
   );
 
   const hasTags = mods.some((m) => (m.tags?.length ?? 0) > 0);
+  const hasNotes = mods.some((m) => (m.notes?.length ?? 0) > 0);
   const hasLaunched = mods.some((m) => m.lastLaunchedAt != null);
+  const uniqueEngines = new Set(mods.map((m) => m.engine));
+  const modsWithNotes = mods.filter((m) => (m.notes?.length ?? 0) > 0).length;
+
+  const totalDownloads = downloads.length;
+  const completedDownloads = downloads.filter((d) => d.status === "completed").length;
+  const totalDownloadBytes = downloads.reduce((sum, d) => sum + (d.totalBytes ?? 0), 0);
+  const largestDownloadMB = Math.max(...downloads.map((d) => (d.totalBytes ?? 0) / 1024 / 1024), 0);
+
+  const data = achievementData ?? {
+    totalLaunches: 0,
+    totalDownloads: 0,
+    deepLinksUsed: 0,
+    settingsChanged: 0,
+    themesTried: [],
+    lastActiveDate: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    categoriesBrowsed: new Set(),
+  };
+
+  const today = new Date().setHours(0, 0, 0, 0);
+  const yesterday = today - 86400000;
 
   return [
+    // Existing achievements
     { id: "first_steps", unlocked: mods.length >= 1 },
     { id: "collector", unlocked: mods.length >= 10 },
     { id: "hoarder", unlocked: mods.length >= 25 },
     { id: "legend", unlocked: mods.length >= 50 },
+    { id: "mod_machine", unlocked: mods.length >= 100 },
     { id: "first_launch", unlocked: hasLaunched },
+    { id: "launcher", unlocked: (data.totalLaunches ?? 0) >= 10 },
+    { id: "regular", unlocked: (data.totalLaunches ?? 0) >= 50 },
+    { id: "century", unlocked: (data.totalLaunches ?? 0) >= 100 },
+    { id: "thousand", unlocked: (data.totalLaunches ?? 0) >= 1000 },
     { id: "time_flies", unlocked: totalPlayMs >= 3_600_000 },
     { id: "dedicated", unlocked: totalPlayMs >= 36_000_000 },
     { id: "obsessed", unlocked: totalPlayMs >= 180_000_000 },
     { id: "engine_master", unlocked: engines.length >= 2 },
+    { id: "engine_collector", unlocked: engines.length >= 4 },
     { id: "up_to_date", unlocked: pendingUpdates === 0 && mods.length > 0 },
     { id: "variety_pack", unlocked: uniqueCategories.size >= 5 },
+    { id: "category_crusher", unlocked: uniqueCategories.size >= 10 },
     { id: "tagging_along", unlocked: hasTags },
+    { id: "note_taker", unlocked: modsWithNotes >= 5 },
+    { id: "minimalist", unlocked: mods.length === 1 },
+    { id: "maximalist", unlocked: mods.length >= 100 },
+    { id: "engine_hopper", unlocked: uniqueEngines.size >= 3 },
+    { id: "multitasker", unlocked: uniqueEngines.size >= 3 && mods.length >= 3 },
+
+    // Download achievements
+    { id: "downloader", unlocked: totalDownloads >= 5 },
+    { id: "download_demon", unlocked: totalDownloads >= 25 },
+    { id: "download_deity", unlocked: totalDownloads >= 100 },
+    { id: "speed_demon", unlocked: completedDownloads >= 3 },
+    { id: "parallel_downloader", unlocked: false }, // Would need real-time tracking
+    { id: "patient", unlocked: largestDownloadMB >= 500 },
+    { id: "speedy", unlocked: false }, // Would need daily tracking
+    { id: "cleaner", unlocked: completedDownloads >= 10 },
+    { id: "organizer", unlocked: completedDownloads >= 50 },
+    { id: "fresh_start", unlocked: totalDownloads >= 10 },
+
+    // Deep link & integration
+    { id: "pair_up", unlocked: (data.deepLinksUsed ?? 0) >= 1 },
+    { id: "deep_link_pro", unlocked: (data.deepLinksUsed ?? 0) >= 10 },
+    { id: "linked", unlocked: false }, // Would need itch.io tracking
+
+    // Settings & customization
+    { id: "tweaker", unlocked: (data.settingsChanged ?? 0) >= 10 },
+    { id: "theme_explorer", unlocked: (data.themesTried?.length ?? 0) >= 3 },
+
+    // Usage & consistency
+    { id: "getting_started", unlocked: true }, // Onboarding complete
+    { id: "week_one", unlocked: (data.currentStreak ?? 0) >= 7 || (data.longestStreak ?? 0) >= 7 },
+    { id: "month_user", unlocked: (data.currentStreak ?? 0) >= 30 || (data.longestStreak ?? 0) >= 30 },
+    { id: "veteran", unlocked: (data.currentStreak ?? 0) >= 100 || (data.longestStreak ?? 0) >= 100 },
+    { id: "old_timer", unlocked: (data.currentStreak ?? 0) >= 365 || (data.longestStreak ?? 0) >= 365 },
+    { id: "consistent", unlocked: (data.currentStreak ?? 0) >= 7 },
+    { id: "data_nerd", unlocked: false }, // Would need page view tracking
+
+    // Collections
+    { id: "curator", unlocked: false }, // Would need collections feature
+    { id: "collector_of_collectors", unlocked: false }, // Would need collections feature
   ];
 }

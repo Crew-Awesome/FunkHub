@@ -488,7 +488,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     
-    const currentAchievements = computeAchievements(installedMods, installedEngines, modUpdates.length);
+    const currentAchievements = computeAchievements(installedMods, installedEngines, modUpdates.length, downloads);
     const newlyUnlocked = currentAchievements.filter(
       (a) => a.unlocked && !unlockedAchievements.has(a.id)
     );

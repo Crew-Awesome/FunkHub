@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Trophy, Star, Package, Clock, Zap, Cpu, Layers, RefreshCw, Music, Flame, Tag, Trash2, Lock, Check } from "lucide-react";
+import { Trophy, Star, Package, Clock, Zap, Cpu, Layers, RefreshCw, Music, Flame, Tag, Trash2, Lock, Check, Download, Settings, Palette, Link2, Calendar, Flame as FlameIcon, Hash, Folder, FileText, Play, Repeat, Gauge, Sparkles, TrendingUp, Target, MousePointer } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
 import { computeAchievements, type Achievement } from "../stats/statsUtils";
 
@@ -8,21 +8,57 @@ const ACHIEVEMENT_ICONS: Record<string, React.ElementType> = {
   collector: Package,
   hoarder: Layers,
   legend: Trophy,
+  mod_machine: Package,
   first_launch: Zap,
+  launcher: Play,
+  regular: Play,
+  century: Play,
+  thousand: Play,
   time_flies: Clock,
   dedicated: Flame,
   obsessed: Flame,
   engine_master: Cpu,
+  engine_collector: Cpu,
   up_to_date: RefreshCw,
   variety_pack: Music,
+  category_crusher: Hash,
   tagging_along: Tag,
+  note_taker: FileText,
+  minimalist: Target,
+  maximalist: Package,
+  engine_hopper: Repeat,
+  multitasker: Layers,
+  downloader: Download,
+  download_demon: Download,
+  download_deity: Download,
+  speed_demon: Gauge,
+  parallel_downloader: Download,
+  patient: Clock,
+  speedy: Sparkles,
+  cleaner: Trash2,
+  organizer: Folder,
+  fresh_start: RefreshCw,
+  pair_up: Link2,
+  deep_link_pro: Link2,
+  linked: Link2,
+  tweaker: Settings,
+  theme_explorer: Palette,
+  getting_started: Star,
+  week_one: Calendar,
+  month_user: Calendar,
+  veteran: Calendar,
+  old_timer: Calendar,
+  consistent: TrendingUp,
+  data_nerd: FlameIcon,
+  curator: Folder,
+  collector_of_collectors: Layers,
 };
 
 export function Achievements() {
   const { t } = useI18n();
-  const { installedMods, installedEngines, modUpdates, clearAchievements } = useFunkHub();
+  const { installedMods, installedEngines, modUpdates, downloads, clearAchievements } = useFunkHub();
   
-  const achievements: Achievement[] = computeAchievements(installedMods, installedEngines, modUpdates.length);
+  const achievements: Achievement[] = computeAchievements(installedMods, installedEngines, modUpdates.length, downloads);
   const unlockedCount = achievements.filter((a: Achievement) => a.unlocked).length;
 
   return (
