@@ -6,6 +6,8 @@
 
 **A Friday Night Funkin' Mod Launcher**
 
+> **AI Disclosure:** This project includes AI-assisted work. OpenAI Codex and Anthropic Claude were used for bug fixing, UI improvements, and Weblate integration.
+
 [![Build](https://github.com/Crew-Awesome/FunkHub/actions/workflows/build.yml/badge.svg)](https://github.com/Crew-Awesome/FunkHub/actions/workflows/build.yml)
 [![Release](https://github.com/Crew-Awesome/FunkHub/actions/workflows/release.yml/badge.svg)](https://github.com/Crew-Awesome/FunkHub/actions/workflows/release.yml)
 [![Latest Release](https://img.shields.io/github/v/release/Crew-Awesome/FunkHub?display_name=tag)](https://github.com/Crew-Awesome/FunkHub/releases/latest)
@@ -151,3 +153,9 @@ Nightly CI artifacts (14-day retention):
 
 - Read `CONTRIBUTING.md` before opening a PR.
 - Please follow `CODE_OF_CONDUCT.md` in issues, PRs, and discussions.
+
+## AI Tooling and Credits
+
+- OpenAI Codex - AI-assisted bug fixing, UI support, and engineering workflow help
+- Anthropic Claude - AI-assisted bug fixing, UI support, and Weblate integration support
+- AI outputs are reviewed and integrated by project maintainers
