@@ -270,10 +270,7 @@ export class FunkHubService {
 
     if (window.funkhubDesktop?.checkAppUpdate && (platform === "windows" || platform === "macos")) {
       const result = await window.funkhubDesktop.checkAppUpdate();
-      if (!result.ok) {
-        throw new Error(result.error || "Update check failed");
-      }
-      if (result.info) {
+      if (result.ok && result.info) {
         return result.info;
       }
     }

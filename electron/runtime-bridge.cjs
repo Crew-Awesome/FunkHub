@@ -160,12 +160,45 @@ function canUseNativeAutoUpdater() {
   return false;
 }
 
+function formatUpdaterUnavailableNotes() {
+  if (process.platform === "linux") {
+    return "In-app updates are only supported on the AppImage build. Download the latest AppImage from the GitHub releases page.";
+  }
+  return "In-app auto updates are unavailable in this build.";
+}
+
+function createUpdaterUnavailableInfo(releaseName = "Auto updater unavailable", notes = formatUpdaterUnavailableNotes()) {
+  const currentVersion = String(app.getVersion() || "0.0.0").replace(/^v/i, "");
+  return {
+    available: false,
+    currentVersion,
+    latestVersion: currentVersion,
+    releaseName,
+    releaseUrl: GITHUB_RELEASES_URL,
+    notes,
+  };
+}
+
 function ensureAppUpdaterInitialized() {
   if (appUpdateState.initialized && appUpdateState.autoUpdater) {
     return appUpdateState.autoUpdater;
   }
 
-  const { autoUpdater } = require("electron-updater");
+  let autoUpdater;
+  try {
+    ({ autoUpdater } = require("electron-updater"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/Cannot find module ['\"]electron-updater['\"]/i.test(message)) {
+      throw new Error("Desktop auto updater module is missing in this build.");
+    }
+    throw new Error("Desktop auto updater failed to initialize.");
+  }
+
+  if (!autoUpdater) {
+    throw new Error("Desktop auto updater failed to initialize.");
+  }
+
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowPrerelease = false;
@@ -1908,19 +1941,9 @@ async function handleUpdateSettings(payload) {
 
 async function handleCheckAppUpdate() {
   if (!canUseNativeAutoUpdater()) {
-    const currentVersion = String(app.getVersion() || "0.0.0").replace(/^v/i, "");
     return {
       ok: true,
-      info: {
-        available: false,
-        currentVersion,
-        latestVersion: currentVersion,
-        releaseName: "Auto updater unavailable",
-        releaseUrl: GITHUB_RELEASES_URL,
-        notes: process.platform === "linux"
-          ? "In-app updates are only supported on the AppImage build. Download the latest AppImage from the GitHub releases page."
-          : "In-app auto updates are unavailable in this build.",
-      },
+      info: createUpdaterUnavailableInfo(),
     };
   }
 
@@ -1931,6 +1954,13 @@ async function handleCheckAppUpdate() {
     appUpdateState.lastInfo = mapped;
     return { ok: true, info: mapped };
   } catch (error) {
+    if (error instanceof Error && /module is missing in this build/i.test(error.message)) {
+      return {
+        ok: true,
+        info: createUpdaterUnavailableInfo("Auto updater unavailable", "In-app auto updates are unavailable in this build. Use the GitHub release download link instead."),
+      };
+    }
+
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Failed to check app update",
