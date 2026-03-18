@@ -451,6 +451,18 @@ export class GameBananaApiService {
     return normalized;
   }
 
+  /** Returns the raw file list inside a GameBanana archive (file paths as strings).
+   *  Best-effort — returns [] on any error so callers can treat it as non-blocking. */
+  async getRawFileList(fileId: number): Promise<string[]> {
+    try {
+      const data = await this.fetchJson<unknown>(`${APIV11_BASE}/File/${fileId}/RawFileList`);
+      if (Array.isArray(data)) return data.filter((x): x is string => typeof x === "string");
+    } catch {
+      // Silently ignore — network errors, CORS, etc. should not block installs
+    }
+    return [];
+  }
+
   async getModFiles(modId: number): Promise<GameBananaFile[]> {
     const payload = await this.fetchJsonCached<Record<string, unknown>[]>({
       key: `modFiles:${modId}`,

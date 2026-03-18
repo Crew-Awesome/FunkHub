@@ -687,6 +687,10 @@ export class FunkHubService {
     return gameBananaApiService.getModProfile(modId);
   }
 
+  async getRawFileList(fileId: number): Promise<string[]> {
+    return gameBananaApiService.getRawFileList(fileId);
+  }
+
   async refreshModUpdates(): Promise<ModUpdateInfo[]> {
     const updates: ModUpdateInfo[] = [];
 

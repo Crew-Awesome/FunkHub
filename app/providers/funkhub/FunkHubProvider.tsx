@@ -381,6 +381,17 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         throw new Error("No downloadable files found for this mod");
       }
 
+      // Check the archive's raw file list for executables — best-effort, non-blocking on failure
+      const rawFileList = await funkHubService.getRawFileList(selectedFileId);
+      const hasExe = rawFileList.some((f) => /\.(exe|msi|bat|cmd|ps1|sh|appimage|dmg|pkg)$/i.test(f));
+      if (hasExe) {
+        const exeFiles = rawFileList.filter((f) => /\.(exe|msi|bat|cmd|ps1|sh|appimage|dmg|pkg)$/i.test(f));
+        const proceed = window.confirm(
+          `⚠️ This archive contains executable file(s):\n\n${exeFiles.slice(0, 5).join("\n")}${exeFiles.length > 5 ? `\n…and ${exeFiles.length - 5} more` : ""}\n\nOnly install mods from sources you trust.\n\nContinue installing "${profile.name}"?`,
+        );
+        if (!proceed) return;
+      }
+
       const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
       const inferredEngineSlug = modInstallerService.detectRequiredEngine(profile);
       const inferredEngines = inferredEngineSlug

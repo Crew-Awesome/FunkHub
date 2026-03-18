@@ -1,5 +1,7 @@
 export type ThemeMode = "light" | "dark" | "auto" | "vibrant" | "pastel" | "focus";
 export type BaseMode = "light" | "dark";
+/** Resolved color-set key — every mode maps to one of these */
+export type ColorSetKey = "light" | "dark" | "vibrant" | "pastel" | "focus";
 
 export interface ThemeColors {
   background: string;
@@ -50,13 +52,16 @@ export interface ThemeDefinition {
   colors: {
     light: ThemeColors;
     dark: ThemeColors;
+    vibrant: ThemeColors;
+    pastel: ThemeColors;
+    focus: ThemeColors;
   };
 }
 
 export interface ThemeContextType {
   theme: string;
   mode: ThemeMode;
-  effectiveMode: BaseMode;
+  effectiveMode: ColorSetKey;
   themeHue: string;
   setTheme: (theme: string) => void;
   setMode: (mode: ThemeMode) => void;
