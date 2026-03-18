@@ -94,18 +94,19 @@ function createLightColors(primary: string, background: string): ThemeDefinition
 function createDarkColors(primary: string, background: string): ThemeDefinition["colors"]["dark"] {
   const primaryForeground = "#1A1512";
   const foreground = "#F5EDE6";
-  const secondary = adjustColorTowards("#2D251F", primary, 0.12);
-  const muted = adjustColorTowards("#3A2F28", primary, 0.08);
-  const card = "#231C18";
+  const secondary = adjustColorTowards(background, primary, 0.15);
+  const muted = adjustColorTowards(background, primary, 0.1);
+  const card = adjustColorTowards(background, "#FFFFFF", 0.04);
+  const popover = adjustColorTowards(background, "#FFFFFF", 0.09);
   const border = adjustRgbaTowards("rgba(245, 237, 230, 0.08)", primary, 0.04);
   const input = adjustRgbaTowards("rgba(245, 237, 230, 0.05)", primary, 0.03);
-  
+
   return {
     background,
     foreground,
     card,
     cardForeground: foreground,
-    popover: "#2D251F",
+    popover,
     popoverForeground: foreground,
     primary,
     primaryForeground: primaryForeground,
@@ -119,7 +120,7 @@ function createDarkColors(primary: string, background: string): ThemeDefinition[
     destructiveForeground: "#FFFFFF",
     border,
     input,
-    inputBackground: "#2D251F",
+    inputBackground: popover,
     switchBackground: muted,
     ring: primary,
     chart1: primary,

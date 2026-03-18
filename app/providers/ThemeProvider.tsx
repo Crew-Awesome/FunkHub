@@ -1,6 +1,85 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
 import { THEMES, getThemeById } from "../services/funkhub/themes";
-import { AVAILABLE_MODES, type ThemeMode, type BaseMode, type ThemeContextType } from "../services/funkhub/themeTypes";
+import { AVAILABLE_MODES, type ThemeMode, type BaseMode, type ThemeContextType, type ThemeColors } from "../services/funkhub/themeTypes";
+
+// --- Effect mode color helpers ---
+
+function hexToRgb(hex: string): [number, number, number] {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+function mixHex(c1: string, c2: string, w: number): string {
+  if (!c1.startsWith("#")) return c1;
+  const [r1, g1, b1] = hexToRgb(c1);
+  const [r2, g2, b2] = hexToRgb(c2);
+  return rgbToHex(
+    Math.round(r1 * w + r2 * (1 - w)),
+    Math.round(g1 * w + g2 * (1 - w)),
+    Math.round(b1 * w + b2 * (1 - w)),
+  );
+}
+
+function saturateHex(hex: string, factor: number): string {
+  if (!hex.startsWith("#")) return hex;
+  const [r, g, b] = hexToRgb(hex);
+  const mid = (r + g + b) / 3;
+  return rgbToHex(
+    Math.max(0, Math.min(255, Math.round(mid + (r - mid) * factor))),
+    Math.max(0, Math.min(255, Math.round(mid + (g - mid) * factor))),
+    Math.max(0, Math.min(255, Math.round(mid + (b - mid) * factor))),
+  );
+}
+
+function applyVibrant(c: ThemeColors): ThemeColors {
+  const sat = (h: string) => saturateHex(h, 1.35);
+  return {
+    ...c,
+    primary: sat(c.primary), accent: sat(c.accent), ring: sat(c.ring),
+    sidebarPrimary: sat(c.sidebarPrimary),
+    chart1: sat(c.chart1), chart2: sat(c.chart2), chart3: sat(c.chart3), chart4: sat(c.chart4), chart5: sat(c.chart5),
+    card: mixHex(c.card, "#ffffff", 0.93),
+    secondary: mixHex(c.secondary, "#ffffff", 0.88),
+    muted: mixHex(c.muted, "#ffffff", 0.92),
+    warning: sat(c.warning), success: sat(c.success), destructive: sat(c.destructive),
+  };
+}
+
+function applyPastel(c: ThemeColors): ThemeColors {
+  const fade = (h: string) => mixHex(h, "#ffffff", 0.6);
+  return {
+    ...c,
+    primary: fade(c.primary), accent: fade(c.accent), ring: fade(c.ring),
+    sidebarPrimary: fade(c.sidebarPrimary),
+    chart1: fade(c.chart1), chart2: fade(c.chart2), chart3: fade(c.chart3), chart4: fade(c.chart4), chart5: fade(c.chart5),
+    card: mixHex(c.card, "#ffffff", 0.95),
+    secondary: mixHex(c.secondary, "#ffffff", 0.7),
+    muted: mixHex(c.muted, "#ffffff", 0.8),
+    warning: fade(c.warning), success: fade(c.success), destructive: fade(c.destructive),
+  };
+}
+
+function applyFocus(c: ThemeColors): ThemeColors {
+  const gray = "#808080";
+  const bg = c.background;
+  const dim = (h: string, w = 0.45) => mixHex(h, gray, w);
+  return {
+    ...c,
+    primary: dim(c.primary), accent: dim(c.accent, 0.35), ring: dim(c.ring, 0.4),
+    sidebarPrimary: dim(c.sidebarPrimary),
+    chart1: dim(c.chart1), chart2: dim(c.chart2), chart3: dim(c.chart3), chart4: dim(c.chart4), chart5: dim(c.chart5),
+    card: mixHex(c.card, bg, 0.95),
+    secondary: mixHex(c.secondary, bg, 0.4),
+    muted: mixHex(c.muted, bg, 0.5),
+    mutedForeground: mixHex(c.mutedForeground, bg, 0.4),
+    cardForeground: mixHex(c.cardForeground, bg, 0.15),
+    hoverGlow: "transparent",
+    warning: dim(c.warning, 0.5), success: dim(c.success, 0.5), destructive: dim(c.destructive, 0.5),
+  };
+}
 
 const STORAGE_KEYS = {
   theme: "funkhub-theme",
@@ -37,11 +116,16 @@ function applyThemeToRoot(themeId: string, mode: ThemeMode, baseMode: BaseMode) 
   const root = document.documentElement;
   const theme = getThemeById(themeId);
   const effectiveMode = resolveEffectiveMode(mode, baseMode);
-  const colors = theme.colors[effectiveMode];
+  let colors = theme.colors[effectiveMode];
+
+  // Apply effect mode transforms in JS — CSS selectors can't override inline styles
+  if (mode === "vibrant") colors = applyVibrant(colors);
+  else if (mode === "pastel") colors = applyPastel(colors);
+  else if (mode === "focus") colors = applyFocus(colors);
 
   root.setAttribute("data-theme", themeId);
   root.setAttribute("data-mode", effectiveMode);
-  root.setAttribute("data-effect-mode", mode); // Store actual mode (vibrant, pastel, focus, etc)
+  root.setAttribute("data-effect-mode", isEffectMode(mode) ? mode : "none");
 
   const cssVarMap: Record<string, string> = {
     background: "--background",
