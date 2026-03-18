@@ -74,9 +74,9 @@
   --hover-glow: rgba(232, 116, 59, 0.24);
 }
 
-/* Mode modifiers */
+/* Effect mode modifiers */
 /* Vibrant - More saturated, punchier colors */
-[data-mode="vibrant"] {
+[data-effect-mode="vibrant"] {
   --primary: color-mix(in srgb, var(--primary) 120%, white);
   --primary-foreground: color-mix(in srgb, var(--primary-foreground) 80%, black);
   --accent: color-mix(in srgb, var(--accent) 120%, white);
@@ -104,7 +104,7 @@
 }
 
 /* Pastel - Muted, soft colors */
-[data-mode="pastel"] {
+[data-effect-mode="pastel"] {
   --primary: color-mix(in srgb, var(--primary) 60%, white);
   --primary-foreground: color-mix(in srgb, var(--primary-foreground) 60%, black);
   --accent: color-mix(in srgb, var(--accent) 60%, white);
@@ -132,7 +132,7 @@
 }
 
 /* Focus - Dimmed, reduced contrast for easier viewing */
-[data-mode="focus"] {
+[data-effect-mode="focus"] {
   --primary: color-mix(in srgb, var(--primary) 45%, oklch(50% 0 0));
   --primary-foreground: var(--primary-foreground);
   --accent: color-mix(in srgb, var(--accent) 35%, oklch(50% 0 0));

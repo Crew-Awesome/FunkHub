@@ -41,6 +41,7 @@ function applyThemeToRoot(themeId: string, mode: ThemeMode, baseMode: BaseMode) 
 
   root.setAttribute("data-theme", themeId);
   root.setAttribute("data-mode", effectiveMode);
+  root.setAttribute("data-effect-mode", mode); // Store actual mode (vibrant, pastel, focus, etc)
 
   const cssVarMap: Record<string, string> = {
     background: "--background",
