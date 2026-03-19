@@ -1,8 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { funkHubService } from "../../services/funkhub";
-import { computeAchievements } from "../../features/stats/statsUtils";
-import { showAchievementToast } from "../../shared/ui/AchievementToast";
 import {
   ALL_SEARCH_FIELDS,
   AppUpdateInfo,
@@ -119,7 +117,6 @@ interface FunkHubContextValue {
   appUpdateStatus?: DesktopAppUpdateStatus;
   runningLaunchIds: Set<string>;
   killLaunch: (launchId: string) => Promise<void>;
-  clearModPlayTime: (installedId: string) => void;
   detectWineRuntimes: () => Promise<Array<{ type: "wine" | "wine64" | "proton"; path: string; label: string }>>;
   scanCommonEnginePaths: () => Promise<string[]>;
   clearAllData: () => Promise<void>;
@@ -133,8 +130,6 @@ interface FunkHubContextValue {
   clearActiveDownloads: () => Promise<void>;
   clearDisabledMods: () => Promise<void>;
   clearUnpinnedMods: () => Promise<void>;
-  clearAllPlayTime: () => Promise<void>;
-  clearAchievements: () => Promise<void>;
 }
 
 const FunkHubContext = createContext<FunkHubContextValue | undefined>(undefined);
@@ -162,7 +157,6 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [searchFields, setSearchFields] = useState<SearchField[]>(ALL_SEARCH_FIELDS);
   const [browseReleaseType, setBrowseReleaseType] = useState<ReleaseType>("");
   const [browseContentRatings, setBrowseContentRatings] = useState<ContentRating[]>([]);
-  const [unlockedAchievements, setUnlockedAchievements] = useState<Set<string>>(new Set());
   const processedDeepLinksRef = useRef<Map<string, number>>(new Map());
   const processingDeepLinksRef = useRef<Set<string>>(new Set());
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | undefined>(undefined);
@@ -497,32 +491,6 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   }, [refreshAll]);
 
   useEffect(() => {
-    if (loading) return;
-    
-    const currentAchievements = computeAchievements(installedMods, installedEngines, modUpdates.length, downloads);
-    const newlyUnlocked = currentAchievements.filter(
-      (a) => a.unlocked && !unlockedAchievements.has(a.id)
-    );
-
-    for (const achievement of newlyUnlocked) {
-      const name = achievement.id.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-      showAchievementToast(achievement.id, name);
-      const newSet = new Set([...unlockedAchievements, achievement.id]);
-      setUnlockedAchievements(newSet);
-      funkHubStorageService.saveUnlockedAchievements([...newSet]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, installedMods.length, installedEngines.length, modUpdates.length]);
-
-  // Load achievements from storage on mount
-  useEffect(() => {
-    const saved = funkHubStorageService.getUnlockedAchievements();
-    if (saved.length > 0) {
-      setUnlockedAchievements(new Set(saved));
-    }
-  }, []);
-
-  useEffect(() => {
     const unsubscribe = funkHubService.subscribeDownloads((tasks) => {
       setDownloads(tasks);
       setInstalledMods(funkHubService.getInstalledMods());
@@ -639,21 +607,13 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => undefined);
 
-    const unsubscribe = window.funkhubDesktop.onLaunchExit(({ launchId }) => {
-      const startTime = launchStartTimesRef.current.get(launchId);
+      const unsubscribe = window.funkhubDesktop.onLaunchExit(({ launchId }) => {
       launchStartTimesRef.current.delete(launchId);
       setRunningLaunchIds((prev) => {
         const next = new Set(prev);
         next.delete(launchId);
         return next;
       });
-      if (startTime !== undefined) {
-        const durationMs = Date.now() - startTime;
-        if (durationMs > 5_000) {
-          funkHubService.addPlayTime(launchId, durationMs);
-          setInstalledMods(funkHubService.getInstalledMods());
-        }
-      }
     });
 
     return unsubscribe;
@@ -745,7 +705,6 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         const startTime = Date.now();
         launchStartTimesRef.current.set(installedId, startTime);
         await funkHubService.launchInstalledMod(installedId);
-        funkHubService.setModLastLaunched(installedId, startTime);
         setInstalledMods(funkHubService.getInstalledMods());
         setRunningLaunchIds((prev) => { const next = new Set(prev); next.add(installedId); return next; });
       },
@@ -848,10 +807,6 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         await window.funkhubDesktop?.killLaunch?.({ launchId });
         setRunningLaunchIds((prev) => { const next = new Set(prev); next.delete(launchId); return next; });
       },
-      clearModPlayTime: (installedId) => {
-        funkHubService.clearPlayTime(installedId);
-        setInstalledMods(funkHubService.getInstalledMods());
-      },
       detectWineRuntimes: async () => {
         const result = await window.funkhubDesktop?.detectWineRuntimes?.();
         return result?.runtimes ?? [];
@@ -906,14 +861,6 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       clearUnpinnedMods: async () => {
         funkHubStorageService.clearUnpinnedMods();
         setInstalledMods(funkHubStorageService.getInstalledMods());
-      },
-      clearAllPlayTime: async () => {
-        funkHubStorageService.clearModPlayTime();
-        setInstalledMods(funkHubStorageService.getInstalledMods());
-      },
-      clearAchievements: async () => {
-        funkHubStorageService.clearAchievements();
-        setUnlockedAchievements(new Set());
       },
     }),
     [
