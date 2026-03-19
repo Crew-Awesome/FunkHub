@@ -6,7 +6,6 @@ const STORAGE_KEYS = {
   downloadHistory: "funkhub-download-history",
   settings: "funkhub-settings",
   theme: "funkhub-theme",
-  achievements: "funkhub-achievements",
 } as const;
 
 const DEFAULT_SETTINGS: FunkHubSettings = {
@@ -138,16 +137,6 @@ export class FunkHubStorageService {
     this.saveInstalledMods(pinned);
   }
 
-  clearModPlayTime(): void {
-    const mods = this.getInstalledMods();
-    const reset = mods.map((mod) => ({
-      ...mod,
-      totalPlayTimeMs: 0,
-      lastLaunchedAt: undefined,
-    }));
-    this.saveInstalledMods(reset);
-  }
-
   clearModUpdates(): void {
     const mods = this.getInstalledMods();
     const reset = mods.map((mod) => ({
@@ -157,23 +146,6 @@ export class FunkHubStorageService {
     this.saveInstalledMods(reset);
   }
 
-  clearAchievements(): void {
-    localStorage.removeItem(STORAGE_KEYS.achievements);
-  }
-
-  getUnlockedAchievements(): string[] {
-    const value = localStorage.getItem(STORAGE_KEYS.achievements);
-    if (!value) return [];
-    try {
-      return JSON.parse(value) as string[];
-    } catch {
-      return [];
-    }
-  }
-
-  saveUnlockedAchievements(achievements: string[]): void {
-    localStorage.setItem(STORAGE_KEYS.achievements, JSON.stringify(achievements));
-  }
 }
 
 export const funkHubStorageService = new FunkHubStorageService();

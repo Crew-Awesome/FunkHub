@@ -916,13 +916,6 @@ export class FunkHubService {
     funkHubStorageService.saveInstalledMods(this.installedMods);
   }
 
-  setModLastLaunched(installedId: string, timestamp: number): void {
-    this.installedMods = this.installedMods.map((mod) =>
-      mod.id === installedId ? { ...mod, lastLaunchedAt: timestamp } : mod,
-    );
-    funkHubStorageService.saveInstalledMods(this.installedMods);
-  }
-
   async removeInstalledMod(installedId: string, options?: { deleteFiles?: boolean }): Promise<void> {
     const installed = this.installedMods.find((mod) => mod.id === installedId);
     if (!installed) {
@@ -979,22 +972,6 @@ export class FunkHubService {
     }
 
     await window.funkhubDesktop.launchEngine({ installPath: engine.installPath, args: launchArgs, launchId: installedId });
-  }
-
-  addPlayTime(installedId: string, durationMs: number): void {
-    this.installedMods = this.installedMods.map((mod) =>
-      mod.id === installedId
-        ? { ...mod, totalPlayTimeMs: (mod.totalPlayTimeMs ?? 0) + durationMs }
-        : mod,
-    );
-    funkHubStorageService.saveInstalledMods(this.installedMods);
-  }
-
-  clearPlayTime(installedId: string): void {
-    this.installedMods = this.installedMods.map((mod) =>
-      mod.id === installedId ? { ...mod, totalPlayTimeMs: 0 } : mod,
-    );
-    funkHubStorageService.saveInstalledMods(this.installedMods);
   }
 
   async updateInstalledModLaunchOptions(
