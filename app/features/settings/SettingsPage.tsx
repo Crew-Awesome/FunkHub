@@ -35,7 +35,6 @@ export function Settings() {
     clearActiveDownloads,
     clearDisabledMods,
     clearUnpinnedMods,
-    clearAllPlayTime,
   } = useFunkHub();
   const [gameDirectory, setGameDirectory] = useState(settings.gameDirectory);
   const [downloadsDirectory, setDownloadsDirectory] = useState(settings.downloadsDirectory);
@@ -706,7 +705,7 @@ export function Settings() {
                 {/* Downloads Sub-options */}
                 <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-3">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("settings.downloads", "Downloads")}</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -772,19 +771,6 @@ export function Settings() {
                       className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium text-left"
                     >
                       {t("settings.clearUnpinned", "Clear Unpinned ({{count}})", { count: installedMods.filter(m => !m.pinned).length })}
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        if (window.confirm(t("settings.confirmClearPlayTime", "Reset all play time data?"))) {
-                          clearAllPlayTime();
-                          toast.success(t("settings.playTimeCleared", "All play time data reset"));
-                        }
-                      }}
-                      className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium text-left"
-                    >
-                      {t("settings.clearPlayTime", "Reset Play Time")}
                     </motion.button>
                   </div>
                 </div>

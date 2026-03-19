@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, ChevronDown, Settings2, Square, Clock, ImagePlus, Eye, EyeOff, Search, Layers, Tag, X, Check, Plus, Pin, Copy, RotateCcw, ExternalLink, FileText, Pencil } from "lucide-react";
+import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, ChevronDown, Settings2, Square, ImagePlus, Eye, EyeOff, Search, Layers, Tag, X, Check, Plus, Pin, Copy, RotateCcw, ExternalLink, FileText, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useFunkHub, useI18n } from "../../providers";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
@@ -8,7 +8,7 @@ import { Checkbox } from "../../shared/ui/checkbox";
 import { formatEngineName, type EngineSlug } from "../../services/funkhub";
 import { getEngineIcon } from "../engines/engineIcons";
 
-type SortBy = "newest" | "oldest" | "name" | "nameDesc" | "mostPlayed" | "recent" | "engine" | "updates";
+type SortBy = "newest" | "oldest" | "name" | "nameDesc" | "engine" | "updates";
 
 export function Library() {
   const { t } = useI18n();
@@ -27,7 +27,6 @@ export function Library() {
     updateInstalledModLaunchOptions,
     runningLaunchIds,
     killLaunch,
-    clearModPlayTime,
     setModCustomImage,
     setModEnabled,
     setModTags,
@@ -102,8 +101,6 @@ export function Library() {
       case "nameDesc": mods.sort((a, b) => b.modName.localeCompare(a.modName)); break;
       case "newest": mods.sort((a, b) => b.installedAt - a.installedAt); break;
       case "oldest": mods.sort((a, b) => a.installedAt - b.installedAt); break;
-      case "mostPlayed": mods.sort((a, b) => (b.totalPlayTimeMs ?? 0) - (a.totalPlayTimeMs ?? 0)); break;
-      case "recent": mods.sort((a, b) => (b.lastLaunchedAt ?? 0) - (a.lastLaunchedAt ?? 0)); break;
       case "engine": mods.sort((a, b) => (a.engine ?? "zzz").localeCompare(b.engine ?? "zzz")); break;
       case "updates": mods.sort((a, b) => Number(b.updateAvailable ?? false) - Number(a.updateAvailable ?? false)); break;
     }
@@ -154,15 +151,6 @@ export function Library() {
     setSelectedModId(displayedMods[nextIndex].id);
     listRef.current?.children[nextIndex]?.scrollIntoView?.({ block: "nearest" });
   }, [displayedMods, selectedMod?.id]);
-
-  const formatPlayTime = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    if (minutes > 0) return `${minutes}m`;
-    return `${totalSeconds}s`;
-  };
 
   useEffect(() => {
     if (!selectedMod) {
@@ -287,9 +275,6 @@ export function Library() {
             </button>
           </div>
           {mod.categoryName && mod.categoryName !== "Unknown" && !groupByEngine && <p className="text-xs text-muted-foreground truncate">{mod.categoryName}</p>}
-          {mod.lastLaunchedAt && (
-            <p className="text-[9px] text-muted-foreground/60 truncate">{t("library.lastPlayed", "Last played")}: {new Date(mod.lastLaunchedAt).toLocaleDateString()}</p>
-          )}
           {mod.tags && mod.tags.length > 0 && (
             <div className="flex gap-1 mt-0.5 flex-wrap">
               {mod.tags.map((tag) => (
@@ -439,8 +424,6 @@ export function Library() {
               <option value="oldest">{t("library.sortOldest", "Oldest")}</option>
               <option value="name">{t("library.sortName", "A–Z")}</option>
               <option value="nameDesc">{t("library.sortNameDesc", "Z–A")}</option>
-              <option value="mostPlayed">{t("library.sortMostPlayed", "Played")}</option>
-              <option value="recent">{t("library.sortRecent", "Recent")}</option>
               <option value="engine">{t("library.sortEngine", "Engine")}</option>
               <option value="updates">{t("library.sortUpdates", "Updates")}</option>
             </select>
@@ -802,26 +785,6 @@ export function Library() {
                 <div className="bg-card border border-border rounded-lg p-3">
                   <p className="text-xs text-muted-foreground mb-0.5">{t("library.installedDate", "Installed")}</p>
                   <p className="text-sm font-semibold text-foreground">{new Date(selectedMod.installedAt).toLocaleDateString()}</p>
-                </div>
-                <div className="bg-card border border-border rounded-lg p-3 relative group">
-                  <p className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {t("library.playTime", "Play Time")}
-                  </p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {selectedMod.totalPlayTimeMs && selectedMod.totalPlayTimeMs > 0
-                      ? formatPlayTime(selectedMod.totalPlayTimeMs)
-                      : "—"}
-                  </p>
-                  {selectedMod.totalPlayTimeMs != null && selectedMod.totalPlayTimeMs > 0 && (
-                    <button
-                      onClick={() => clearModPlayTime(selectedMod.id)}
-                      className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all text-[10px] px-1.5 py-0.5 rounded border border-border hover:border-destructive/40"
-                      title={t("library.clearPlayTime", "Clear play time")}
-                    >
-                      {t("library.clear", "Clear")}
-                    </button>
-                  )}
                 </div>
               </div>
 
