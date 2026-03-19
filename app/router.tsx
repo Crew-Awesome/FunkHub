@@ -2,15 +2,12 @@ import { lazy } from "react";
 import { createBrowserRouter, createHashRouter, useNavigate, useRouteError } from "react-router";
 import { Layout } from "./app-shell";
 
-const Home = lazy(() => import("./features/home").then((module) => ({ default: module.Home })));
 const Discover = lazy(() => import("./features/discover").then((module) => ({ default: module.Discover })));
 const Downloads = lazy(() => import("./features/downloads").then((module) => ({ default: module.Downloads })));
 const Engines = lazy(() => import("./features/engines").then((module) => ({ default: module.Engines })));
 const Library = lazy(() => import("./features/library").then((module) => ({ default: module.Library })));
 const Settings = lazy(() => import("./features/settings").then((module) => ({ default: module.Settings })));
-const Stats = lazy(() => import("./features/stats").then((module) => ({ default: module.Stats })));
 const Updates = lazy(() => import("./features/updates").then((module) => ({ default: module.Updates })));
-const Achievements = lazy(() => import("./features/achievements").then((module) => ({ default: module.Achievements })));
 
 function RouteErrorPage() {
   const error = useRouteError() as { status?: number; statusText?: string; message?: string } | undefined;
@@ -47,16 +44,13 @@ export const router = routerFactory([
     Component: Layout,
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true, Component: Home },
-      { path: "home", Component: Home },
+      { index: true, Component: Discover },
       { path: "discover", Component: Discover },
       { path: "library", Component: Library },
       { path: "downloads", Component: Downloads },
       { path: "updates", Component: Updates },
       { path: "engines", Component: Engines },
       { path: "settings", Component: Settings },
-      { path: "stats", Component: Stats },
-      { path: "achievements", Component: Achievements },
       { path: "*", Component: Discover },
     ],
   },
