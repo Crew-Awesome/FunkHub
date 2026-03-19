@@ -31,7 +31,6 @@
     "electron-updater": "^6.6.2",
     "lucide-react": "^0.555.0",
     "motion": "^12.23.24",
-    "node-7z": "^3.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router": "^7.9.4",
