@@ -15,16 +15,6 @@ function AppRouter() {
   );
 }
 
-// 🎵 Easter egg for curious devs
-if (typeof window !== "undefined") {
-  // eslint-disable-next-line no-console
-  console.log(
-    "%c🎵 FunkHub\n%cYo, you found the console. Impressive.\nWanna help build the best FNF mod manager? Check us out on GitHub!",
-    "font-size: 20px; font-weight: bold; color: #E8743B;",
-    "font-size: 13px; color: #A89A8F; line-height: 1.6;",
-  );
-}
-
 export default function App() {
   return (
     <ThemeProvider>
