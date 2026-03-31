@@ -55,7 +55,7 @@ function resolve7zipBinaryPath() {
   try {
     fsSync.chmodSync(found, 0o755);
   } catch {
-    // Ignore chmod failures and try spawning anyway.
+    // Ignore chmod failures and try spawning anyway...
   }
 
   return found;
