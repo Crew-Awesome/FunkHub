@@ -1,0 +1,10 @@
+execute
+
+npm install
+for install all dependencies
+
+neu run
+for test the app
+
+neu build
+for build the app

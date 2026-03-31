@@ -8,7 +8,8 @@ const { app, BrowserWindow } = require("electron");
 const { path7za } = require("7zip-bin");
 
 const ARCHIVE_EXTENSIONS = [".zip", ".rar", ".7z"];
-const GITHUB_RELEASES_URL = "https://github.com/Crew-Awesome/FunkHub/releases/latest";
+const GITHUB_RELEASES_URL =
+  "https://github.com/Crew-Awesome/FunkHub/releases/latest";
 const jobState = new Map();
 const runningProcesses = new Map(); // launchId -> { pid, installPath, startTime, child }
 const appUpdateState = {
@@ -42,14 +43,18 @@ function resolve7zipBinaryPath() {
   const dedupedCandidates = [...new Set(candidates)];
   const found = dedupedCandidates.find((candidate) => {
     try {
-      return fsSync.existsSync(candidate) && fsSync.statSync(candidate).isFile();
+      return (
+        fsSync.existsSync(candidate) && fsSync.statSync(candidate).isFile()
+      );
     } catch {
       return false;
     }
   });
 
   if (!found) {
-    throw new Error(`7zip binary not found. Tried: ${dedupedCandidates.join(", ")}`);
+    throw new Error(
+      `7zip binary not found. Tried: ${dedupedCandidates.join(", ")}`,
+    );
   }
 
   try {
@@ -78,8 +83,14 @@ function now() {
 }
 
 function normalizeVersionParts(version) {
-  const cleaned = String(version || "").trim().replace(/^v/i, "");
-  const parts = cleaned.split(/[^0-9]+/).filter(Boolean).slice(0, 3).map((part) => Number(part));
+  const cleaned = String(version || "")
+    .trim()
+    .replace(/^v/i, "");
+  const parts = cleaned
+    .split(/[^0-9]+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((part) => Number(part));
   while (parts.length < 3) {
     parts.push(0);
   }
@@ -116,17 +127,25 @@ function emitAppUpdateStatus(payload) {
 
 function mapUpdaterInfo(updateInfo) {
   const currentVersion = String(app.getVersion() || "0.0.0").replace(/^v/i, "");
-  const latestVersion = String(updateInfo?.version || currentVersion).replace(/^v/i, "");
-  const releaseName = String(updateInfo?.releaseName || `FunkHub v${latestVersion}`);
+  const latestVersion = String(updateInfo?.version || currentVersion).replace(
+    /^v/i,
+    "",
+  );
+  const releaseName = String(
+    updateInfo?.releaseName || `FunkHub v${latestVersion}`,
+  );
   const releaseNotes = updateInfo?.releaseNotes;
   let notes = "";
   if (Array.isArray(releaseNotes)) {
-    notes = releaseNotes.map((entry) => {
-      if (entry && typeof entry.note === "string") {
-        return entry.note;
-      }
-      return "";
-    }).filter(Boolean).join("\n\n");
+    notes = releaseNotes
+      .map((entry) => {
+        if (entry && typeof entry.note === "string") {
+          return entry.note;
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
   } else if (typeof releaseNotes === "string") {
     notes = releaseNotes;
   }
@@ -137,7 +156,10 @@ function mapUpdaterInfo(updateInfo) {
     latestVersion,
     releaseName,
     releaseUrl: GITHUB_RELEASES_URL,
-    publishedAt: typeof updateInfo?.releaseDate === "string" ? updateInfo.releaseDate : undefined,
+    publishedAt:
+      typeof updateInfo?.releaseDate === "string"
+        ? updateInfo.releaseDate
+        : undefined,
     notes,
   };
 }
@@ -167,7 +189,10 @@ function formatUpdaterUnavailableNotes() {
   return "In-app auto updates are unavailable in this build.";
 }
 
-function createUpdaterUnavailableInfo(releaseName = "Auto updater unavailable", notes = formatUpdaterUnavailableNotes()) {
+function createUpdaterUnavailableInfo(
+  releaseName = "Auto updater unavailable",
+  notes = formatUpdaterUnavailableNotes(),
+) {
   const currentVersion = String(app.getVersion() || "0.0.0").replace(/^v/i, "");
   return {
     available: false,
@@ -211,13 +236,20 @@ function ensureAppUpdaterInitialized() {
   });
 
   autoUpdater.on("checking-for-update", () => {
-    emitAppUpdateStatus({ status: "checking", message: "Checking for app updates" });
+    emitAppUpdateStatus({
+      status: "checking",
+      message: "Checking for app updates",
+    });
   });
 
   autoUpdater.on("update-available", (info) => {
     const mapped = mapUpdaterInfo(info);
     appUpdateState.lastInfo = mapped;
-    emitAppUpdateStatus({ status: "available", info: mapped, message: "Update available" });
+    emitAppUpdateStatus({
+      status: "available",
+      info: mapped,
+      message: "Update available",
+    });
   });
 
   autoUpdater.on("update-not-available", () => {
@@ -230,7 +262,11 @@ function ensureAppUpdaterInitialized() {
       notes: "You are on the latest version.",
     };
     appUpdateState.lastInfo = info;
-    emitAppUpdateStatus({ status: "idle", info, message: "No updates available" });
+    emitAppUpdateStatus({
+      status: "idle",
+      info,
+      message: "No updates available",
+    });
   });
 
   autoUpdater.on("download-progress", (progress) => {
@@ -248,7 +284,12 @@ function ensureAppUpdaterInitialized() {
   autoUpdater.on("update-downloaded", (info) => {
     const mapped = mapUpdaterInfo(info);
     appUpdateState.lastInfo = mapped;
-    emitAppUpdateStatus({ status: "downloaded", info: mapped, progress: 100, message: "Update ready to install" });
+    emitAppUpdateStatus({
+      status: "downloaded",
+      info: mapped,
+      progress: 100,
+      message: "Update ready to install",
+    });
   });
 
   autoUpdater.on("error", (error) => {
@@ -265,7 +306,9 @@ function ensureAppUpdaterInitialized() {
 }
 
 function isArchive(filePath) {
-  return ARCHIVE_EXTENSIONS.some((extension) => filePath.toLowerCase().endsWith(extension));
+  return ARCHIVE_EXTENSIONS.some((extension) =>
+    filePath.toLowerCase().endsWith(extension),
+  );
 }
 
 function emitProgress(webContents, payload) {
@@ -288,7 +331,10 @@ function isPathInside(basePath, targetPath) {
   const baseResolved = path.resolve(basePath);
   const targetResolved = path.resolve(targetPath);
   const relative = path.relative(baseResolved, targetResolved);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return (
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative))
+  );
 }
 
 async function ensureDir(dirPath) {
@@ -355,7 +401,11 @@ async function readItchAuth() {
 
 async function writeItchAuth(payload) {
   await ensureDir(path.dirname(getItchAuthFilePath()));
-  await fs.writeFile(getItchAuthFilePath(), JSON.stringify(payload, null, 2), "utf-8");
+  await fs.writeFile(
+    getItchAuthFilePath(),
+    JSON.stringify(payload, null, 2),
+    "utf-8",
+  );
 }
 
 async function clearItchAuth() {
@@ -369,12 +419,14 @@ async function getItchAccessToken() {
 
 async function getEffectiveSettings() {
   const runtimeSettings = await readRuntimeSettings();
-  const dataRootDirectory = typeof runtimeSettings.dataRootDirectory === "string"
-    ? runtimeSettings.dataRootDirectory.trim()
-    : "";
-  const downloadsDirectory = typeof runtimeSettings.downloadsDirectory === "string"
-    ? runtimeSettings.downloadsDirectory.trim()
-    : "";
+  const dataRootDirectory =
+    typeof runtimeSettings.dataRootDirectory === "string"
+      ? runtimeSettings.dataRootDirectory.trim()
+      : "";
+  const downloadsDirectory =
+    typeof runtimeSettings.downloadsDirectory === "string"
+      ? runtimeSettings.downloadsDirectory.trim()
+      : "";
 
   return {
     ...runtimeSettings,
@@ -408,7 +460,9 @@ async function moveAllChildren(sourceDir, targetDir) {
 }
 
 async function flattenSingleTopFolder(extractDir) {
-  const entries = (await readDirEntries(extractDir)).filter((entry) => !entry.name.startsWith("__MACOSX"));
+  const entries = (await readDirEntries(extractDir)).filter(
+    (entry) => !entry.name.startsWith("__MACOSX"),
+  );
   const directories = entries.filter((entry) => entry.isDirectory());
   const files = entries.filter((entry) => entry.isFile());
 
@@ -419,8 +473,15 @@ async function flattenSingleTopFolder(extractDir) {
   }
 }
 
-async function extractNestedArchiveIfPresent(extractDir, cancelState, webContents, jobId) {
-  const entries = (await readDirEntries(extractDir)).filter((entry) => entry.isFile());
+async function extractNestedArchiveIfPresent(
+  extractDir,
+  cancelState,
+  webContents,
+  jobId,
+) {
+  const entries = (await readDirEntries(extractDir)).filter((entry) =>
+    entry.isFile(),
+  );
   if (entries.length !== 1) {
     return;
   }
@@ -438,12 +499,20 @@ async function extractNestedArchiveIfPresent(extractDir, cancelState, webContent
     timestamp: now(),
   });
 
-  await extractArchive(nestedArchive, extractDir, cancelState, webContents, jobId);
+  await extractArchive(
+    nestedArchive,
+    extractDir,
+    cancelState,
+    webContents,
+    jobId,
+  );
   await fs.unlink(nestedArchive);
 }
 
 async function ensureModFolderStructure(extractDir, modFolderName) {
-  const entries = (await readDirEntries(extractDir)).filter((entry) => !entry.name.startsWith("."));
+  const entries = (await readDirEntries(extractDir)).filter(
+    (entry) => !entry.name.startsWith("."),
+  );
   const directories = entries.filter((entry) => entry.isDirectory());
   const files = entries.filter((entry) => entry.isFile());
 
@@ -486,14 +555,24 @@ function parsePercent(line) {
   return Math.max(0, Math.min(100, value));
 }
 
-async function extractArchive(archivePath, outputDir, cancelState, webContents, jobId) {
+async function extractArchive(
+  archivePath,
+  outputDir,
+  cancelState,
+  webContents,
+  jobId,
+) {
   await ensureDir(outputDir);
   const sevenZipBinary = resolve7zipBinaryPath();
 
   await new Promise((resolve, reject) => {
-    const child = spawn(sevenZipBinary, ["x", "-y", `-o${outputDir}`, archivePath], {
-      windowsHide: true,
-    });
+    const child = spawn(
+      sevenZipBinary,
+      ["x", "-y", `-o${outputDir}`, archivePath],
+      {
+        windowsHide: true,
+      },
+    );
 
     cancelState.process = child;
 
@@ -528,7 +607,11 @@ async function extractArchive(archivePath, outputDir, cancelState, webContents, 
 
       if (code !== 0) {
         if (code === 2) {
-          reject(new Error("7z extraction failed with exit code 2 (unsupported or corrupted archive format)"));
+          reject(
+            new Error(
+              "7z extraction failed with exit code 2 (unsupported or corrupted archive format)",
+            ),
+          );
           return;
         }
         reject(new Error(`7z extraction failed with exit code ${code}`));
@@ -540,13 +623,23 @@ async function extractArchive(archivePath, outputDir, cancelState, webContents, 
   });
 }
 
-async function extractRarWithUnrar(archivePath, outputDir, cancelState, webContents, jobId) {
+async function extractRarWithUnrar(
+  archivePath,
+  outputDir,
+  cancelState,
+  webContents,
+  jobId,
+) {
   await ensureDir(outputDir);
 
   return new Promise((resolve, reject) => {
-    const child = spawn("unrar", ["x", "-o+", "-idq", archivePath, `${outputDir}${path.sep}`], {
-      windowsHide: true,
-    });
+    const child = spawn(
+      "unrar",
+      ["x", "-o+", "-idq", archivePath, `${outputDir}${path.sep}`],
+      {
+        windowsHide: true,
+      },
+    );
 
     cancelState.process = child;
 
@@ -584,14 +677,21 @@ async function extractRarWithUnrar(archivePath, outputDir, cancelState, webConte
   });
 }
 
-async function downloadToFile(url, outputPath, cancelState, webContents, jobId) {
+async function downloadToFile(
+  url,
+  outputPath,
+  cancelState,
+  webContents,
+  jobId,
+) {
   const response = await fetch(url, { signal: cancelState.controller.signal });
 
   if (!response.ok || !response.body) {
     throw new Error(`Download failed (${response.status})`);
   }
 
-  const totalBytes = Number(response.headers.get("content-length") || "0") || undefined;
+  const totalBytes =
+    Number(response.headers.get("content-length") || "0") || undefined;
   const writer = fsSync.createWriteStream(outputPath);
   const reader = response.body.getReader();
   const startedAt = Date.now();
@@ -684,13 +784,36 @@ async function detectArchiveSignature(filePath) {
     try {
       const buffer = Buffer.alloc(8);
       const { bytesRead } = await handle.read(buffer, 0, 8, 0);
-      if (bytesRead >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4b && buffer[2] === 0x03 && buffer[3] === 0x04) {
+      if (
+        bytesRead >= 4 &&
+        buffer[0] === 0x50 &&
+        buffer[1] === 0x4b &&
+        buffer[2] === 0x03 &&
+        buffer[3] === 0x04
+      ) {
         return "zip";
       }
-      if (bytesRead >= 7 && buffer[0] === 0x52 && buffer[1] === 0x61 && buffer[2] === 0x72 && buffer[3] === 0x21 && buffer[4] === 0x1a && buffer[5] === 0x07 && (buffer[6] === 0x00 || buffer[6] === 0x01)) {
+      if (
+        bytesRead >= 7 &&
+        buffer[0] === 0x52 &&
+        buffer[1] === 0x61 &&
+        buffer[2] === 0x72 &&
+        buffer[3] === 0x21 &&
+        buffer[4] === 0x1a &&
+        buffer[5] === 0x07 &&
+        (buffer[6] === 0x00 || buffer[6] === 0x01)
+      ) {
         return "rar";
       }
-      if (bytesRead >= 6 && buffer[0] === 0x37 && buffer[1] === 0x7a && buffer[2] === 0xbc && buffer[3] === 0xaf && buffer[4] === 0x27 && buffer[5] === 0x1c) {
+      if (
+        bytesRead >= 6 &&
+        buffer[0] === 0x37 &&
+        buffer[1] === 0x7a &&
+        buffer[2] === 0xbc &&
+        buffer[3] === 0xaf &&
+        buffer[4] === 0x27 &&
+        buffer[5] === 0x1c
+      ) {
         return "7z";
       }
       return "unknown";
@@ -702,22 +825,49 @@ async function detectArchiveSignature(filePath) {
   }
 }
 
-async function installRawModPackage({ resolvedInstallPath, installSubdir, archiveName, tempArchivePath, jobId }) {
-  const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
-  const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
-  const safeArchiveName = path.basename(archiveName || `package-${jobId}.bin`).replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `package-${jobId}.bin`;
+async function installRawModPackage({
+  resolvedInstallPath,
+  installSubdir,
+  archiveName,
+  tempArchivePath,
+  jobId,
+}) {
+  const folderNameBase =
+    installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
+  const safeFolderName =
+    folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
+  const safeArchiveName =
+    path
+      .basename(archiveName || `package-${jobId}.bin`)
+      .replace(/[^A-Za-z0-9._ -]/g, "_")
+      .trim() || `package-${jobId}.bin`;
   const destinationDir = path.join(resolvedInstallPath, safeFolderName);
   await removePath(destinationDir);
   await ensureDir(destinationDir);
-  await fs.copyFile(tempArchivePath, path.join(destinationDir, safeArchiveName));
+  await fs.copyFile(
+    tempArchivePath,
+    path.join(destinationDir, safeArchiveName),
+  );
   return destinationDir;
 }
 
-async function installRawStandalonePackage({ resolvedInstallPath, archiveName, tempArchivePath, jobId }) {
-  const safeArchiveName = path.basename(archiveName || `package-${jobId}.bin`).replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `package-${jobId}.bin`;
+async function installRawStandalonePackage({
+  resolvedInstallPath,
+  archiveName,
+  tempArchivePath,
+  jobId,
+}) {
+  const safeArchiveName =
+    path
+      .basename(archiveName || `package-${jobId}.bin`)
+      .replace(/[^A-Za-z0-9._ -]/g, "_")
+      .trim() || `package-${jobId}.bin`;
   await removePath(resolvedInstallPath);
   await ensureDir(resolvedInstallPath);
-  await fs.copyFile(tempArchivePath, path.join(resolvedInstallPath, safeArchiveName));
+  await fs.copyFile(
+    tempArchivePath,
+    path.join(resolvedInstallPath, safeArchiveName),
+  );
   return resolvedInstallPath;
 }
 
@@ -760,7 +910,10 @@ async function installArchiveInternal(webContents, payload) {
     installSubdir,
     allowMissingExecutable,
   } = payload;
-  const treatAsStandaloneMod = mode === "mod" && typeof installPath === "string" && installPath.startsWith("executables/");
+  const treatAsStandaloneMod =
+    mode === "mod" &&
+    typeof installPath === "string" &&
+    installPath.startsWith("executables/");
 
   if (!jobId) {
     throw new Error("Missing jobId");
@@ -774,7 +927,8 @@ async function installArchiveInternal(webContents, payload) {
 
   jobState.set(jobId, cancelState);
 
-  const { rootPath, downloadsPath, resolvedInstallPath } = await resolveInstallDirs(mode, installPath);
+  const { rootPath, downloadsPath, resolvedInstallPath } =
+    await resolveInstallDirs(mode, installPath);
   await ensureDir(downloadsPath);
   await ensureDir(resolvedInstallPath);
 
@@ -788,7 +942,13 @@ async function installArchiveInternal(webContents, payload) {
 
   try {
     if (downloadUrl) {
-      await downloadToFile(downloadUrl, tempArchivePath, cancelState, webContents, jobId);
+      await downloadToFile(
+        downloadUrl,
+        tempArchivePath,
+        cancelState,
+        webContents,
+        jobId,
+      );
     } else if (archiveBase64) {
       await fs.writeFile(tempArchivePath, base64ToBuffer(archiveBase64));
     } else {
@@ -812,7 +972,9 @@ async function installArchiveInternal(webContents, payload) {
     });
 
     const archiveSignature = await detectArchiveSignature(tempArchivePath);
-    const hasArchiveExtension = ARCHIVE_EXTENSIONS.some((extension) => archiveName.toLowerCase().endsWith(extension));
+    const hasArchiveExtension = ARCHIVE_EXTENSIONS.some((extension) =>
+      archiveName.toLowerCase().endsWith(extension),
+    );
     const canExtract = archiveSignature !== "unknown" || hasArchiveExtension;
 
     let finalInstallPath = resolvedInstallPath;
@@ -843,15 +1005,28 @@ async function installArchiveInternal(webContents, payload) {
           });
     } else {
       try {
-        await extractArchive(tempArchivePath, extractTempPath, cancelState, webContents, jobId);
+        await extractArchive(
+          tempArchivePath,
+          extractTempPath,
+          cancelState,
+          webContents,
+          jobId,
+        );
         await flattenSingleTopFolder(extractTempPath);
-        await extractNestedArchiveIfPresent(extractTempPath, cancelState, webContents, jobId);
+        await extractNestedArchiveIfPresent(
+          extractTempPath,
+          cancelState,
+          webContents,
+          jobId,
+        );
         await flattenSingleTopFolder(extractTempPath);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Extraction failed";
-        const canRetryWithUnrar = mode === "mod"
-          && archiveSignature === "rar"
-          && /exit code 2/i.test(message);
+        const message =
+          error instanceof Error ? error.message : "Extraction failed";
+        const canRetryWithUnrar =
+          mode === "mod" &&
+          archiveSignature === "rar" &&
+          /exit code 2/i.test(message);
         let recoveredFromRarFallback = false;
 
         if (canRetryWithUnrar) {
@@ -863,10 +1038,21 @@ async function installArchiveInternal(webContents, payload) {
             timestamp: now(),
           });
 
-          recoveredFromRarFallback = await extractRarWithUnrar(tempArchivePath, extractTempPath, cancelState, webContents, jobId);
+          recoveredFromRarFallback = await extractRarWithUnrar(
+            tempArchivePath,
+            extractTempPath,
+            cancelState,
+            webContents,
+            jobId,
+          );
           if (recoveredFromRarFallback) {
             await flattenSingleTopFolder(extractTempPath);
-            await extractNestedArchiveIfPresent(extractTempPath, cancelState, webContents, jobId);
+            await extractNestedArchiveIfPresent(
+              extractTempPath,
+              cancelState,
+              webContents,
+              jobId,
+            );
             await flattenSingleTopFolder(extractTempPath);
           }
         }
@@ -877,12 +1063,12 @@ async function installArchiveInternal(webContents, payload) {
             phase: "install",
             progress: 0.9,
             message: treatAsStandaloneMod
-              ? (/exit code 2/i.test(message)
+              ? /exit code 2/i.test(message)
                 ? "Archive extraction unsupported for this format; keeping package for manual launcher setup"
-                : "Archive extraction failed; keeping package for manual launcher setup")
-              : (/exit code 2/i.test(message)
+                : "Archive extraction failed; keeping package for manual launcher setup"
+              : /exit code 2/i.test(message)
                 ? "Archive extraction unsupported for this format; saving package as raw file"
-                : "Archive extraction failed; saving package as raw file"),
+                : "Archive extraction failed; saving package as raw file",
             timestamp: now(),
           });
           finalInstallPath = treatAsStandaloneMod
@@ -912,9 +1098,17 @@ async function installArchiveInternal(webContents, payload) {
             await moveDirectory(extractTempPath, resolvedInstallPath);
             finalInstallPath = resolvedInstallPath;
           } else {
-            const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
-            const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
-            const modRoot = await ensureModFolderStructure(extractTempPath, safeFolderName);
+            const folderNameBase =
+              installSubdir ||
+              archiveName.replace(/\.[^.]+$/, "") ||
+              `mod-${jobId}`;
+            const safeFolderName =
+              folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() ||
+              `mod-${jobId}`;
+            const modRoot = await ensureModFolderStructure(
+              extractTempPath,
+              safeFolderName,
+            );
             const destination = path.join(resolvedInstallPath, safeFolderName);
             await removePath(destination);
             await ensureDir(resolvedInstallPath);
@@ -935,18 +1129,24 @@ async function installArchiveInternal(webContents, payload) {
             timestamp: now(),
           });
 
-          const launchable = await findLaunchableExecutable(resolvedInstallPath, [path.basename(resolvedInstallPath), "funkin", "engine"]);
+          const launchable = await findLaunchableExecutable(
+            resolvedInstallPath,
+            [path.basename(resolvedInstallPath), "funkin", "engine"],
+          );
           if (!launchable) {
             if (allowMissingExecutable) {
               emitProgress(webContents, {
                 jobId,
                 phase: "validate",
                 progress: 0.95,
-                message: "No native executable detected for this platform; keeping install for manual launcher setup",
+                message:
+                  "No native executable detected for this platform; keeping install for manual launcher setup",
                 timestamp: now(),
               });
             } else {
-              throw new Error("Installed engine does not contain a launchable executable for this platform");
+              throw new Error(
+                "Installed engine does not contain a launchable executable for this platform",
+              );
             }
           }
         }
@@ -964,7 +1164,9 @@ async function installArchiveInternal(webContents, payload) {
     });
 
     return {
-      installPath: path.relative(rootPath, finalInstallPath).replace(/\\/g, "/"),
+      installPath: path
+        .relative(rootPath, finalInstallPath)
+        .replace(/\\/g, "/"),
       versionDetected: detectVersionFromName(archiveName),
       normalized: true,
     };
@@ -986,7 +1188,8 @@ async function handleInstallArchive(webContents, payload) {
   try {
     return await installArchiveInternal(webContents, payload);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Installation failed";
+    const message =
+      error instanceof Error ? error.message : "Installation failed";
     emitProgress(webContents, {
       jobId: payload?.jobId,
       phase: "error",
@@ -1031,7 +1234,8 @@ async function findMacAppInnerBinary(appBundlePath) {
     const entries = await fs.readdir(macosDir, { withFileTypes: true });
     const appName = path.basename(appBundlePath, ".app").toLowerCase();
     const files = entries.filter((e) => e.isFile());
-    const preferred = files.find((e) => e.name.toLowerCase() === appName) ?? files[0];
+    const preferred =
+      files.find((e) => e.name.toLowerCase() === appName) ?? files[0];
     if (preferred) {
       return path.join(macosDir, preferred.name);
     }
@@ -1077,12 +1281,19 @@ async function findLaunchableExecutable(dirPath, hints = []) {
       if (process.platform === "darwin" && lower.endsWith(".app")) {
         return fullPath;
       }
-      if (process.platform === "linux" && (lower.endsWith(".appimage") || lower.endsWith(".x86_64") || lower.endsWith(".sh"))) {
+      if (
+        process.platform === "linux" &&
+        (lower.endsWith(".appimage") ||
+          lower.endsWith(".x86_64") ||
+          lower.endsWith(".sh"))
+      ) {
         return fullPath;
       }
 
       if (process.platform === "linux") {
-        const isHintMatch = normalizedHints.some((hint) => hint.length > 0 && lower.includes(hint));
+        const isHintMatch = normalizedHints.some(
+          (hint) => hint.length > 0 && lower.includes(hint),
+        );
         const hasNoExtension = !entry.name.includes(".");
 
         if (isHintMatch && (hasNoExtension || lower.endsWith(".bin"))) {
@@ -1104,14 +1315,21 @@ async function findLaunchableExecutable(dirPath, hints = []) {
   if (process.platform === "win32" && windowsCandidates.length > 0) {
     const ranked = windowsCandidates
       .map((candidate) => {
-        const base = path.basename(candidate).toLowerCase().replace(/\.exe$/i, "");
-        const relativeDepth = path.relative(dirPath, candidate).split(path.sep).length;
+        const base = path
+          .basename(candidate)
+          .toLowerCase()
+          .replace(/\.exe$/i, "");
+        const relativeDepth = path
+          .relative(dirPath, candidate)
+          .split(path.sep).length;
 
         let score = 0;
 
         if (normalizedHints.some((hint) => hint.length > 0 && base === hint)) {
           score += 300;
-        } else if (normalizedHints.some((hint) => hint.length > 0 && base.includes(hint))) {
+        } else if (
+          normalizedHints.some((hint) => hint.length > 0 && base.includes(hint))
+        ) {
           score += 180;
         }
 
@@ -1158,9 +1376,20 @@ async function collectFileHints(dirPath) {
 
 async function getLaunchFailureHint(dirPath) {
   const names = await collectFileHints(dirPath);
-  const hasWindowsBinary = names.some((name) => name.endsWith(".exe") || name.endsWith(".msi") || name.endsWith(".bat"));
-  const hasMacBinary = names.some((name) => name.endsWith(".app") || name.endsWith(".dmg") || name.endsWith(".pkg"));
-  const hasLinuxBinary = names.some((name) => name.endsWith(".appimage") || name.endsWith(".x86_64") || name.endsWith(".sh"));
+  const hasWindowsBinary = names.some(
+    (name) =>
+      name.endsWith(".exe") || name.endsWith(".msi") || name.endsWith(".bat"),
+  );
+  const hasMacBinary = names.some(
+    (name) =>
+      name.endsWith(".app") || name.endsWith(".dmg") || name.endsWith(".pkg"),
+  );
+  const hasLinuxBinary = names.some(
+    (name) =>
+      name.endsWith(".appimage") ||
+      name.endsWith(".x86_64") ||
+      name.endsWith(".sh"),
+  );
   const hasAnyBinLike = names.some((name) => !name.includes("."));
 
   if (process.platform === "linux" && hasWindowsBinary && !hasLinuxBinary) {
@@ -1185,7 +1414,8 @@ async function handleLaunchEngine(payload) {
   const launcherPath = payload?.launcherPath;
   const executablePath = payload?.executablePath;
   const extraArgs = Array.isArray(payload?.args) ? payload.args : [];
-  const launchId = typeof payload?.launchId === "string" ? payload.launchId : null;
+  const launchId =
+    typeof payload?.launchId === "string" ? payload.launchId : null;
   if (!installPath) {
     throw new Error("installPath is required");
   }
@@ -1217,7 +1447,9 @@ async function handleLaunchEngine(payload) {
         throw new Error("Executable path is not a file");
       }
     } catch {
-      throw new Error(`Configured executable path was not found: ${launchable}`);
+      throw new Error(
+        `Configured executable path was not found: ${launchable}`,
+      );
     }
   } else {
     launchable = await findLaunchableExecutable(absolutePath, [
@@ -1249,11 +1481,20 @@ async function handleLaunchEngine(payload) {
   let command = launchable;
   let args = [];
   let launchCwd = path.dirname(launchable);
-  const isAppBundle = process.platform === "darwin" && launcher === "native" && launchable.toLowerCase().endsWith(".app");
+  const isAppBundle =
+    process.platform === "darwin" &&
+    launcher === "native" &&
+    launchable.toLowerCase().endsWith(".app");
   let usingOpenWrapper = false;
 
-  if (process.platform === "linux" && launcher === "native" && launchable.toLowerCase().endsWith(".exe")) {
-    throw new Error("Selected executable is a Windows .exe. Choose Wine/Wine64/Proton in Manage before launching.");
+  if (
+    process.platform === "linux" &&
+    launcher === "native" &&
+    launchable.toLowerCase().endsWith(".exe")
+  ) {
+    throw new Error(
+      "Selected executable is a Windows .exe. Choose Wine/Wine64/Proton in Manage before launching.",
+    );
   }
 
   if (isAppBundle) {
@@ -1290,10 +1531,13 @@ async function handleLaunchEngine(payload) {
 
   const startupGraceMs = 1200;
   const allowImmediateExit = launcher !== "native" || usingOpenWrapper;
-  const shouldDetach = !(process.platform === "win32" && launcher === "native" && !isAppBundle);
-  const shouldHideWindow = process.platform === "win32"
-    ? (launcher !== "native" || isAppBundle)
-    : true;
+  const shouldDetach = !(
+    process.platform === "win32" &&
+    launcher === "native" &&
+    !isAppBundle
+  );
+  const shouldHideWindow =
+    process.platform === "win32" ? launcher !== "native" || isAppBundle : true;
 
   const child = await new Promise((resolve, reject) => {
     let resolved = false;
@@ -1309,7 +1553,11 @@ async function handleLaunchEngine(payload) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "spawn failed";
       if (message.includes("ENOENT")) {
-        reject(new Error(`Launcher command not found: ${command}. Set a valid launcher path.`));
+        reject(
+          new Error(
+            `Launcher command not found: ${command}. Set a valid launcher path.`,
+          ),
+        );
         return;
       }
       reject(error);
@@ -1340,10 +1588,18 @@ async function handleLaunchEngine(payload) {
       resolved = true;
       clearTimeout(timeout);
       if (signal) {
-        reject(new Error(`Engine process exited immediately (signal: ${signal}). Check executable path and launcher settings.`));
+        reject(
+          new Error(
+            `Engine process exited immediately (signal: ${signal}). Check executable path and launcher settings.`,
+          ),
+        );
         return;
       }
-      reject(new Error(`Engine process exited immediately (code: ${code ?? "unknown"}). Check executable path and launcher settings.`));
+      reject(
+        new Error(
+          `Engine process exited immediately (code: ${code ?? "unknown"}). Check executable path and launcher settings.`,
+        ),
+      );
     });
 
     spawned.once("error", (error) => {
@@ -1354,7 +1610,11 @@ async function handleLaunchEngine(payload) {
       clearTimeout(timeout);
       const message = error instanceof Error ? error.message : "spawn failed";
       if (message.includes("ENOENT")) {
-        reject(new Error(`Launcher command not found: ${command}. Set a valid launcher path.`));
+        reject(
+          new Error(
+            `Launcher command not found: ${command}. Set a valid launcher path.`,
+          ),
+        );
         return;
       }
       reject(error instanceof Error ? error : new Error(message));
@@ -1363,7 +1623,11 @@ async function handleLaunchEngine(payload) {
 
   if (launchId && child.exitCode === null) {
     const startTime = Date.now();
-    runningProcesses.set(launchId, { pid: child.pid, installPath: absolutePath, startTime });
+    runningProcesses.set(launchId, {
+      pid: child.pid,
+      installPath: absolutePath,
+      startTime,
+    });
     child.once("exit", () => {
       runningProcesses.delete(launchId);
       for (const win of BrowserWindow.getAllWindows()) {
@@ -1499,13 +1763,29 @@ async function handleInspectEngineInstall(payload) {
   try {
     const stats = await fs.stat(absolutePath);
     if (!stats.isDirectory()) {
-      return { ok: true, health: "broken_install", message: "Engine path is not a directory" };
+      return {
+        ok: true,
+        health: "broken_install",
+        message: "Engine path is not a directory",
+      };
     }
   } catch {
-    return { ok: true, health: "broken_install", message: "Engine directory is missing" };
+    return {
+      ok: true,
+      health: "broken_install",
+      message: "Engine directory is missing",
+    };
   }
 
-  const launchablePath = await findLaunchableExecutable(absolutePath, [path.basename(installPath), "funkin", "alepsych", "ale-psych", "ale psych", "psych", "engine"]);
+  const launchablePath = await findLaunchableExecutable(absolutePath, [
+    path.basename(installPath),
+    "funkin",
+    "alepsych",
+    "ale-psych",
+    "ale psych",
+    "psych",
+    "engine",
+  ]);
   if (!launchablePath) {
     const hint = await getLaunchFailureHint(absolutePath);
     return { ok: true, health: "missing_binary", message: hint };
@@ -1564,10 +1844,15 @@ async function handleImportEngineFolder(payload) {
     throw new Error("sourcePath must be a directory");
   }
 
-  const { rootPath, enginesPath } = await resolveInstallDirs("engine", `engines/${slug}`);
+  const { rootPath, enginesPath } = await resolveInstallDirs(
+    "engine",
+    `engines/${slug}`,
+  );
   await ensureDir(enginesPath);
 
-  const safeVersion = (version || "imported").toString().replace(/[^A-Za-z0-9._-]+/g, "-") || "imported";
+  const safeVersion =
+    (version || "imported").toString().replace(/[^A-Za-z0-9._-]+/g, "-") ||
+    "imported";
   const relInstallPath = `engines/${slug}/${safeVersion}-${Date.now()}`;
   const absoluteInstallPath = safeJoin(rootPath, relInstallPath);
 
@@ -1576,7 +1861,12 @@ async function handleImportEngineFolder(payload) {
   await fs.cp(sourceAbsolute, absoluteInstallPath, { recursive: true });
   await ensureDir(path.join(absoluteInstallPath, "mods"));
 
-  const launchablePath = await findLaunchableExecutable(absoluteInstallPath, [slug, path.basename(sourceAbsolute), "funkin", "engine"]);
+  const launchablePath = await findLaunchableExecutable(absoluteInstallPath, [
+    slug,
+    path.basename(sourceAbsolute),
+    "funkin",
+    "engine",
+  ]);
   if (!launchablePath) {
     await removePath(absoluteInstallPath);
     return {
@@ -1589,7 +1879,10 @@ async function handleImportEngineFolder(payload) {
     ok: true,
     installPath: relInstallPath,
     modsPath: `${relInstallPath}/mods`,
-    detectedVersion: detectVersionFromName(path.basename(sourceAbsolute)) || version || "imported",
+    detectedVersion:
+      detectVersionFromName(path.basename(sourceAbsolute)) ||
+      version ||
+      "imported",
   };
 }
 
@@ -1599,7 +1892,9 @@ async function handleImportModFolder(payload) {
   const installSubdir = payload?.installSubdir;
 
   if (!sourcePath || !targetModsPath || !installSubdir) {
-    throw new Error("sourcePath, targetModsPath and installSubdir are required");
+    throw new Error(
+      "sourcePath, targetModsPath and installSubdir are required",
+    );
   }
 
   const sourceAbsolute = path.resolve(sourcePath);
@@ -1613,7 +1908,10 @@ async function handleImportModFolder(payload) {
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
   const targetRoot = safeJoin(rootPath, targetModsPath);
-  const targetInstall = safeJoin(rootPath, `${targetModsPath}/${installSubdir}`);
+  const targetInstall = safeJoin(
+    rootPath,
+    `${targetModsPath}/${installSubdir}`,
+  );
 
   if (!isPathInside(rootPath, targetInstall)) {
     throw new Error("target path must be inside FunkHub data root");
@@ -1650,9 +1948,10 @@ async function handleClearItchAuth() {
 async function handleStartItchOAuth(payload) {
   const clientId = payload?.clientId;
   const redirectPort = Number(payload?.redirectPort || 34567);
-  const scopes = Array.isArray(payload?.scopes) && payload.scopes.length > 0
-    ? payload.scopes
-    : ["profile:me", "profile:owned"];
+  const scopes =
+    Array.isArray(payload?.scopes) && payload.scopes.length > 0
+      ? payload.scopes
+      : ["profile:me", "profile:owned"];
 
   if (!clientId) {
     throw new Error("itch clientId is required");
@@ -1713,7 +2012,10 @@ async function handleStartItchOAuth(payload) {
           if (!accessToken) {
             res.writeHead(400);
             res.end("Missing access token");
-            finish(new Error("Missing access token from itch OAuth callback"), true);
+            finish(
+              new Error("Missing access token from itch OAuth callback"),
+              true,
+            );
             return;
           }
           if (returnedState !== state) {
@@ -1744,7 +2046,9 @@ async function handleStartItchOAuth(payload) {
 
     server.listen(redirectPort, "127.0.0.1", () => {
       const { shell } = require("electron");
-      shell.openExternal(authUrl.toString()).catch((error) => finish(error, true));
+      shell
+        .openExternal(authUrl.toString())
+        .catch((error) => finish(error, true));
     });
 
     const timeout = setTimeout(() => {
@@ -1757,7 +2061,8 @@ async function handleStartItchOAuth(payload) {
 
 function platformUploadMatch(platform, fileName) {
   const lower = fileName.toLowerCase();
-  if (platform === "windows") return lower.includes("windows") || lower.includes("win");
+  if (platform === "windows")
+    return lower.includes("windows") || lower.includes("win");
   if (platform === "linux") return lower.includes("linux");
   if (platform === "macos") return lower.includes("mac");
   return true;
@@ -1784,14 +2089,25 @@ async function getItchFunkinUploads(token) {
 
   let target = null;
   for (let page = 1; page <= 25; page += 1) {
-    const ownedResponse = await fetch(`https://api.itch.io/profile/owned-keys?page=${page}`, { headers });
+    const ownedResponse = await fetch(
+      `https://api.itch.io/profile/owned-keys?page=${page}`,
+      { headers },
+    );
     if (!ownedResponse.ok) {
       throw new Error("itch.io auth failed, reconnect your account");
     }
 
     const ownedPayload = await ownedResponse.json();
-    const ownedKeys = Array.isArray(ownedPayload?.owned_keys) ? ownedPayload.owned_keys : [];
-    target = ownedKeys.find((entry) => entry?.game_id === 792778 || String(entry?.game?.url || "").includes("ninja-muffin24.itch.io/funkin"));
+    const ownedKeys = Array.isArray(ownedPayload?.owned_keys)
+      ? ownedPayload.owned_keys
+      : [];
+    target = ownedKeys.find(
+      (entry) =>
+        entry?.game_id === 792778 ||
+        String(entry?.game?.url || "").includes(
+          "ninja-muffin24.itch.io/funkin",
+        ),
+    );
     if (target) {
       break;
     }
@@ -1805,13 +2121,18 @@ async function getItchFunkinUploads(token) {
     throw new Error("Funkin base game is not found in your itch.io library");
   }
 
-  const uploadsResponse = await fetch(`https://api.itch.io/games/${target.game_id}/uploads?download_key=${target.id}`, { headers });
+  const uploadsResponse = await fetch(
+    `https://api.itch.io/games/${target.game_id}/uploads?download_key=${target.id}`,
+    { headers },
+  );
   if (!uploadsResponse.ok) {
     throw new Error("Failed to query itch.io uploads");
   }
 
   const uploadsPayload = await uploadsResponse.json();
-  const uploads = Array.isArray(uploadsPayload?.uploads) ? uploadsPayload.uploads : [];
+  const uploads = Array.isArray(uploadsPayload?.uploads)
+    ? uploadsPayload.uploads
+    : [];
 
   return {
     headers,
@@ -1833,18 +2154,20 @@ async function handleListItchBaseGameReleases() {
 
   try {
     const { uploads } = await getItchFunkinUploads(token);
-    const releases = uploads.map((upload) => {
-      const fileName = String(upload?.filename || "Funkin build");
-      const platform = detectPlatformFromUploadName(fileName);
-      return {
-        platform,
-        version: detectVersionFromUploadName(fileName),
-        fileName,
-        uploadId: Number(upload?.id || 0),
-        downloadUrl: `itch://upload/${upload?.id}`,
-        sourceUrl: "https://ninja-muffin24.itch.io/funkin",
-      };
-    }).filter((entry) => Number.isFinite(entry.uploadId) && entry.uploadId > 0);
+    const releases = uploads
+      .map((upload) => {
+        const fileName = String(upload?.filename || "Funkin build");
+        const platform = detectPlatformFromUploadName(fileName);
+        return {
+          platform,
+          version: detectVersionFromUploadName(fileName),
+          fileName,
+          uploadId: Number(upload?.id || 0),
+          downloadUrl: `itch://upload/${upload?.id}`,
+          sourceUrl: "https://ninja-muffin24.itch.io/funkin",
+        };
+      })
+      .filter((entry) => Number.isFinite(entry.uploadId) && entry.uploadId > 0);
 
     return {
       ok: true,
@@ -1853,7 +2176,8 @@ async function handleListItchBaseGameReleases() {
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Failed to load itch releases",
+      message:
+        error instanceof Error ? error.message : "Failed to load itch releases",
       releases: [],
     };
   }
@@ -1866,7 +2190,8 @@ async function handleResolveItchBaseGameDownload(payload) {
   if (!uploadId && platform === "unknown") {
     return {
       ok: false,
-      message: "Platform is unknown. Select a specific base game release for your OS.",
+      message:
+        "Platform is unknown. Select a specific base game release for your OS.",
     };
   }
 
@@ -1888,16 +2213,24 @@ async function handleResolveItchBaseGameDownload(payload) {
     return {
       ok: false,
       requiresAuth: true,
-      message: error instanceof Error ? error.message : "Failed to query itch.io uploads",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to query itch.io uploads",
     };
   }
 
   const upload = uploadId
     ? uploads.find((entry) => Number(entry?.id) === uploadId)
-    : (uploads.find((entry) => platformUploadMatch(platform, String(entry?.filename || ""))) || uploads[0]);
+    : uploads.find((entry) =>
+        platformUploadMatch(platform, String(entry?.filename || "")),
+      ) || uploads[0];
 
   if (!upload?.id) {
-    return { ok: false, message: "No compatible itch.io base game upload found" };
+    return {
+      ok: false,
+      message: "No compatible itch.io base game upload found",
+    };
   }
 
   const downloadResponse = await fetch(
@@ -1954,16 +2287,23 @@ async function handleCheckAppUpdate() {
     appUpdateState.lastInfo = mapped;
     return { ok: true, info: mapped };
   } catch (error) {
-    if (error instanceof Error && /module is missing in this build/i.test(error.message)) {
+    if (
+      error instanceof Error &&
+      /module is missing in this build/i.test(error.message)
+    ) {
       return {
         ok: true,
-        info: createUpdaterUnavailableInfo("Auto updater unavailable", "In-app auto updates are unavailable in this build. Use the GitHub release download link instead."),
+        info: createUpdaterUnavailableInfo(
+          "Auto updater unavailable",
+          "In-app auto updates are unavailable in this build. Use the GitHub release download link instead.",
+        ),
       };
     }
 
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Failed to check app update",
+      error:
+        error instanceof Error ? error.message : "Failed to check app update",
     };
   }
 }
@@ -1972,9 +2312,10 @@ async function handleDownloadAppUpdate() {
   if (!canUseNativeAutoUpdater()) {
     return {
       ok: false,
-      error: process.platform === "linux"
-        ? "In-app updates require the AppImage build. Download the latest AppImage from GitHub releases."
-        : "In-app auto download is unavailable in this build.",
+      error:
+        process.platform === "linux"
+          ? "In-app updates require the AppImage build. Download the latest AppImage from GitHub releases."
+          : "In-app auto download is unavailable in this build.",
     };
   }
 
@@ -1985,7 +2326,10 @@ async function handleDownloadAppUpdate() {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Failed to download app update",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to download app update",
     };
   }
 }
@@ -2007,17 +2351,20 @@ async function handleInstallAppUpdate() {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Failed to install app update",
+      error:
+        error instanceof Error ? error.message : "Failed to install app update",
     };
   }
 }
 
 function handleGetRunningLaunches() {
-  const launches = Array.from(runningProcesses.entries()).map(([launchId, info]) => ({
-    launchId,
-    installPath: info.installPath,
-    startTime: info.startTime,
-  }));
+  const launches = Array.from(runningProcesses.entries()).map(
+    ([launchId, info]) => ({
+      launchId,
+      installPath: info.installPath,
+      startTime: info.startTime,
+    }),
+  );
   return { launches };
 }
 
@@ -2032,13 +2379,19 @@ function handleKillLaunch(payload) {
   }
   try {
     if (process.platform === "win32") {
-      spawn("taskkill", ["/PID", String(info.pid), "/F", "/T"], { stdio: "ignore" });
+      spawn("taskkill", ["/PID", String(info.pid), "/F", "/T"], {
+        stdio: "ignore",
+      });
     } else {
       process.kill(info.pid, "SIGTERM");
     }
     return { ok: true };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "Failed to kill process" };
+    return {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : "Failed to kill process",
+    };
   }
 }
 
@@ -2058,7 +2411,11 @@ async function handleDetectWineRuntimes() {
   for (const candidate of candidates) {
     try {
       await fs.access(candidate.path, fsSync.constants.X_OK);
-      found.push({ type: candidate.type, path: candidate.path, label: candidate.type === "wine64" ? "Wine64" : "Wine" });
+      found.push({
+        type: candidate.type,
+        path: candidate.path,
+        label: candidate.type === "wine64" ? "Wine64" : "Wine",
+      });
     } catch {
       // not found
     }
@@ -2097,7 +2454,14 @@ async function handleScanCommonEnginePaths() {
   const os = require("node:os");
   const home = os.homedir();
 
-  const ENGINE_BINARY_NAMES = ["Funkin.exe", "Funkin", "FunkinLinux64", "Funkin-Mac", "FPSPlus.exe", "FPSPlus"];
+  const ENGINE_BINARY_NAMES = [
+    "Funkin.exe",
+    "Funkin",
+    "FunkinLinux64",
+    "Funkin-Mac",
+    "FPSPlus.exe",
+    "FPSPlus",
+  ];
 
   const searchRoots = [
     path.join(home, "Games"),

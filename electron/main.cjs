@@ -79,12 +79,13 @@ function enqueueDeepLink(rawUrl) {
 function registerProtocolHandler() {
   try {
     if (process.defaultApp && process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient("funkhub", process.execPath, [path.resolve(process.argv[1])]);
+      app.setAsDefaultProtocolClient("funkhub", process.execPath, [
+        path.resolve(process.argv[1]),
+      ]);
       return;
     }
     app.setAsDefaultProtocolClient("funkhub");
-  } catch {
-  }
+  } catch {}
 }
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
@@ -222,9 +223,12 @@ app.whenReady().then(() => {
     return handleListItchBaseGameReleases();
   });
 
-  ipcMain.handle("funkhub:resolveItchBaseGameDownload", async (_event, payload) => {
-    return handleResolveItchBaseGameDownload(payload);
-  });
+  ipcMain.handle(
+    "funkhub:resolveItchBaseGameDownload",
+    async (_event, payload) => {
+      return handleResolveItchBaseGameDownload(payload);
+    },
+  );
 
   ipcMain.handle("funkhub:inspectEngineInstall", async (_event, payload) => {
     return handleInspectEngineInstall(payload);

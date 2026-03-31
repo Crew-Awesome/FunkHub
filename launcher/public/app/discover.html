@@ -1,0 +1,66 @@
+<div class="discover-container">
+  <div class="discover-sticky-header">
+    <div class="discover-search-row">
+      <button id="discover-filter-btn" class="discover-filter-btn" title="Filter Categories">
+        <i data-lucide="filter"></i>
+      </button>
+      <button id="discover-view-toggle" class="discover-filter-btn" title="Toggle View">
+        <i data-lucide="list"></i>
+      </button>
+      <div class="discover-search-wrapper">
+        <i data-lucide="search" class="discover-search-icon"></i>
+        <input 
+          type="text" 
+          id="discover-search-input" 
+          class="discover-search-input" 
+          placeholder="Search mods or paste a GameBanana URL..." 
+        />
+      </div>
+    </div>
+  </div>
+
+  <div id="discover-hero" class="discover-hero">
+    <div class="hero-main" id="hero-main-banner" onclick="window.launcher.discover.ui.triggerHeroClick()">
+      <div class="hero-gradient"></div>
+      <div class="hero-badge" id="hero-badge">Trending</div>
+      <div class="hero-content" id="hero-content">
+        <h3 class="hero-title" id="hero-title">Loading...</h3>
+        <p class="hero-desc" id="hero-desc"></p>
+      </div>
+      <div class="hero-progress-bar">
+        <div class="hero-progress-fill" id="hero-progress"></div>
+      </div>
+    </div>
+    
+    <div class="hero-strip">
+      <button class="strip-nav-btn" id="hero-prev"><i data-lucide="chevron-left"></i></button>
+      <div class="hero-strip-viewport">
+        <div class="hero-strip-track" id="hero-strip-container"></div>
+      </div>
+      <button class="strip-nav-btn" id="hero-next"><i data-lucide="chevron-right"></i></button>
+    </div>
+  </div>
+
+  <div class="discover-layout-single">
+    <div class="categories-carousel-wrapper">
+      <button class="pill-nav-btn hidden" id="pill-nav-prev"><i data-lucide="chevron-left"></i></button>
+      <div class="categories-pills-viewport" id="pills-viewport">
+        <div class="categories-pills-track" id="discover-categories">
+          <div class="categories-pills-indicator" id="pills-indicator"></div>
+        </div>
+      </div>
+      <button class="pill-nav-btn" id="pill-nav-next"><i data-lucide="chevron-right"></i></button>
+    </div>
+
+    <div id="discover-status" style="font-size: 0.875rem; color: var(--muted-foreground); margin-bottom: 8px;">
+      Loading mods...
+    </div>
+    
+    <div class="mods-layout-grid" id="discover-grid"></div>
+
+    <div id="discover-scroll-sentinel" class="scroll-sentinel">
+      <div class="spinner"></div>
+      <span>Loading more mods...</span>
+    </div>
+  </div>
+</div>

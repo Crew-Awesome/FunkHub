@@ -1,0 +1,140 @@
+.filter-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  background-color: transparent;
+}
+
+.filter-modal-overlay.active {
+  display: block;
+}
+
+.filter-modal-content {
+  position: absolute;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 320px;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  transform-origin: top left;
+  transform: scale(0.95) translateY(-10px);
+  opacity: 0;
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
+  z-index: 201;
+  pointer-events: none;
+}
+
+.filter-modal-overlay.active + .filter-modal-content,
+.filter-modal-content.active {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.filter-modal-header {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-modal-search-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.filter-modal-search-wrapper i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.filter-modal-search-input {
+  width: 100%;
+  background-color: var(--input-background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px 8px 36px;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.filter-modal-search-input:focus {
+  border-color: var(--primary);
+}
+
+.filter-modal-body {
+  padding: 8px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-tree-node {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+  border: 1px solid transparent;
+}
+
+.filter-tree-row:hover {
+  background-color: var(--secondary);
+}
+
+.filter-tree-row.active {
+  background-color: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.filter-tree-toggle {
+  background: none;
+  border: none;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.filter-tree-toggle:hover {
+  color: var(--foreground);
+  background-color: var(--muted);
+}
+
+.filter-tree-children {
+  display: flex;
+  flex-direction: column;
+  margin-left: 20px;
+  border-left: 1px solid var(--border);
+  padding-left: 8px;
+  margin-top: 4px;
+}

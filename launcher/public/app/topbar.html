@@ -1,0 +1,39 @@
+<div class="topbar-header">
+  <h1 class="topbar-title" onclick="window.launcher.router.navigate('home')">FunkHub</h1>
+</div>
+
+<nav class="topbar-nav" id="topbar-nav">
+  <div class="active-indicator" id="topbar-active-indicator"></div>
+
+  <div class="topbar-item" data-route="discover" onclick="window.launcher.router.navigate('discover')">
+    <div class="icon-wrapper"><i data-lucide="compass"></i></div>
+    <span>Discover</span>
+  </div>
+
+  <div class="topbar-item" data-route="library" onclick="window.launcher.router.navigate('library')">
+    <div class="icon-wrapper"><i data-lucide="library"></i></div>
+    <span>Library</span>
+  </div>
+
+  <div class="topbar-item" data-route="downloads" onclick="window.launcher.router.navigate('downloads')">
+    <div class="icon-wrapper"><i data-lucide="download"></i></div>
+    <span>Downloads</span>
+  </div>
+
+  <div class="topbar-item" data-route="updates" onclick="window.launcher.router.navigate('updates')">
+    <div class="icon-wrapper"><i data-lucide="refresh-cw"></i></div>
+    <span>Updates</span>
+  </div>
+
+  <div class="topbar-item" data-route="engines" onclick="window.launcher.router.navigate('engines')">
+    <div class="icon-wrapper"><i data-lucide="cpu"></i></div>
+    <span>Engines</span>
+  </div>
+</nav>
+
+<div class="topbar-footer">
+  <div class="topbar-item" data-route="settings" onclick="window.launcher.router.navigate('settings')">
+    <div class="icon-wrapper"><i data-lucide="settings"></i></div>
+    <span>Settings</span>
+  </div>
+</div>

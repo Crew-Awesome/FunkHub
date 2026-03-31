@@ -1,0 +1,116 @@
+.categories-carousel-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.pill-nav-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.pill-nav-btn:hover {
+  background-color: var(--secondary);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.pill-nav-btn.hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.categories-pills-viewport {
+  flex: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  scroll-behavior: smooth;
+}
+
+.categories-pills-track {
+  display: flex;
+  justify-content: flex-start; /* Alineado a la izquierda */
+  gap: 12px;
+  position: relative;
+  width: max-content;
+  padding: 4px;
+}
+
+/* ... (El resto sigue igual) ... */
+
+.categories-pills-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: 999px;
+  z-index: 0;
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.categories-pills-indicator.active {
+  opacity: 1;
+}
+
+.category-pill {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.2s ease;
+  flex: 0 0 auto;
+  width: max-content;
+}
+
+.category-pill span {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.category-pill:hover {
+  color: var(--foreground);
+  border-color: var(--muted-foreground);
+  transform: translateY(-2px);
+}
+
+.category-pill.active {
+  color: var(--primary);
+  border-color: transparent;
+  background-color: transparent;
+}
