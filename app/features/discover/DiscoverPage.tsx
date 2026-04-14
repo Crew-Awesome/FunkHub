@@ -70,6 +70,7 @@ export function Discover() {
   const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
   const [onboardingOpen, setOnboardingOpen] = useState(!settings.firstRunCompleted);
+  const [onboardingStep, setOnboardingStep] = useState(0);
   const [showCategoryPanel, setShowCategoryPanel] = useState(false);
   const [bestOfIndex, setBestOfIndex] = useState(0);
   const [bestOfStripOffset, setBestOfStripOffset] = useState(0);
@@ -164,6 +165,7 @@ export function Discover() {
   useEffect(() => {
     if (needsOnboarding) {
       setOnboardingOpen(true);
+      setOnboardingStep(0);
     }
   }, [needsOnboarding]);
 
@@ -333,7 +335,10 @@ export function Discover() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setOnboardingOpen(true)}
+                  onClick={() => {
+                    setOnboardingStep(0);
+                    setOnboardingOpen(true);
+                  }}
                   className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
                   {t("discover.openWizard", "Open Wizard")}
@@ -828,7 +833,15 @@ export function Discover() {
         }}
       />
 
-      <Dialog open={onboardingOpen} onOpenChange={setOnboardingOpen}>
+      <Dialog
+        open={onboardingOpen}
+        onOpenChange={(open) => {
+          setOnboardingOpen(open);
+          if (open) {
+            setOnboardingStep(0);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("discover.welcome", "Welcome to FunkHub")}</DialogTitle>
@@ -838,92 +851,124 @@ export function Discover() {
           </DialogHeader>
 
           <div className="space-y-3 text-sm">
-            <div className="rounded-lg border border-border p-3">
-              <p className="font-medium text-foreground">{t("discover.step0", "0) Choose your language")}</p>
-              <p className="mt-1 text-muted-foreground">{t("discover.step0Desc", "Pick your preferred UI language before continuing setup.")}</p>
-              <select
-                value={locale}
-                onChange={(event) => {
-                  void setLocale(event.target.value as SupportedLocale);
-                }}
-                className="mt-2 w-full rounded-lg border border-border bg-input-background px-3 py-2 text-foreground"
-              >
-                {locales.map((item) => (
-                  <option key={item.code} value={item.code}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              {t("discover.stepProgress", "Step {{current}} of {{total}}", { current: String(onboardingStep + 1), total: "4" })}
+            </p>
 
-            <div className="rounded-lg border border-border p-3">
-              <p className="font-medium text-foreground">{t("discover.step1", "1) Choose your game folder")}</p>
-              <p className="mt-1 text-muted-foreground">{t("discover.step1Desc", "Pick your Friday Night Funkin' directory so FunkHub can open and reference local files.")}</p>
-              <button
-                onClick={async () => {
-                  const selected = await browseFolder({
-                    title: t("discover.chooseGameFolder", "Choose your FNF game folder"),
-                    defaultPath: settings.gameDirectory || undefined,
-                  });
-                  if (selected) {
-                    await updateSettings({ gameDirectory: selected });
-                  }
-                }}
-                className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
-              >
-                {t("discover.chooseGameFolderBtn", "Choose Game Folder")}
-              </button>
-              <p className="mt-2 text-xs text-muted-foreground break-all">{t("discover.current", "Current")}: {settings.gameDirectory || t("discover.notSet", "Not set")}</p>
-            </div>
-
-            <div className="rounded-lg border border-border p-3">
-              <p className="font-medium text-foreground">{t("discover.step2", "2) Choose data root (engine installs)")}</p>
-              <p className="mt-1 text-muted-foreground">{t("discover.step2Desc", "This is where FunkHub stores engine installs and imported content.")}</p>
-              <button
-                onClick={async () => {
-                  const selected = await browseFolder({
-                    title: t("discover.chooseEngineRoot", "Choose engine install root"),
-                    defaultPath: settings.dataRootDirectory || undefined,
-                  });
-                  if (selected) {
-                    await updateSettings({ dataRootDirectory: selected });
-                  }
-                }}
-                className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
-              >
-                {t("discover.chooseDataRoot", "Choose Data Root")}
-              </button>
-              <p className="mt-2 text-xs text-muted-foreground break-all">{t("discover.current", "Current")}: {settings.dataRootDirectory || t("discover.notSetDefault", "Not set (app default)")}</p>
-            </div>
-
-            <div className="rounded-lg border border-border p-3">
-              <p className="font-medium text-foreground">{t("discover.step3", "3) Install an engine and test one-click")}</p>
-              <p className="mt-1 text-muted-foreground">{t("discover.step3Desc", "After installing an engine, test with a URL like:")}</p>
-              <p className="mt-1 font-mono text-xs text-muted-foreground">{t("discover.exampleDeepLink", "funkhub://mod/install/<ModId>/<FileId>")}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  onClick={() => navigate("/engines")}
-                  className="rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+            {onboardingStep === 0 && (
+              <div className="rounded-lg border border-border p-3">
+                <p className="font-medium text-foreground">{t("discover.step0", "0) Choose your language")}</p>
+                <p className="mt-1 text-muted-foreground">{t("discover.step0Desc", "Pick your preferred UI language before continuing setup.")}</p>
+                <select
+                  value={locale}
+                  onChange={(event) => {
+                    void setLocale(event.target.value as SupportedLocale);
+                  }}
+                  className="mt-2 w-full rounded-lg border border-border bg-input-background px-3 py-2 text-foreground"
                 >
-                  {t("discover.openEngines", "Open Engines")}
-                </button>
-                <button
-                  onClick={() => navigate("/settings")}
-                  className="rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
-                >
-                  {t("discover.openSettings", "Open Settings")}
-                </button>
+                  {locales.map((item) => (
+                    <option key={item.code} value={item.code}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
+            )}
+
+            {onboardingStep === 1 && (
+              <div className="rounded-lg border border-border p-3">
+                <p className="font-medium text-foreground">{t("discover.step1", "1) Choose your game folder")}</p>
+                <p className="mt-1 text-muted-foreground">{t("discover.step1Desc", "Select the folder that contains your Friday Night Funkin' executable.")}</p>
+                <button
+                  onClick={async () => {
+                    const selected = await browseFolder({
+                      title: t("discover.chooseGameFolder", "Choose your FNF base game folder"),
+                      defaultPath: settings.gameDirectory || undefined,
+                    });
+                    if (selected) {
+                      await updateSettings({ gameDirectory: selected });
+                    }
+                  }}
+                  className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                >
+                  {t("discover.chooseGameFolderBtn", "Choose Game Folder")}
+                </button>
+                <p className="mt-2 text-xs text-muted-foreground break-all">{t("discover.current", "Current")}: {settings.gameDirectory || t("discover.notSet", "Not set")}</p>
+              </div>
+            )}
+
+            {onboardingStep === 2 && (
+              <div className="rounded-lg border border-border p-3">
+                <p className="font-medium text-foreground">{t("discover.step2", "2) Choose FunkHub data folder")}</p>
+                <p className="mt-1 text-muted-foreground">{t("discover.step2Desc", "FunkHub stores engine installs and managed content here (engines, imported mods, and app-managed files).")}</p>
+                <button
+                  onClick={async () => {
+                    const selected = await browseFolder({
+                      title: t("discover.chooseEngineRoot", "Choose your FunkHub data folder"),
+                      defaultPath: settings.dataRootDirectory || undefined,
+                    });
+                    if (selected) {
+                      await updateSettings({ dataRootDirectory: selected });
+                    }
+                  }}
+                  className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                >
+                  {t("discover.chooseDataRoot", "Choose Data Folder")}
+                </button>
+                <p className="mt-2 text-xs text-muted-foreground break-all">{t("discover.current", "Current")}: {settings.dataRootDirectory || t("discover.notSet", "Not set")}</p>
+              </div>
+            )}
+
+            {onboardingStep === 3 && (
+              <div className="rounded-lg border border-border p-3">
+                <p className="font-medium text-foreground">{t("discover.step3", "3) Install an engine and test one-click")}</p>
+                <p className="mt-1 text-muted-foreground">{t("discover.step3Desc", "Install at least one engine next so mods can launch correctly. You can skip deep-link testing for now.")}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => navigate("/engines")}
+                    className="rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                  >
+                    {t("discover.openEngines", "Open Engines")}
+                  </button>
+                  <button
+                    onClick={() => navigate("/settings")}
+                    className="rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                  >
+                    {t("discover.openSettings", "Open Settings")}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
-            <button
-              onClick={completeOnboarding}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              {t("discover.markSetupComplete", "Mark Setup Complete")}
-            </button>
+            <div className="flex w-full items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setOnboardingStep((current) => Math.max(0, current - 1))}
+                disabled={onboardingStep === 0}
+                className="rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t("discover.previous", "Previous")}
+              </button>
+
+              {onboardingStep < 3 ? (
+                <button
+                  type="button"
+                  onClick={() => setOnboardingStep((current) => Math.min(3, current + 1))}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t("discover.next", "Next")}
+                </button>
+              ) : (
+                <button
+                  onClick={completeOnboarding}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t("discover.markSetupComplete", "Mark Setup Complete")}
+                </button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
