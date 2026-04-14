@@ -5,15 +5,11 @@ on:
     branches: [main]
     paths-ignore:
       - "app/i18n/locales/**"
-      - "weblate.config.json"
-      - "scripts/configure-weblate.mjs"
       - "**/*.md"
   pull_request:
     branches: [main]
     paths-ignore:
       - "app/i18n/locales/**"
-      - "weblate.config.json"
-      - "scripts/configure-weblate.mjs"
       - "**/*.md"
 
 permissions:
