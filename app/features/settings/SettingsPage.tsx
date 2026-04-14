@@ -253,9 +253,9 @@ export function Settings() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <button onClick={() => openFolderSafe(dataRootDirectory || ".")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">{t("settings.openDataRoot", "Open Data Root")}</button>
-                <button onClick={() => openFolderSafe("engines")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">{t("settings.openEnginesFolder", "Open Engines Folder")}</button>
+                <button onClick={() => openFolderSafe(dataRootDirectory || ".")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">{t("settings.openEnginesFolder", "Open Engines Folder")}</button>
                 <button onClick={() => openFolderSafe(downloadsDirectory || "downloads")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">{t("settings.openDownloadsFolder", "Open Downloads Folder")}</button>
-                <button onClick={() => openFolderSafe(defaultEngine?.modsPath || "engines")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">{t("settings.openModsFolder", "Open Mods Folder")}</button>
+                <button onClick={() => openFolderSafe(defaultEngine?.modsPath || dataRootDirectory || ".")} className="px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary text-left text-sm">{t("settings.openModsFolder", "Open Mods Folder")}</button>
                 <button
                   onClick={() => gameDirectory.trim() && openFolderSafe(gameDirectory)}
                   disabled={!gameDirectory.trim()}
