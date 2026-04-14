@@ -468,7 +468,7 @@ export function Library() {
                   >
                     <ChevronDown className={`w-3 h-3 transition-transform shrink-0 ${isCollapsed ? "-rotate-90" : ""}`} />
                     {engineInstall && (
-                      <img src={engineInstall.customIconUrl ?? getEngineIcon(engineInstall.slug)} alt="" className="w-3 h-3 object-contain shrink-0" />
+                      <img src={engineInstall.customIconUrl ?? getEngineIcon(engineInstall.slug)} alt="" className="w-3 h-3 object-contain shrink-0" loading="lazy" />
                     )}
                     <span className="truncate">{groupLabel}</span>
                     <span className="ml-auto font-normal normal-case">{mods.length}</span>
