@@ -191,14 +191,19 @@ const staticOnlyEngines: EngineDefinition[] = [
 
 function detectPlatformFromAsset(name: string): EngineRelease["platform"] {
   const lowered = name.toLowerCase();
-  if (lowered.includes("win")) {
+
+  const hasToken = (tokens: string[]) => {
+    return tokens.some((token) => new RegExp(`(^|[^a-z0-9])${token}([^a-z0-9]|$)`).test(lowered));
+  };
+
+  if (hasToken(["windows", "win32", "win64", "win"])) {
     return "windows";
   }
-  if (lowered.includes("mac") || lowered.includes("osx")) {
-    return "macos";
-  }
-  if (lowered.includes("linux")) {
+  if (hasToken(["linux", "appimage"])) {
     return "linux";
+  }
+  if (hasToken(["macos", "mac", "osx", "darwin"])) {
+    return "macos";
   }
   return "any";
 }
