@@ -196,8 +196,6 @@ export interface FunkHubSettings {
   checkAppUpdatesOnStartup: boolean;
   autoDownloadAppUpdates: boolean;
   autoUpdateMods: boolean;
-  autoUpdateEngines: boolean;
-  sendAnalytics: boolean;
   showAnimations: boolean;
   gameBananaIntegration: {
     pollingIntervalSeconds: number;
