@@ -128,9 +128,7 @@ bun run electron:dev
 bun run build
 
 # Desktop packages
-bun run build:desktop:linux:appimage   # AppImage (x64)
-bun run build:desktop:linux:deb        # .deb (x64)
-bun run build:desktop:linux            # AppImage + .deb (x64)
+bun run build:desktop:linux            # AppImage (x64)
 bun run build:desktop:win              # NSIS + portable (x64)
 bun run build:desktop:mac              # DMG + ZIP
 ```
