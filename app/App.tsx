@@ -1,8 +1,8 @@
-import { Suspense, useEffect } from "react";
+import { Suspense, type ReactNode } from "react";
 import { RouterProvider } from "react-router";
 import { MotionConfig } from "motion/react";
 import { router } from "./router";
-import { FunkHubProvider, I18nProvider, ThemeProvider, useI18n } from "./providers";
+import { FunkHubProvider, I18nProvider, ThemeProvider, useFunkHub, useI18n } from "./providers";
 import { Toaster } from "./shared/ui/sonner";
 
 function AppRouter() {
@@ -15,17 +15,27 @@ function AppRouter() {
   );
 }
 
+function MotionProvider({ children }: { children: ReactNode }) {
+  const { settings } = useFunkHub();
+
+  return (
+    <MotionConfig reducedMotion={settings.showAnimations ? "user" : "always"}>
+      {children}
+    </MotionConfig>
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider>
-      <MotionConfig reducedMotion="user">
-        <FunkHubProvider>
+      <FunkHubProvider>
+        <MotionProvider>
           <I18nProvider>
             <AppRouter />
             <Toaster />
           </I18nProvider>
-        </FunkHubProvider>
-      </MotionConfig>
+        </MotionProvider>
+      </FunkHubProvider>
     </ThemeProvider>
   );
 }
