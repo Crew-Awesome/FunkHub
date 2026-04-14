@@ -4,11 +4,20 @@ import { Folder, Download, Palette, Sliders, Info, MessageCircle, FolderOpen, Li
 import { toast } from "sonner";
 import { useFunkHub, useI18n, useTheme } from "../../providers";
 import { AppIcon } from "../../shared/ui/AppIcon";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 import { ThemePicker } from "../../shared/ui/ThemePicker";
 import { ModePicker } from "../../shared/ui/ModePicker";
 import type { SupportedLocale } from "../../i18n";
 
 const ITCH_OAUTH_CLIENT_ID = "4f345ebf07699f30d702a69fd6dca358";
+
+type ConfirmIntent = {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  danger?: boolean;
+  onConfirm: () => void;
+};
 
 export function Settings() {
   const { theme, toggleTheme } = useTheme();
@@ -43,6 +52,7 @@ export function Settings() {
   const [itchBusy, setItchBusy] = useState(false);
   const [pollingIntervalSeconds, setPollingIntervalSeconds] = useState(String(settings.gameBananaIntegration.pollingIntervalSeconds || 300));
   const [activeSection, setActiveSection] = useState<"setup" | "integrations" | "appearance" | "advanced" | "about">("setup");
+  const [confirmIntent, setConfirmIntent] = useState<ConfirmIntent | null>(null);
   const appVersion = (__FUNKHUB_VERSION__ || "0.0.0").trim().replace(/^v/i, "");
   const buildChannel = (__FUNKHUB_CHANNEL__ || "release").toLowerCase();
   const isInDevBuild = buildChannel !== "release";
@@ -113,6 +123,19 @@ export function Settings() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("settings.failedOpenFolder", "Failed to open folder"));
     }
+  };
+
+  const requestConfirm = (intent: ConfirmIntent) => {
+    setConfirmIntent(intent);
+  };
+
+  const runConfirmAction = () => {
+    if (!confirmIntent) {
+      return;
+    }
+    const action = confirmIntent.onConfirm;
+    setConfirmIntent(null);
+    action();
   };
 
   return (
@@ -582,10 +605,16 @@ export function Settings() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
-                      if (window.confirm(t("settings.confirmClearMods", "Are you sure you want to remove all installed mods? This cannot be undone."))) {
-                        clearAllMods();
-                        toast.success(t("settings.modsCleared", "All mods cleared"));
-                      }
+                      requestConfirm({
+                        title: t("settings.clearMods", "Clear All Mods"),
+                        description: t("settings.confirmClearMods", "Are you sure you want to remove all installed mods? This cannot be undone."),
+                        confirmLabel: t("settings.clearMods", "Clear All Mods"),
+                        danger: true,
+                        onConfirm: () => {
+                          clearAllMods();
+                          toast.success(t("settings.modsCleared", "All mods cleared"));
+                        },
+                      });
                     }}
                     disabled={installedMods.length === 0}
                     className="shrink-0 px-4 py-2 bg-destructive/15 hover:bg-destructive/25 text-destructive rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -605,10 +634,16 @@ export function Settings() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
-                      if (window.confirm(t("settings.confirmClearEngines", "Are you sure you want to remove all installed engines? This cannot be undone."))) {
-                        clearAllEngines();
-                        toast.success(t("settings.enginesCleared", "All engines cleared"));
-                      }
+                      requestConfirm({
+                        title: t("settings.clearEngines", "Clear All Engines"),
+                        description: t("settings.confirmClearEngines", "Are you sure you want to remove all installed engines? This cannot be undone."),
+                        confirmLabel: t("settings.clearEngines", "Clear All Engines"),
+                        danger: true,
+                        onConfirm: () => {
+                          clearAllEngines();
+                          toast.success(t("settings.enginesCleared", "All engines cleared"));
+                        },
+                      });
                     }}
                     disabled={installedEngines.length === 0}
                     className="shrink-0 px-4 py-2 bg-destructive/15 hover:bg-destructive/25 text-destructive rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -628,10 +663,16 @@ export function Settings() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
-                      if (window.confirm(t("settings.confirmClearDownloads", "Are you sure you want to clear the download history?"))) {
-                        clearAllDownloads();
-                        toast.success(t("settings.downloadsCleared", "Download history cleared"));
-                      }
+                      requestConfirm({
+                        title: t("settings.clearDownloads", "Clear Download History"),
+                        description: t("settings.confirmClearDownloads", "Are you sure you want to clear the download history?"),
+                        confirmLabel: t("settings.clearDownloads", "Clear Download History"),
+                        danger: true,
+                        onConfirm: () => {
+                          clearAllDownloads();
+                          toast.success(t("settings.downloadsCleared", "Download history cleared"));
+                        },
+                      });
                     }}
                     disabled={downloads.length === 0}
                     className="shrink-0 px-4 py-2 bg-destructive/15 hover:bg-destructive/25 text-destructive rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -651,10 +692,15 @@ export function Settings() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
-                      if (window.confirm(t("settings.confirmResetSettings", "Are you sure you want to reset all settings to defaults?"))) {
-                        resetSettings();
-                        toast.success(t("settings.settingsReset", "Settings reset to defaults"));
-                      }
+                      requestConfirm({
+                        title: t("settings.resetSettings", "Reset Settings"),
+                        description: t("settings.confirmResetSettings", "Are you sure you want to reset all settings to defaults?"),
+                        confirmLabel: t("settings.resetSettings", "Reset Settings"),
+                        onConfirm: () => {
+                          resetSettings();
+                          toast.success(t("settings.settingsReset", "Settings reset to defaults"));
+                        },
+                      });
                     }}
                     className="shrink-0 px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium"
                   >
@@ -730,10 +776,16 @@ export function Settings() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => {
-                        if (window.confirm(t("settings.confirmClearDisabled", "Remove all disabled mods?"))) {
-                          clearDisabledMods();
-                          toast.success(t("settings.disabledModsCleared", "Disabled mods cleared"));
-                        }
+                        requestConfirm({
+                          title: t("settings.clearDisabled", "Clear Disabled ({{count}})", { count: installedMods.filter(m => m.enabled === false).length }),
+                          description: t("settings.confirmClearDisabled", "Remove all disabled mods?"),
+                          confirmLabel: t("settings.clearDisabled", "Clear Disabled ({{count}})", { count: installedMods.filter(m => m.enabled === false).length }),
+                          danger: true,
+                          onConfirm: () => {
+                            clearDisabledMods();
+                            toast.success(t("settings.disabledModsCleared", "Disabled mods cleared"));
+                          },
+                        });
                       }}
                       className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium text-left"
                     >
@@ -743,10 +795,16 @@ export function Settings() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => {
-                        if (window.confirm(t("settings.confirmClearUnpinned", "Remove all unpinned mods?"))) {
-                          clearUnpinnedMods();
-                          toast.success(t("settings.unpinnedModsCleared", "Unpinned mods cleared"));
-                        }
+                        requestConfirm({
+                          title: t("settings.clearUnpinned", "Clear Unpinned ({{count}})", { count: installedMods.filter(m => !m.pinned).length }),
+                          description: t("settings.confirmClearUnpinned", "Remove all unpinned mods?"),
+                          confirmLabel: t("settings.clearUnpinned", "Clear Unpinned ({{count}})", { count: installedMods.filter(m => !m.pinned).length }),
+                          danger: true,
+                          onConfirm: () => {
+                            clearUnpinnedMods();
+                            toast.success(t("settings.unpinnedModsCleared", "Unpinned mods cleared"));
+                          },
+                        });
                       }}
                       className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-xs font-medium text-left"
                     >
@@ -766,11 +824,21 @@ export function Settings() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
-                      if (window.confirm(t("settings.confirmClearAllData", "WARNING: This will remove ALL data including mods, engines, and settings. This cannot be undone! Are you absolutely sure?"))) {
-                        if (window.confirm(t("settings.confirmClearAllData2", "Are you REALLY sure? This is irreversible."))) {
-                          clearAllData();
-                        }
-                      }
+                      requestConfirm({
+                        title: t("settings.clearAllData", "Clear All Data"),
+                        description: t("settings.confirmClearAllData", "WARNING: This will remove ALL data including mods, engines, and settings. This cannot be undone! Are you absolutely sure?"),
+                        confirmLabel: t("settings.clearAll", "Clear All"),
+                        danger: true,
+                        onConfirm: () => {
+                          requestConfirm({
+                            title: t("settings.clearAllData", "Clear All Data"),
+                            description: t("settings.confirmClearAllData2", "Are you REALLY sure? This is irreversible."),
+                            confirmLabel: t("settings.clearAll", "Clear All"),
+                            danger: true,
+                            onConfirm: clearAllData,
+                          });
+                        },
+                      });
                     }}
                     className="shrink-0 px-4 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg text-sm font-medium flex items-center gap-2"
                   >
@@ -817,6 +885,36 @@ export function Settings() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <Dialog open={Boolean(confirmIntent)} onOpenChange={(open) => { if (!open) setConfirmIntent(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmIntent?.title ?? t("settings.confirm", "Confirm action")}</DialogTitle>
+            <DialogDescription>{confirmIntent?.description ?? ""}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setConfirmIntent(null)}
+              className="px-4 py-2 rounded-lg border border-border bg-card text-foreground hover:bg-secondary transition-colors"
+            >
+              {t("settings.cancel", "Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={runConfirmAction}
+              className={[
+                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                confirmIntent?.danger
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90",
+              ].join(" ")}
+            >
+              {confirmIntent?.confirmLabel ?? t("settings.confirm", "Confirm")}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
