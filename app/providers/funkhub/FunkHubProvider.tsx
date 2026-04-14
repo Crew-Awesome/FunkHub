@@ -378,7 +378,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       // Check the archive's raw file list for executables — best-effort, non-blocking on failure
       const rawFileList = await funkHubService.getRawFileList(selectedFileId);
       const hasExe = rawFileList.some((f) => /\.(exe|msi|bat|cmd|ps1|sh|appimage|dmg|pkg)$/i.test(f));
-      if (hasExe) {
+      if (settings.compatibilityChecks && hasExe) {
         const exeFiles = rawFileList.filter((f) => /\.(exe|msi|bat|cmd|ps1|sh|appimage|dmg|pkg)$/i.test(f));
         const proceed = window.confirm(
           `⚠️ This archive contains executable file(s):\n\n${exeFiles.slice(0, 5).join("\n")}${exeFiles.length > 5 ? `\n…and ${exeFiles.length - 5} more` : ""}\n\nOnly install mods from sources you trust.\n\nContinue installing "${profile.name}"?`,
@@ -408,11 +408,13 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
           if (inferredEngines.length === 1) {
             selectedEngineId = inferredEngines[0].id;
           } else if (installedEngines.length === 1 && defaultEngine) {
-            const continueWithDefault = window.confirm(
-              `Could not auto-detect a required engine for ${profile.name}. Use ${defaultEngine.name} (${defaultEngine.slug})?`,
-            );
-            if (!continueWithDefault) {
-              return;
+            if (settings.compatibilityChecks) {
+              const continueWithDefault = window.confirm(
+                `Could not auto-detect a required engine for ${profile.name}. Use ${defaultEngine.name} (${defaultEngine.slug})?`,
+              );
+              if (!continueWithDefault) {
+                return;
+              }
             }
             selectedEngineId = defaultEngine.id;
           } else {
@@ -424,14 +426,16 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
               throw new Error("No target engine selected. Install cancelled.");
             }
 
-            const continueWithSuggested = window.confirm([
-              warningLine,
-              "",
-              `Use suggested engine: ${suggestedEngine.name} (${suggestedEngine.slug})?`,
-              "Select Cancel to stop this install and choose an engine manually from the app.",
-            ].join("\n"));
-            if (!continueWithSuggested) {
-              return;
+            if (settings.compatibilityChecks) {
+              const continueWithSuggested = window.confirm([
+                warningLine,
+                "",
+                `Use suggested engine: ${suggestedEngine.name} (${suggestedEngine.slug})?`,
+                "Select Cancel to stop this install and choose an engine manually from the app.",
+              ].join("\n"));
+              if (!continueWithSuggested) {
+                return;
+              }
             }
 
             selectedEngineId = suggestedEngine.id;
@@ -454,7 +458,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     } finally {
       processingDeepLinksRef.current.delete(normalizedUrl);
     }
-  }, [installedEngines, settings.gameBananaIntegration]);
+  }, [installedEngines, settings.gameBananaIntegration, settings.compatibilityChecks]);
 
   const refreshAll = useCallback(async () => {
     setLoading(true);
