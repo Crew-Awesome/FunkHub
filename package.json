@@ -13,6 +13,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
+    "test:windows": "scripts\\test-windows.bat",
     "build": "vite build",
     "preview": "vite preview",
     "electron:dev": "vite --host 127.0.0.1 --port 5173 & electron ./electron/main.cjs",
