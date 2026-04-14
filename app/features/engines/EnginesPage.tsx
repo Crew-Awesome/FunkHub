@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Cpu, Loader2, AlertCircle, Download, ImagePlus, ChevronLeft } from "lucide-react";
+import { Plus, Cpu, Loader2, AlertCircle, Download, ImagePlus, Search, ArrowLeft } from "lucide-react";
 import { EngineCard } from "./EngineCard";
 import { getEngineIcon } from "./engineIcons";
 import { useFunkHub, useI18n } from "../../providers";
-import { detectClientPlatform, pickBestReleaseForPlatform, formatEngineName, type EngineSlug, type EngineRelease } from "../../services/funkhub";
+import { detectClientPlatform, pickBestReleaseForPlatform, formatEngineName, type EngineSlug } from "../../services/funkhub";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 import { useEngineWizard } from "./useEngineWizard";
 import { useEngineManage } from "./useEngineManage";
@@ -38,9 +38,6 @@ export function Engines() {
   } = useFunkHub();
   const wizard = useEngineWizard();
   const {
-    wizardStep, setWizardStep,
-    wizardEngineSlug, setWizardEngineSlug,
-    wizardVersion, setWizardVersion,
     installingSlug, setInstallingSlug,
     installError, setInstallError,
     scannedPaths, setScannedPaths,
@@ -66,6 +63,11 @@ export function Engines() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyEngineId, setBusyEngineId] = useState<string | null>(null);
   const [confirmUninstall, setConfirmUninstall] = useState<{ id: string; name: string; version: string; path: string } | null>(null);
+  const [wizardQuery, setWizardQuery] = useState("");
+  const [selectedEngineSlug, setSelectedEngineSlug] = useState<EngineSlug | null>(null);
+  const [selectedReleaseType, setSelectedReleaseType] = useState<"all" | "release" | "prerelease" | "nightly">("all");
+  const [selectedReleaseVersion, setSelectedReleaseVersion] = useState<string>("all");
+  const deferredWizardQuery = useDeferredValue(wizardQuery);
 
   useEffect(() => {
     refreshEngineHealth().catch((error) => {
@@ -76,6 +78,7 @@ export function Engines() {
   const availableEngines = enginesCatalog;
   const hasEngines = installedEngines.length > 0;
   const currentPlatform = detectClientPlatform();
+  const normalizedWizardQuery = deferredWizardQuery.trim().toLowerCase();
   const engineDownloads = downloads
     .filter((task) => task.modId === -1)
     .filter((task) => ["queued", "downloading", "installing", "failed"].includes(task.status));
@@ -94,6 +97,22 @@ export function Engines() {
   }, [installedEngines]);
 
   const showGroupHeaders = engineGroups.length > 1 || (engineGroups[0]?.[1].length ?? 0) > 1;
+
+  const installedCountBySlug = useMemo(() => {
+    const counts = new Map<EngineSlug, number>();
+    for (const engine of installedEngines) {
+      counts.set(engine.slug, (counts.get(engine.slug) ?? 0) + 1);
+    }
+    return counts;
+  }, [installedEngines]);
+
+  const filteredAvailableEngines = useMemo(() => {
+    if (!normalizedWizardQuery) return availableEngines;
+    return availableEngines.filter((engine) => {
+      const haystack = `${engine.name} ${engine.slug} ${engine.description ?? ""}`.toLowerCase();
+      return haystack.includes(normalizedWizardQuery);
+    });
+  }, [availableEngines, normalizedWizardQuery]);
 
   const installSelectedEngine = async (
     engineSlug: EngineSlug,
@@ -243,14 +262,6 @@ export function Engines() {
     return false;
   };
 
-  const getVersionsForEngine = (slug: EngineSlug): string[] => {
-    const releases = getInstallableReleases(slug);
-    return [...new Set(releases.map((r) => r.version))];
-  };
-
-  const getFilesForVersion = (slug: EngineSlug, version: string): EngineRelease[] =>
-    getInstallableReleases(slug).filter((r) => r.version === version);
-
   const getInstallableReleases = (engineSlug: EngineSlug) => {
     const definition = availableEngines.find((engine) => engine.slug === engineSlug);
     if (!definition) return [];
@@ -276,328 +287,336 @@ export function Engines() {
     return pickBestReleaseForPlatform(releases, currentPlatform) ?? releases[0];
   };
 
-  // ── 3-step wizard ──────────────────────────────────────────────────────────
+  const selectedEngine = selectedEngineSlug
+    ? availableEngines.find((engine) => engine.slug === selectedEngineSlug) ?? null
+    : null;
+  const selectedEngineReleases = selectedEngineSlug ? getInstallableReleases(selectedEngineSlug) : [];
 
-  const wizardEngine = wizardEngineSlug ? availableEngines.find((e) => e.slug === wizardEngineSlug) : null;
+  useEffect(() => {
+    setSelectedReleaseType("all");
+    setSelectedReleaseVersion("all");
+  }, [selectedEngineSlug]);
 
-  const addEnginePanel = (() => {
-    // Step 1: choose engine
-    if (wizardStep === 1) {
-      return (
-        <>
-          <DialogHeader>
-            <DialogTitle>{t("engines.addEngine", "Add Engine")}</DialogTitle>
-            <DialogDescription>{t("engines.addEngineDesc", "Choose an engine to install.")}</DialogDescription>
-            <div className="flex items-center gap-1.5 mt-3">
-              {[1, 2, 3].map((step) => (
-                <div key={step} className={`h-1 flex-1 rounded-full transition-colors ${step === 1 ? "bg-primary" : "bg-secondary"}`} />
-              ))}
+  const releaseTypeOf = (input: { isPrerelease?: boolean; version?: string }) => {
+    const version = (input.version || "").toLowerCase();
+    if (version.includes("nightly")) return "nightly" as const;
+    if (input.isPrerelease) return "prerelease" as const;
+    return "release" as const;
+  };
+
+  const releaseTypeLabel = (input: { isPrerelease?: boolean; version?: string }) => {
+    const type = releaseTypeOf(input);
+    if (type === "nightly") return t("engines.releaseTypeNightly", "Nightly");
+    if (type === "prerelease") return t("engines.releaseTypePrerelease", "Pre-release");
+    return t("engines.releaseTypeStable", "Release");
+  };
+
+  const selectedEngineTypeFilteredReleases = useMemo(() => {
+    if (selectedReleaseType === "all") return selectedEngineReleases;
+    return selectedEngineReleases.filter((release) => releaseTypeOf(release) === selectedReleaseType);
+  }, [selectedEngineReleases, selectedReleaseType]);
+
+  const selectedEngineVersions = useMemo(() => {
+    return [...new Set(selectedEngineTypeFilteredReleases.map((release) => release.version))];
+  }, [selectedEngineTypeFilteredReleases]);
+
+  const selectedEngineVisibleReleases = useMemo(() => {
+    if (selectedReleaseVersion === "all") return selectedEngineTypeFilteredReleases;
+    return selectedEngineTypeFilteredReleases.filter((release) => release.version === selectedReleaseVersion);
+  }, [selectedEngineTypeFilteredReleases, selectedReleaseVersion]);
+
+  const getReleaseFileName = (release: { fileName?: string; downloadUrl: string }) => {
+    const fromUrl = release.downloadUrl.split("?")[0].split("/").pop();
+    const raw = release.fileName ?? fromUrl ?? release.downloadUrl;
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  };
+
+  const addEnginePanel = (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="sticky top-0 z-10 border-b border-border bg-card/95 px-5 py-4 backdrop-blur">
+        <DialogHeader>
+          <DialogTitle>{t("engines.addEngine", "Add Engine")}</DialogTitle>
+          <DialogDescription>{t("engines.addEngineDesc", "Install from official releases or import an existing folder.")}</DialogDescription>
+        </DialogHeader>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="relative flex-1 min-w-0">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={wizardQuery}
+              onChange={(event) => setWizardQuery(event.target.value)}
+              placeholder={t("engines.searchPlaceholder", "Search engines (name, slug)")}
+              className="w-full rounded-lg border border-border bg-input-background py-2.5 pl-10 pr-3 text-sm text-foreground"
+            />
+          </div>
+          <button
+            onClick={async () => {
+              setScanningPaths(true);
+              try {
+                const paths = await scanCommonEnginePaths();
+                setScannedPaths(paths);
+              } finally {
+                setScanningPaths(false);
+              }
+            }}
+            disabled={scanningPaths}
+            className="shrink-0 flex items-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-xs text-foreground hover:bg-secondary disabled:opacity-50"
+          >
+            {scanningPaths ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            {scanningPaths ? t("engines.scanning", "Scanning…") : t("engines.scanNow", "Scan Now")}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {t("engines.availableCount", "{{count}} engines available", { count: filteredAvailableEngines.length })}
+        </p>
+        {selectedEngine && (
+          <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-secondary/25 px-3 py-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">{selectedEngine.name}</p>
+              <p className="text-[11px] text-muted-foreground">{t("engines.chooseReleasePrompt", "Choose a release and file to install")}</p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">{t("engines.step", "Step")} {wizardStep} {t("engines.of3", "of 3")}</p>
-          </DialogHeader>
+            <button
+              onClick={() => setSelectedEngineSlug(null)}
+              className="ml-3 inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-foreground hover:bg-secondary"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              {t("engines.backToEngines", "Back")}
+            </button>
+          </div>
+        )}
+      </div>
 
-          <div className="space-y-3 mt-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {availableEngines.map((engine) => {
-                const installedCount = installedEngines.filter((entry) => entry.slug === engine.slug).length;
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        {!selectedEngine && (
+          <>
+            <div className="grid grid-cols-3 gap-3 2xl:grid-cols-4">
+              {filteredAvailableEngines.map((engine) => {
+                const installedCount = installedCountBySlug.get(engine.slug) ?? 0;
                 const iconSrc = getEngineIcon(engine.slug);
+                const release = getSelectedRelease(engine.slug);
                 return (
-                  <div key={engine.slug} className="rounded-xl border border-border bg-secondary/30 overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => { setWizardEngineSlug(engine.slug); setWizardVersion(null); setWizardStep(2); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/60 transition-colors"
-                    >
-                      <div className="w-9 h-9 rounded-lg border border-border bg-card flex items-center justify-center shrink-0 overflow-hidden">
+                  <div key={engine.slug} className="rounded-lg border border-border bg-secondary/25 p-3">
+                    <div className="mb-2 flex items-center gap-2.5">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-card">
                         {iconSrc
-                          ? <img src={iconSrc} alt="" className="w-6 h-6 object-contain" loading="lazy" />
-                          : <Cpu className="w-4 h-4 text-primary" />}
+                          ? <img src={iconSrc} alt="" className="h-6 w-6 object-contain" loading="lazy" />
+                          : <Cpu className="h-4 w-4 text-primary" />}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground">{engine.name}</span>
-                          {installedCount > 0 && (
-                            <span className="text-[11px] text-muted-foreground">{t("engines.installedCount", "{{n}} installed", { n: installedCount })}</span>
-                          )}
-                        </div>
-                        {engine.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{engine.description}</p>
-                        )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">{engine.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{release ? formatVersionLabel(release.version) : "latest"}</p>
                       </div>
-                    </button>
-                    <div className="px-4 pb-3">
-                      <button
-                        onClick={() => handleImport(engine.slug)}
-                        disabled={installingSlug === engine.slug}
-                        className="w-full rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-secondary/80 disabled:opacity-50 text-center"
-                      >
-                        {installingSlug === engine.slug ? <Loader2 className="w-3 h-3 animate-spin inline mr-1" /> : null}
-                        {t("engines.importFolder", "Import from folder")}
-                      </button>
+                      {installedCount > 0 && (
+                        <span className="shrink-0 rounded border border-success/25 bg-success/10 px-1.5 py-0.5 text-[10px] text-success">
+                          {t("engines.installed", "Installed")}
+                        </span>
+                      )}
                     </div>
+                    <button
+                      onClick={() => setSelectedEngineSlug(engine.slug)}
+                      className="w-full rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                    >
+                      {t("engines.viewReleases", "View")}
+                    </button>
                   </div>
                 );
               })}
             </div>
 
-            {installError && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {installError}
+            {filteredAvailableEngines.length === 0 && (
+              <div className="mt-2 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+                {t("engines.searchNoResults", "No engines match your search.")}
               </div>
             )}
+          </>
+        )}
 
-            {/* Scan for engine folders on disk */}
-            <div className="border-t border-border pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-foreground">{t("engines.scanTitle", "Scan for existing engines")}</p>
-                <button
-                  onClick={async () => {
-                    setScanningPaths(true);
-                    try {
-                      const paths = await scanCommonEnginePaths();
-                      setScannedPaths(paths);
-                    } finally {
-                      setScanningPaths(false);
-                    }
-                  }}
-                  disabled={scanningPaths}
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-secondary disabled:opacity-50"
-                >
-                  {scanningPaths ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                  {scanningPaths ? t("engines.scanning", "Scanning…") : t("engines.scanNow", "Scan Now")}
-                </button>
-              </div>
-              {scannedPaths !== null && scannedPaths.length === 0 && (
-                <p className="text-xs text-muted-foreground">{t("engines.scanNoneFound", "No engine folders found in common locations.")}</p>
-              )}
-              {scannedPaths !== null && scannedPaths.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground mb-2">{t("engines.scanFoundPaths", "Found potential engine folders — select a slug to import:")}</p>
-                  {scannedPaths.map((foundPath) => (
-                    <div key={foundPath} className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2">
-                      <span className="flex-1 text-xs font-mono text-muted-foreground truncate">{foundPath}</span>
-                      {availableEngines.map((eng) => (
-                        <button
-                          key={eng.slug}
-                          onClick={async () => {
-                            setInstallingSlug(eng.slug);
-                            try {
-                              await importEngineFromFolder(eng.slug, "imported", foundPath);
-                              await refreshEngineHealth();
-                              setScannedPaths((prev) => prev ? prev.filter((p) => p !== foundPath) : prev);
-                              setShowAddDialog(false);
-                            } catch (error) {
-                              setInstallError(error instanceof Error ? error.message : t("engines.importFailed", "Engine import failed"));
-                            } finally {
-                              setInstallingSlug(null);
-                            }
-                          }}
-                          disabled={installingSlug === eng.slug}
-                          className="shrink-0 rounded border border-border px-2 py-1 text-[10px] text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
-                        >
-                          {eng.name}
-                        </button>
-                      ))}
-                    </div>
+        {selectedEngine && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-lg border border-border bg-secondary/20 p-2.5">
+                <p className="text-[11px] font-medium text-muted-foreground">1. {t("engines.filterType", "Type")}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {([
+                    ["all", t("engines.filterAll", "All")],
+                    ["release", t("engines.releaseTypeStable", "Release")],
+                    ["prerelease", t("engines.releaseTypePrerelease", "Pre-release")],
+                    ["nightly", t("engines.releaseTypeNightly", "Nightly")],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => { setSelectedReleaseType(value); setSelectedReleaseVersion("all"); }}
+                      className={`rounded px-2 py-1 text-[11px] ${
+                        selectedReleaseType === value
+                          ? "bg-primary/15 text-primary"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
                   ))}
                 </div>
-              )}
-            </div>
-          </div>
-        </>
-      );
-    }
+              </div>
 
-    // Step 2: choose version
-    if (wizardStep === 2 && wizardEngine) {
-      const allReleases = getInstallableReleases(wizardEngine.slug);
-      const bestRelease = pickBestReleaseForPlatform(allReleases, currentPlatform) ?? allReleases[0];
-      const versions = getVersionsForEngine(wizardEngine.slug);
-      const iconSrc = getEngineIcon(wizardEngine.slug);
-
-      return (
-        <>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setWizardStep(1)}
-                className="rounded-lg border border-border p-1.5 hover:bg-secondary transition-colors"
-                aria-label="Back"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              {iconSrc && <img src={iconSrc} alt="" className="w-5 h-5 object-contain" />}
-              {wizardEngine.name}
-            </DialogTitle>
-            <DialogDescription>{t("engines.chooseVersion", "Choose a version to install.")}</DialogDescription>
-            <div className="flex items-center gap-1.5 mt-3">
-              {[1, 2, 3].map((step) => (
-                <div key={step} className={`h-1 flex-1 rounded-full transition-colors ${step <= 2 ? "bg-primary" : "bg-secondary"}`} />
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{t("engines.step", "Step")} {wizardStep} {t("engines.of3", "of 3")}</p>
-          </DialogHeader>
-
-          <div className="space-y-1.5 mt-2">
-            {versions.map((version) => {
-              const filesForVersion = getFilesForVersion(wizardEngine.slug, version);
-              const isRecommended = bestRelease?.version === version;
-              const isPrerelease = filesForVersion.every((r) => r.isPrerelease);
-              const platforms = [...new Set(filesForVersion.map((r) => r.platform))];
-
-              return (
-                <button
-                  key={version}
-                  type="button"
-                  onClick={() => { setWizardVersion(version); setWizardStep(3); }}
-                  className="w-full flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-sm text-left hover:bg-secondary/60 transition-colors"
+              <div className="rounded-lg border border-border bg-secondary/20 p-2.5">
+                <p className="text-[11px] font-medium text-muted-foreground">2. {t("engines.filterVersion", "Version")}</p>
+                <select
+                  value={selectedReleaseVersion}
+                  onChange={(event) => setSelectedReleaseVersion(event.target.value)}
+                  className="mt-2 w-full rounded border border-border bg-input-background px-2 py-1.5 text-xs text-foreground"
                 >
-                  <span className="flex items-center gap-2 min-w-0">
-                    <span className="font-medium text-foreground">{formatVersionLabel(version)}</span>
-                    {isRecommended && (
-                      <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">Recommended</span>
-                    )}
-                    {isPrerelease && (
-                      <span className="text-[10px] bg-warning/10 text-warning px-1.5 py-0.5 rounded">Pre-release</span>
-                    )}
-                  </span>
-                  <span className="text-xs text-muted-foreground shrink-0 ml-2">{platforms.join(", ")}</span>
-                </button>
-              );
-            })}
-          </div>
-        </>
-      );
-    }
+                  <option value="all">{t("engines.filterAllVersions", "All versions")}</option>
+                  {selectedEngineVersions.map((version) => (
+                    <option key={version} value={version}>{formatVersionLabel(version)}</option>
+                  ))}
+                </select>
+              </div>
 
-    // Step 3: choose file
-    if (wizardStep === 3 && wizardEngine && wizardVersion) {
-      const files = getFilesForVersion(wizardEngine.slug, wizardVersion);
-      const allReleases = getInstallableReleases(wizardEngine.slug);
-      const bestRelease = pickBestReleaseForPlatform(allReleases, currentPlatform) ?? allReleases[0];
-      const iconSrc = getEngineIcon(wizardEngine.slug);
-
-      return (
-        <>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setWizardStep(2)}
-                className="rounded-lg border border-border p-1.5 hover:bg-secondary transition-colors"
-                aria-label="Back"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              {iconSrc && <img src={iconSrc} alt="" className="w-5 h-5 object-contain" />}
-              {wizardEngine.name} · {formatVersionLabel(wizardVersion)}
-            </DialogTitle>
-            <DialogDescription>{t("engines.chooseFile", "Choose a file to download.")}</DialogDescription>
-            <div className="flex items-center gap-1.5 mt-3">
-              {[1, 2, 3].map((step) => (
-                <div key={step} className={`h-1 flex-1 rounded-full transition-colors ${step <= 3 ? "bg-primary" : "bg-secondary"}`} />
-              ))}
+              <div className="rounded-lg border border-border bg-secondary/20 p-2.5">
+                <p className="text-[11px] font-medium text-muted-foreground">3. {t("engines.filterFile", "File")}</p>
+                <p className="mt-2 text-xs text-foreground">
+                  {t("engines.filesFound", "{{count}} files", { count: selectedEngineVisibleReleases.length })}
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">{t("engines.step", "Step")} {wizardStep} {t("engines.of3", "of 3")}</p>
-          </DialogHeader>
 
-          <div className="space-y-1.5 mt-2">
-            {files.map((release) => {
-              const fileName = release.fileName ?? release.downloadUrl.split("/").pop() ?? release.downloadUrl;
-              const isRecommended = release.downloadUrl === bestRelease?.downloadUrl;
+            {selectedEngineVisibleReleases.map((release) => {
+              const fileName = getReleaseFileName(release);
               return (
-                <div key={release.downloadUrl} className="rounded-lg border border-border bg-secondary/30 overflow-hidden">
-                  <div className="flex items-start gap-3 px-3 py-2.5">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground font-mono break-all">{fileName}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[11px] text-muted-foreground">{release.platform}</span>
-                        {isRecommended && (
-                          <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">Recommended</span>
-                        )}
-                        {release.isPrerelease && (
-                          <span className="text-[10px] bg-warning/10 text-warning px-1.5 py-0.5 rounded">Pre-release</span>
-                        )}
+                <div key={`${release.downloadUrl}|${release.version}|${release.platform}|${release.fileName ?? ""}`} className="rounded-lg border border-border bg-secondary/25 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{fileName}</p>
+                      <div className="mt-1 flex items-center gap-2 text-[11px]">
+                        <span className="rounded bg-secondary px-1.5 py-0.5 text-muted-foreground">{formatVersionLabel(release.version)}</span>
+                        <span className="rounded bg-secondary px-1.5 py-0.5 text-muted-foreground">{release.platform}</span>
+                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">{releaseTypeLabel(release)}</span>
                       </div>
                     </div>
                     <button
                       onClick={async () => {
-                        await installSelectedEngine(wizardEngine.slug, release.downloadUrl, release.version);
-                        setShowAddDialog(false);
+                        await installSelectedEngine(selectedEngine.slug, release.downloadUrl, release.version);
                       }}
-                      disabled={installingSlug === wizardEngine.slug}
-                      className="shrink-0 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                      disabled={installingSlug === selectedEngine.slug}
+                      className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                     >
-                      {installingSlug === wizardEngine.slug
-                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        : <Download className="w-3.5 h-3.5" />}
+                      {installingSlug === selectedEngine.slug
+                        ? <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" />
+                        : <Download className="mr-1 inline h-3.5 w-3.5" />}
                       {t("engines.install", "Install")}
                     </button>
                   </div>
                 </div>
               );
             })}
-          </div>
 
-          {engineDownloads.length > 0 && (
-            <div className="space-y-2 mt-3">
-              {engineDownloads.map((task) => (
-                <div key={task.id} className="rounded-lg border border-border p-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-foreground">{task.fileName}</span>
-                    <span className="text-muted-foreground">{Math.round(task.progress * 100)}%</span>
-                  </div>
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full origin-left bg-primary transition-transform"
-                      style={{ transform: `scaleX(${Math.max(0, Math.min(1, task.progress))})` }}
-                    />
-                  </div>
-                  <p className="mt-1.5 text-xs text-muted-foreground">{task.message ?? task.status}</p>
+            {selectedEngineVisibleReleases.length === 0 && (
+              <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+                {t("engines.noReleasesFound", "No installable releases were found for this engine.")}
+              </div>
+            )}
+          </div>
+        )}
+
+        {installError && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {installError}
+          </div>
+        )}
+
+        {platformWarning && (
+          <div className="mt-3 space-y-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+            <p className="font-medium">{t("engines.crossPlatformWarning", "Cross-platform executable warning")}</p>
+            <p className="text-xs opacity-90">{t("engines.crossPlatformWarningDesc", "This engine may still work with a custom launcher (Wine/Proton) after install. Continue anyway?")}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const pending = platformWarning;
+                  setPlatformWarning(null);
+                  installSelectedEngine(pending.slug, pending.releaseUrl, pending.releaseVersion, { allowMissingExecutable: true }).catch(() => undefined);
+                }}
+                className="rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90"
+              >
+                {t("engines.keepDownloading", "Keep Downloading")}
+              </button>
+              <button
+                onClick={() => setPlatformWarning(null)}
+                className="rounded bg-secondary px-3 py-1.5 text-xs text-foreground hover:bg-secondary/80"
+              >
+                {t("engines.cancel", "Cancel")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4 border-t border-border pt-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-medium text-foreground">{t("engines.scanTitle", "Scan for existing engines")}</p>
+            <span className="text-xs text-muted-foreground">{t("engines.scanHint", "Use Scan Now to auto-detect old installs.")}</span>
+          </div>
+          {scannedPaths !== null && scannedPaths.length === 0 && (
+            <p className="text-xs text-muted-foreground">{t("engines.scanNoneFound", "No engine folders found in common locations.")}</p>
+          )}
+          {scannedPaths !== null && scannedPaths.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="mb-2 text-xs text-muted-foreground">{t("engines.scanFoundPaths", "Found potential engine folders — select a slug to import:")}</p>
+              {scannedPaths.map((foundPath) => (
+                <div key={foundPath} className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2">
+                  <span className="flex-1 truncate font-mono text-xs text-muted-foreground">{foundPath}</span>
+                  {availableEngines.map((eng) => (
+                    <button
+                      key={eng.slug}
+                      onClick={async () => {
+                        setInstallingSlug(eng.slug);
+                        try {
+                          await importEngineFromFolder(eng.slug, "imported", foundPath);
+                          await refreshEngineHealth();
+                          setScannedPaths((prev) => prev ? prev.filter((p) => p !== foundPath) : prev);
+                          setShowAddDialog(false);
+                        } catch (error) {
+                          setInstallError(error instanceof Error ? error.message : t("engines.importFailed", "Engine import failed"));
+                        } finally {
+                          setInstallingSlug(null);
+                        }
+                      }}
+                      disabled={installingSlug === eng.slug}
+                      className="shrink-0 rounded border border-border px-2 py-1 text-[10px] text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
+                    >
+                      {eng.name}
+                    </button>
+                  ))}
                 </div>
               ))}
             </div>
           )}
+        </div>
 
-          {installError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2 mt-3">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {installError}
-            </div>
-          )}
-
-          {platformWarning && (
-            <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning space-y-2 mt-3">
-              <p className="font-medium">{t("engines.crossPlatformWarning", "Cross-platform executable warning")}</p>
-              <p className="text-xs opacity-90">{t("engines.crossPlatformWarningDesc", "This engine may still work with a custom launcher (Wine/Proton) after install. Continue anyway?")}</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    const pending = platformWarning;
-                    setPlatformWarning(null);
-                    installSelectedEngine(pending.slug, pending.releaseUrl, pending.releaseVersion, { allowMissingExecutable: true }).catch(() => undefined);
-                  }}
-                  className="rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90"
-                >
-                  {t("engines.keepDownloading", "Keep Downloading")}
-                </button>
-                <button
-                  onClick={() => setPlatformWarning(null)}
-                  className="rounded bg-secondary px-3 py-1.5 text-xs text-foreground hover:bg-secondary/80"
-                >
-                  {t("engines.cancel", "Cancel")}
-                </button>
+        {engineDownloads.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {engineDownloads.map((task) => (
+              <div key={task.id} className="rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-foreground">{task.fileName}</span>
+                  <span className="text-muted-foreground">{Math.round(task.progress * 100)}%</span>
+                </div>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full origin-left bg-primary transition-transform"
+                    style={{ transform: `scaleX(${Math.max(0, Math.min(1, task.progress))})` }}
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">{task.message ?? task.status}</p>
               </div>
-            </div>
-          )}
-        </>
-      );
-    }
-
-    return null;
-  })();
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   if (!hasEngines) {
     return (
@@ -612,7 +631,7 @@ export function Engines() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setShowAddDialog(true)}
+            onClick={() => { setWizardQuery(""); setSelectedEngineSlug(null); setShowAddDialog(true); }}
             className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
           >
             <Plus className="w-4 h-4" />
@@ -698,8 +717,8 @@ export function Engines() {
           </div>
         )}
 
-        <Dialog open={showAddDialog} onOpenChange={(next) => { if (next) resetWizard(); setShowAddDialog(next); }}>
-          <DialogContent className="max-h-[88vh] w-[min(96vw,900px)] max-w-none overflow-y-auto">
+        <Dialog open={showAddDialog} onOpenChange={(next) => { if (next) { resetWizard(); setWizardQuery(""); setSelectedEngineSlug(null); } if (!next) { setWizardQuery(""); setSelectedEngineSlug(null); } setShowAddDialog(next); }}>
+          <DialogContent className="h-[90vh] w-[min(97vw,1180px)] max-w-none overflow-hidden p-0">
             {addEnginePanel}
           </DialogContent>
         </Dialog>
@@ -715,7 +734,7 @@ export function Engines() {
           <p className="text-sm text-muted-foreground mt-1">Game engine installs used to run mods</p>
         </div>
         <button
-          onClick={() => { resetWizard(); setShowAddDialog(true); }}
+          onClick={() => { resetWizard(); setWizardQuery(""); setSelectedEngineSlug(null); setShowAddDialog(true); }}
           className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
         >
           <Plus className="w-4 h-4" />
@@ -784,8 +803,8 @@ export function Engines() {
       </div>
 
       {/* Add Engine Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-h-[88vh] w-[min(96vw,900px)] max-w-none overflow-y-auto">
+      <Dialog open={showAddDialog} onOpenChange={(next) => { if (next) { resetWizard(); setWizardQuery(""); setSelectedEngineSlug(null); } if (!next) { setWizardQuery(""); setSelectedEngineSlug(null); } setShowAddDialog(next); }}>
+        <DialogContent className="h-[90vh] w-[min(97vw,1180px)] max-w-none overflow-hidden p-0">
           {addEnginePanel}
         </DialogContent>
       </Dialog>
