@@ -125,6 +125,14 @@ export function Settings() {
     }
   };
 
+  const applyFolderDefaults = async () => {
+    await updateSettings({
+      downloadsDirectory: "",
+      dataRootDirectory: "",
+    });
+    toast.success(t("settings.defaultsApplied", "Recommended folder defaults applied"));
+  };
+
   const requestConfirm = (intent: ConfirmIntent) => {
     setConfirmIntent(intent);
   };
@@ -238,6 +246,22 @@ export function Settings() {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="rounded-lg border border-border bg-secondary/20 p-3">
+                  <p className="text-sm font-medium text-foreground">{t("settings.folderDefaults", "Folder defaults")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("settings.folderDefaultsDesc", "Use recommended app defaults for data and downloads folders.")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void applyFolderDefaults();
+                    }}
+                    className="mt-2 rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-secondary"
+                  >
+                    {t("settings.applyDefaults", "Apply Recommended Defaults")}
+                  </button>
                 </div>
               </div>
             </section>
