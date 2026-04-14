@@ -852,7 +852,7 @@ export function Discover() {
 
           <div className="space-y-3 text-sm">
             <p className="text-xs text-muted-foreground">
-              {t("discover.stepProgress", "Step {{current}} of {{total}}", { current: String(onboardingStep + 1), total: "4" })}
+              {t("discover.stepProgress", "Step {{current}} of {{total}}", { current: String(onboardingStep + 1), total: "5" })}
             </p>
 
             {onboardingStep === 0 && (
@@ -921,7 +921,29 @@ export function Discover() {
 
             {onboardingStep === 3 && (
               <div className="rounded-lg border border-border p-3">
-                <p className="font-medium text-foreground">{t("discover.step3", "3) Install an engine and test one-click")}</p>
+                <p className="font-medium text-foreground">{t("discover.stepDownloads", "3) Choose download folder")}</p>
+                <p className="mt-1 text-muted-foreground">{t("discover.stepDownloadsDesc", "Downloaded archives are saved here before install/import. You can keep default if unsure.")}</p>
+                <button
+                  onClick={async () => {
+                    const selected = await browseFolder({
+                      title: t("discover.chooseDownloadsFolder", "Choose your download folder"),
+                      defaultPath: settings.downloadsDirectory || undefined,
+                    });
+                    if (selected) {
+                      await updateSettings({ downloadsDirectory: selected });
+                    }
+                  }}
+                  className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                >
+                  {t("discover.chooseDownloadsFolderBtn", "Choose Download Folder")}
+                </button>
+                <p className="mt-2 text-xs text-muted-foreground break-all">{t("discover.current", "Current")}: {settings.downloadsDirectory || t("discover.notSetDefault", "Not set (app default)")}</p>
+              </div>
+            )}
+
+            {onboardingStep === 4 && (
+              <div className="rounded-lg border border-border p-3">
+                <p className="font-medium text-foreground">{t("discover.step3", "4) Install an engine and test one-click")}</p>
                 <p className="mt-1 text-muted-foreground">{t("discover.step3Desc", "Install at least one engine next so mods can launch correctly. You can skip deep-link testing for now.")}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
@@ -952,10 +974,10 @@ export function Discover() {
                 {t("discover.previous", "Previous")}
               </button>
 
-              {onboardingStep < 3 ? (
+              {onboardingStep < 4 ? (
                 <button
                   type="button"
-                  onClick={() => setOnboardingStep((current) => Math.min(3, current + 1))}
+                  onClick={() => setOnboardingStep((current) => Math.min(4, current + 1))}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {t("discover.next", "Next")}
