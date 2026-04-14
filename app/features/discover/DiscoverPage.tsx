@@ -161,6 +161,8 @@ export function Discover() {
   }, [bestOfIndex]);
 
   const needsOnboarding = !settings.firstRunCompleted;
+  const hasGameFolder = settings.gameDirectory.trim().length > 0;
+  const hasDataRoot = settings.dataRootDirectory.trim().length > 0;
 
   useEffect(() => {
     if (needsOnboarding) {
@@ -978,6 +980,7 @@ export function Discover() {
                 <button
                   type="button"
                   onClick={() => setOnboardingStep((current) => Math.min(4, current + 1))}
+                  disabled={(onboardingStep === 1 && !hasGameFolder) || (onboardingStep === 2 && !hasDataRoot)}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {t("discover.next", "Next")}
@@ -985,6 +988,7 @@ export function Discover() {
               ) : (
                 <button
                   onClick={completeOnboarding}
+                  disabled={!hasGameFolder || !hasDataRoot}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {t("discover.markSetupComplete", "Mark Setup Complete")}
