@@ -65,6 +65,14 @@ function getDefaultDataRoot() {
   return path.join(app.getPath("userData"), "funkhub");
 }
 
+function getRecommendedDataRootPath() {
+  return path.join(app.getPath("documents"), "FunkHub");
+}
+
+function getRecommendedDownloadsPath() {
+  return path.join(app.getPath("downloads"), "FunkHub");
+}
+
 function getSettingsFilePath() {
   return path.join(getDefaultDataRoot(), "settings.json");
 }
@@ -369,12 +377,15 @@ async function getItchAccessToken() {
 
 async function getEffectiveSettings() {
   const runtimeSettings = await readRuntimeSettings();
-  const dataRootDirectory = typeof runtimeSettings.dataRootDirectory === "string"
+  const configuredDataRoot = typeof runtimeSettings.dataRootDirectory === "string"
     ? runtimeSettings.dataRootDirectory.trim()
     : "";
-  const downloadsDirectory = typeof runtimeSettings.downloadsDirectory === "string"
+  const configuredDownloads = typeof runtimeSettings.downloadsDirectory === "string"
     ? runtimeSettings.downloadsDirectory.trim()
     : "";
+
+  const dataRootDirectory = configuredDataRoot || getRecommendedDataRootPath();
+  const downloadsDirectory = configuredDownloads || getRecommendedDownloadsPath();
 
   return {
     ...runtimeSettings,
