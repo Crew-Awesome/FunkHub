@@ -145,31 +145,6 @@ const githubEngineSources: GithubEngineSource[] = [
 
 const staticOnlyEngines: EngineDefinition[] = [
   {
-    slug: "codename",
-    name: "Codename Engine",
-    description: "Nightly link build artifacts.",
-    releases: [
-      {
-        platform: "windows",
-        version: "nightly",
-        sourceUrl: "https://nightly.link/CodenameCrew/CodenameEngine/workflows/windows/main/Codename%20Engine.zip",
-        downloadUrl: "https://nightly.link/CodenameCrew/CodenameEngine/workflows/windows/main/Codename%20Engine.zip",
-      },
-      {
-        platform: "macos",
-        version: "nightly",
-        sourceUrl: "https://nightly.link/CodenameCrew/CodenameEngine/workflows/macos/main/Codename%20Engine.zip",
-        downloadUrl: "https://nightly.link/CodenameCrew/CodenameEngine/workflows/macos/main/Codename%20Engine.zip",
-      },
-      {
-        platform: "linux",
-        version: "nightly",
-        sourceUrl: "https://nightly.link/CodenameCrew/CodenameEngine/workflows/linux/main/Codename%20Engine.zip",
-        downloadUrl: "https://nightly.link/CodenameCrew/CodenameEngine/workflows/linux/main/Codename%20Engine.zip",
-      },
-    ],
-  },
-  {
     slug: "ale-psych",
     name: "ALE Psych Engine",
     description: "ALE Psych nightly workflow artifacts.",
