@@ -558,27 +558,6 @@ export function Settings() {
                   />
                 </label>
 
-                <label className="flex items-center justify-between cursor-pointer">
-                  <div>
-                    <p className="font-medium text-foreground">{t("settings.sendAnalytics", "Send analytics")}</p>
-                    <p id="desc-send-analytics" className="text-sm text-muted-foreground">
-                      {t("settings.sendAnalyticsDesc", "Help improve FunkHub by sharing usage data")}
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    aria-describedby="desc-send-analytics"
-                    checked={settings.sendAnalytics}
-                    onChange={(event) => {
-                      updateSettings({ sendAnalytics: event.target.checked });
-                    }}
-                    className="w-11 h-6 bg-secondary rounded-full appearance-none cursor-pointer relative
-                             checked:bg-primary transition-colors
-                             after:content-[''] after:absolute after:top-1 after:left-1
-                             after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform
-                             checked:after:translate-x-5"
-                  />
-                </label>
               </div>
             </section>
 
