@@ -608,7 +608,7 @@ export function Engines() {
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="mb-6 flex items-center justify-between"
         >
-          <h1 className="text-3xl font-bold text-foreground">{t("engines.instances", "Instances")}</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t("engines.title", "Engines")}</h1>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -711,7 +711,7 @@ export function Engines() {
     <div className="p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{t("engines.instances", "Instances")}</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t("engines.title", "Engines")}</h1>
           <p className="text-sm text-muted-foreground mt-1">Game engine installs used to run mods</p>
         </div>
         <button
