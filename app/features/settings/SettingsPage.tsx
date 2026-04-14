@@ -181,8 +181,11 @@ export function Settings() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    {t("settings.gameDirectory", "Game Directory")}
+                    {t("settings.gameDirectory", "Base Game Folder (Friday Night Funkin')")}
                   </label>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    {t("settings.gameDirectoryHelp", "Used for launching the base game and finding local FNF files.")}
+                  </p>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <input
                       type="text"
@@ -192,7 +195,7 @@ export function Settings() {
                       className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                     <button
-                      onClick={() => browseForSetting("gameDirectory", t("settings.chooseGameFolder", "Choose your FNF game folder"), gameDirectory)}
+                      onClick={() => browseForSetting("gameDirectory", t("settings.chooseGameFolder", "Choose your FNF base game folder"), gameDirectory)}
                       className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
                     >
                       <Folder className="w-4 h-4" />
@@ -265,8 +268,11 @@ export function Settings() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    {t("settings.downloadLocation", "Download Location")}
+                    {t("settings.downloadLocation", "Download Folder")}
                   </label>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    {t("settings.downloadLocationHelp", "Used for downloaded archives before install/import.")}
+                  </p>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <input
                       type="text"
@@ -276,7 +282,7 @@ export function Settings() {
                       className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                     <button
-                      onClick={() => browseForSetting("downloadsDirectory", t("settings.chooseDownloadTempFolder", "Choose a download temp folder"), downloadsDirectory)}
+                      onClick={() => browseForSetting("downloadsDirectory", t("settings.chooseDownloadsFolder", "Choose your download folder"), downloadsDirectory)}
                       className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
                     >
                       <Folder className="w-4 h-4" />
@@ -287,8 +293,11 @@ export function Settings() {
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    {t("settings.engineDataRoot", "Engine Data Root")}
+                    {t("settings.engineDataRoot", "FunkHub Data Folder (Engines + Managed Content)")}
                   </label>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    {t("settings.engineDataRootHelp", "Used for engine installs, imported mods, and managed app data.")}
+                  </p>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <input
                       type="text"
@@ -296,10 +305,10 @@ export function Settings() {
                       onChange={(event) => setDataRootDirectory(event.target.value)}
                       onBlur={() => saveStringSetting("dataRootDirectory", dataRootDirectory)}
                       className="flex-1 px-4 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      placeholder={t("settings.dataRootPlaceholder", "Defaults to app data directory")}
+                      placeholder={t("settings.dataRootPlaceholder", "Defaults to the app data folder")}
                     />
                     <button
-                      onClick={() => browseForSetting("dataRootDirectory", t("settings.chooseEngineInstallRoot", "Choose engine install root"), dataRootDirectory)}
+                      onClick={() => browseForSetting("dataRootDirectory", t("settings.chooseDataRootFolder", "Choose your FunkHub data folder"), dataRootDirectory)}
                       className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors inline-flex items-center justify-center gap-2"
                     >
                       <Folder className="w-4 h-4" />
