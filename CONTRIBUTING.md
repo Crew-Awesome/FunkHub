@@ -29,6 +29,12 @@ Thanks for helping improve FunkHub.
   - app closed then open `funkhub://...`
   - app already open then open `funkhub://...`
 
+## Translation updates
+
+- Translation portal is currently offline.
+- Please submit translation changes through pull requests.
+- Edit locale files under `app/i18n/locales/*.json` and keep keys aligned with `app/i18n/locales/en.json`.
+
 ## Pull request checklist
 
 - [ ] Linked issue (if applicable)

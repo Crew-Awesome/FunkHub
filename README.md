@@ -20,23 +20,11 @@ Fast to navigate, easy to use, and built around the GameBanana API.
 
 ## Help Translate FunkHub
 
-<p align="center">
-  <a href="https://funkhub-translations.duckdns.org/">
-    <img src="assets/art/weblate-logo.png" alt="Weblate" width="200" />
-  </a>
-</p>
+Translation portal is currently offline.
 
-<p align="center">
-  <strong>FunkHub needs your help to reach more players!</strong><br>
-  We use <a href="https://funkhub-translations.duckdns.org/">Weblate</a> for community translations — no coding required.<br>
-  If you speak another language, please consider contributing a translation!
-</p>
+For now, please submit translation updates through pull requests by editing files in `app/i18n/locales/*.json`.
 
-<p align="center">
-  <a href="https://funkhub-translations.duckdns.org/">
-    <img src="https://img.shields.io/badge/translate-on%20Weblate-green?style=for-the-badge&logo=weblate" alt="Translate on Weblate" />
-  </a>
-</p>
+Before opening a PR, make sure locale keys stay aligned with `app/i18n/locales/en.json`.
 
 ## Features
 
@@ -98,7 +86,7 @@ Fast to navigate, easy to use, and built around the GameBanana API.
 
 
 
-> **AI Disclosure:** This project includes AI-assisted work. OpenAI Codex and Anthropic Claude were used for bug fixing, UI improvements, and Weblate integration.
+> **AI Disclosure:** This project includes AI-assisted work. OpenAI Codex and Anthropic Claude were used for bug fixing and UI improvements.
 
 ## Screenshots
 
@@ -157,5 +145,5 @@ Nightly CI artifacts (14-day retention):
 ## AI Tooling and Credits
 
 - OpenAI Codex - AI-assisted bug fixing, UI support, and engineering workflow help
-- Anthropic Claude - AI-assisted bug fixing, UI support, and Weblate integration support
+- Anthropic Claude - AI-assisted bug fixing and UI support
 - AI outputs are reviewed and integrated by project maintainers
