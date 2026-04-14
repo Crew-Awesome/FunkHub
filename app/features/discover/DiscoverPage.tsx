@@ -903,6 +903,7 @@ export function Discover() {
               <div className="rounded-lg border border-border p-3">
                 <p className="font-medium text-foreground">{t("discover.step2", "2) Choose FunkHub data folder")}</p>
                 <p className="mt-1 text-muted-foreground">{t("discover.step2Desc", "FunkHub stores engine installs and managed content here (engines, imported mods, and app-managed files).")}</p>
+                <p className="mt-1 text-xs text-muted-foreground break-all">{t("discover.defaultPath", "Default")}: {settings.dataRootDirectory}</p>
                 <button
                   onClick={async () => {
                     const selected = await browseFolder({
@@ -917,6 +918,14 @@ export function Discover() {
                 >
                   {t("discover.chooseDataRoot", "Choose Data Folder")}
                 </button>
+                <button
+                  onClick={async () => {
+                    await updateSettings({ dataRootDirectory: "" });
+                  }}
+                  className="mt-2 ml-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                >
+                  {t("discover.useDefault", "Use Default")}
+                </button>
                 <p className="mt-2 text-xs text-muted-foreground break-all">{t("discover.current", "Current")}: {settings.dataRootDirectory || t("discover.notSet", "Not set")}</p>
               </div>
             )}
@@ -925,6 +934,7 @@ export function Discover() {
               <div className="rounded-lg border border-border p-3">
                 <p className="font-medium text-foreground">{t("discover.stepDownloads", "3) Choose download folder")}</p>
                 <p className="mt-1 text-muted-foreground">{t("discover.stepDownloadsDesc", "Downloaded archives are saved here before install/import. You can keep default if unsure.")}</p>
+                <p className="mt-1 text-xs text-muted-foreground break-all">{t("discover.defaultPath", "Default")}: {settings.downloadsDirectory}</p>
                 <button
                   onClick={async () => {
                     const selected = await browseFolder({
@@ -938,6 +948,14 @@ export function Discover() {
                   className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
                 >
                   {t("discover.chooseDownloadsFolderBtn", "Choose Download Folder")}
+                </button>
+                <button
+                  onClick={async () => {
+                    await updateSettings({ downloadsDirectory: "" });
+                  }}
+                  className="mt-2 ml-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                >
+                  {t("discover.useDefault", "Use Default")}
                 </button>
                 <p className="mt-2 text-xs text-muted-foreground break-all">{t("discover.current", "Current")}: {settings.downloadsDirectory || t("discover.notSetDefault", "Not set (app default)")}</p>
               </div>
