@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Folder, Download, Palette, Sliders, Info, MessageCircle, FolderOpen, Link2, Copy, Trash2, RotateCcw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useFunkHub, useI18n, useTheme } from "../../providers";
+import { AppIcon } from "../../shared/ui/AppIcon";
 import { ThemePicker } from "../../shared/ui/ThemePicker";
 import { ModePicker } from "../../shared/ui/ModePicker";
 import type { SupportedLocale } from "../../i18n";
@@ -820,9 +821,7 @@ export function Settings() {
                   aria-label={t("settings.creatorX", "Creator on X")}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-secondary/50 hover:bg-secondary transition-colors"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" aria-hidden="true">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.259 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
+                  <AppIcon name="socialX" className="w-4 h-4" aria-hidden="true" />
                 </a>
                 <a
                   href="https://discord.gg/cdP7JhDv4u"
