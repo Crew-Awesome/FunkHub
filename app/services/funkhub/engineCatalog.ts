@@ -70,6 +70,21 @@ const githubEngineSources: GithubEngineSource[] = [
     ],
   },
   {
+    slug: "codename",
+    name: "Codename Engine",
+    description: "Codename Engine official release feed.",
+    repo: "CodenameCrew/CodenameEngine",
+    fallbackVersion: "latest",
+    fallbackReleases: [
+      {
+        platform: "any",
+        version: "latest",
+        sourceUrl: "https://github.com/CodenameCrew/CodenameEngine/releases",
+        downloadUrl: "https://github.com/CodenameCrew/CodenameEngine/releases",
+      },
+    ],
+  },
+  {
     slug: "basegame",
     name: "Funkin Base Game",
     description: "Official FunkinCrew base game releases.",
