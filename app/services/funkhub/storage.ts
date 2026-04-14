@@ -19,8 +19,6 @@ const DEFAULT_SETTINGS: FunkHubSettings = {
   checkAppUpdatesOnStartup: true,
   autoDownloadAppUpdates: false,
   autoUpdateMods: false,
-  autoUpdateEngines: false,
-  sendAnalytics: false,
   showAnimations: true,
   gameBananaIntegration: {
     pollingIntervalSeconds: 300,
