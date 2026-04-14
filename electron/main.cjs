@@ -92,6 +92,11 @@ if (!gotSingleInstanceLock) {
   app.quit();
 }
 
+app.setName("FunkHub");
+if (process.platform === "win32") {
+  app.setAppUserModelId("com.funkhub.desktop");
+}
+
 app.on("second-instance", (_event, argv) => {
   const deepLink = extractDeepLinkFromArgv(argv);
   if (deepLink) {
