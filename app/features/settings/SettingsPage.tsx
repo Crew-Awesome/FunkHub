@@ -202,6 +202,16 @@ export function Settings() {
                       {t("settings.browse", "Browse")}
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGameDirectory("");
+                      void saveStringSetting("gameDirectory", "");
+                    }}
+                    className="mt-2 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    {t("settings.useDefaultPath", "Use default path")}
+                  </button>
                 </div>
 
                 <div>
@@ -289,6 +299,16 @@ export function Settings() {
                       {t("settings.browse", "Browse")}
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDownloadsDirectory("");
+                      void saveStringSetting("downloadsDirectory", "");
+                    }}
+                    className="mt-2 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    {t("settings.useDefaultPath", "Use default path")}
+                  </button>
                 </div>
 
                 <div>
@@ -315,6 +335,16 @@ export function Settings() {
                       {t("settings.browse", "Browse")}
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDataRootDirectory("");
+                      void saveStringSetting("dataRootDirectory", "");
+                    }}
+                    className="mt-2 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    {t("settings.useDefaultPath", "Use default path")}
+                  </button>
                 </div>
 
                 <div>
