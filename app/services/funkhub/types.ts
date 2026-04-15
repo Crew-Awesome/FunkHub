@@ -451,3 +451,14 @@ export interface SearchModsParams {
   order?: SearchSortOrder;
   fields?: SearchField[];
 }
+
+export interface PageMetadata {
+  recordCount?: number;
+  perPage?: number;
+  isComplete?: boolean;
+}
+
+export interface PagedResult<T> {
+  records: T[];
+  metadata: PageMetadata;
+}
