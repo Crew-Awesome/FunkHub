@@ -449,9 +449,20 @@ export class GameBananaApiService {
 
     // TopSubs may not include _aPreviewMedia even with _csvFields — hydrate missing images
     // from individual mod profiles (results are cached so this only runs once per session).
-    const result = await Promise.all(
-      normalized.map(async (mod) => {
-        if (mod.imageUrl || mod.thumbnailUrl) return mod;
+    const result = [...normalized];
+    const maxHydrationConcurrency = 4;
+    let index = 0;
+
+    const workers = Array.from({ length: Math.min(maxHydrationConcurrency, normalized.length) }, async () => {
+      while (index < normalized.length) {
+        const current = index;
+        index += 1;
+        const mod = normalized[current];
+
+        if (mod.imageUrl || mod.thumbnailUrl) {
+          continue;
+        }
+
         try {
           const profile = await this.fetchJsonCached<Record<string, unknown>>({
             key: `modPreviewMedia:${mod.id}`,
@@ -459,17 +470,19 @@ export class GameBananaApiService {
             ttlMs: LIST_CACHE_TTL_MS,
             url: `${APIV11_BASE}/Mod/${mod.id}?_csvFields=_aPreviewMedia`,
           });
-          return {
+          result[current] = {
             ...mod,
             imageUrl: firstImageUrl(profile._aPreviewMedia, "_sFile530"),
             thumbnailUrl: firstImageUrl(profile._aPreviewMedia, "_sFile220"),
             screenshotUrls: allImageUrls(profile._aPreviewMedia, "_sFile530"),
           };
         } catch {
-          return mod;
+          result[current] = mod;
         }
-      }),
-    );
+      }
+    });
+
+    await Promise.all(workers);
 
     this.prefetchThumbnails(result);
     return result;
