@@ -142,6 +142,7 @@ export class ModInstallerService {
     requiredEngine?: EngineSlug;
     selectedEngine?: InstalledEngine;
     plan: InstallPlan;
+    userSelectedEngine?: boolean;
   }): { compatible: boolean; warning?: string } {
     if (input.plan.type === "executable") {
       return { compatible: true };
@@ -152,6 +153,13 @@ export class ModInstallerService {
     }
 
     if (input.requiredEngine !== input.selectedEngine.slug) {
+      if (input.userSelectedEngine) {
+        return {
+          compatible: true,
+          warning: `Continuing with selected engine ${input.selectedEngine.slug} even though metadata suggests ${input.requiredEngine}.`,
+        };
+      }
+
       return {
         compatible: false,
         warning: `This mod targets ${input.requiredEngine} but selected engine is ${input.selectedEngine.slug}.`,
