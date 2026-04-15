@@ -145,7 +145,7 @@ export function Engines() {
       const override = getLaunchOverride(engineId);
       await launchEngine(engineId, {
         launcher: currentPlatform === "linux" ? override.launcher : "native",
-        launcherPath: currentPlatform === "linux" && override.launcher !== "native" ? override.launcherPath : undefined,
+        launcherPath: currentPlatform === "linux" ? override.launcherPath : undefined,
         executablePath: override.executablePath,
       });
     } catch (error) {
@@ -391,6 +391,35 @@ export function Engines() {
           >
             {scanningPaths ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
             {scanningPaths ? t("engines.scanning", "Scanning…") : t("engines.scanNow", "Scan Now")}
+          </button>
+          <button
+            onClick={async () => {
+              const sourcePath = await browseFolder({ title: t("engines.selectEngineFolder", "Select engine folder to import") });
+              if (!sourcePath) {
+                return;
+              }
+              const suggested = sourcePath.split(/[\\/]/).filter(Boolean).pop() || "Custom Engine";
+              const customName = window.prompt(t("engines.customEngineNamePrompt", "Custom engine name"), suggested)?.trim();
+              if (!customName) {
+                return;
+              }
+
+              setInstallError(null);
+              setInstallingSlug("custom");
+              try {
+                await importEngineFromFolder("custom", "imported", sourcePath, customName);
+                await refreshEngineHealth();
+                setShowAddDialog(false);
+              } catch (error) {
+                setInstallError(error instanceof Error ? error.message : t("engines.importFailed", "Engine import failed"));
+              } finally {
+                setInstallingSlug(null);
+              }
+            }}
+            className="shrink-0 flex items-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-xs text-foreground hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t("engines.importCustom", "Import Custom")}
           </button>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
