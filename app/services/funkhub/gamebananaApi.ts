@@ -10,7 +10,7 @@ import {
   SearchModsParams,
   type SubfeedParams,
 } from "./types";
-import { detectRequiredEngineFromMetadata } from "./engineDetection";
+import { detectRequiredEngineForProfile } from "./engineDetection";
 
 const APIV11_BASE = "https://gamebanana.com/apiv11";
 const APIV7_BASE = "https://gamebanana.com/apiv7";
@@ -151,12 +151,8 @@ function normalizeSummary(record: Record<string, unknown>): GameBananaModSummary
   };
 }
 
-function detectRequiredEngine(mod: Pick<GameBananaModProfile, "name" | "text" | "rootCategory">): GameBananaModProfile["requiredEngine"] {
-  return detectRequiredEngineFromMetadata({
-    name: mod.name,
-    text: mod.text,
-    rootCategoryName: mod.rootCategory?.name,
-  });
+function detectRequiredEngine(mod: Pick<GameBananaModProfile, "rootCategory" | "category" | "superCategory">): GameBananaModProfile["requiredEngine"] {
+  return detectRequiredEngineForProfile(mod);
 }
 
 function detectDependencies(text?: string): string[] {
@@ -562,7 +558,7 @@ export class GameBananaApiService {
         files: fallback.files ?? [],
         credits: [],
         dependencies: detectDependencies(fallback.text),
-        requiredEngine: detectRequiredEngine({ name: fallback.name ?? "", text: fallback.text, rootCategory: undefined }),
+        requiredEngine: undefined,
       };
       this.setCached(this.metadataCache, cacheKey, fallbackProfile, METADATA_CACHE_TTL_MS);
       return fallbackProfile;
