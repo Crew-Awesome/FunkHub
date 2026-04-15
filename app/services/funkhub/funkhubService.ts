@@ -676,6 +676,10 @@ export class FunkHubService {
     return gameBananaApiService.getSubfeed(params);
   }
 
+  async getSubfeedPage(params?: SubfeedParams): Promise<PagedResult<GameBananaModSummary>> {
+    return gameBananaApiService.getSubfeedPage(params);
+  }
+
   async getModSortOptions(): Promise<Array<{ alias: string; title: string }>> {
     const config = await gameBananaApiService.getModListFilterConfig();
     return config.sorts;
@@ -683,6 +687,10 @@ export class FunkHubService {
 
   async searchMods(params: SearchModsParams): Promise<GameBananaModSummary[]> {
     return gameBananaApiService.searchMods(params);
+  }
+
+  async searchModsPage(params: SearchModsParams): Promise<PagedResult<GameBananaModSummary>> {
+    return gameBananaApiService.searchModsPage(params);
   }
 
   async getModProfile(modId: number): Promise<GameBananaModProfile> {
