@@ -33,6 +33,7 @@ Desktop.ini
 # FunkHub internal
 /.megamemory
 .megamemory/
+.sisyphus/
 *.db
 *.db-shm
 *.db-wal
