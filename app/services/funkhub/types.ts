@@ -139,6 +139,7 @@ export type EngineSlug =
   | "ale-psych"
   | "p-slice"
   | "psych-online"
+  | "custom"
   ;
 
 export interface EngineRelease {
@@ -290,6 +291,11 @@ export interface DesktopBridge {
     exists: boolean;
     isDirectory?: boolean;
     absolutePath?: string;
+    error?: string;
+  }>;
+  listDirectory: (payload: { targetPath: string; directoriesOnly?: boolean; filesOnly?: boolean }) => Promise<{
+    ok: boolean;
+    entries: Array<{ name: string; path: string; isDirectory: boolean }>;
     error?: string;
   }>;
   pickFolder: (payload?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>;
