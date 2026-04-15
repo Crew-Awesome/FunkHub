@@ -64,7 +64,7 @@ interface FunkHubContextValue {
   listModsBySubmitter: (input: { submitterId: number; categoryId?: number; page?: number; perPage?: number }) => Promise<GameBananaModSummary[]>;
   installMod: (modId: number, fileId: number, selectedEngineId?: string, priority?: number, options?: InstallOptions) => void;
   installEngine: (slug: InstalledEngine["slug"], downloadUrl: string, version: string, options?: { allowMissingExecutable?: boolean }) => Promise<void>;
-  importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string, sourcePath?: string) => Promise<void>;
+  importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string, sourcePath?: string, customName?: string) => Promise<void>;
   updateEngine: (engineId: string) => Promise<void>;
   uninstallEngine: (engineId: string) => Promise<void>;
   launchEngine: (
@@ -102,7 +102,8 @@ interface FunkHubContextValue {
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
   browseFile: (options?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => Promise<string | undefined>;
   openFolderPath: (targetPath: string) => Promise<void>;
-  addManualMod: (input: { modName: string; engineId?: string; sourcePath?: string; description?: string; version?: string; author?: string; standalone?: boolean }) => Promise<void>;
+  addManualMod: (input: { modName: string; engineId?: string; sourcePath?: string; description?: string; version?: string; author?: string; standalone?: boolean; gameBananaUrl?: string }) => Promise<void>;
+  autodetectInstalledMods: () => Promise<number>;
   reconcileDiskState: () => Promise<void>;
   connectItch: (clientId: string) => Promise<void>;
   disconnectItch: () => Promise<void>;
@@ -713,8 +714,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         });
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
-      importEngineFromFolder: async (slug, versionHint, sourcePath) => {
-        await funkHubService.importEngineFromFolder({ slug, versionHint, sourcePath });
+      importEngineFromFolder: async (slug, versionHint, sourcePath, customName) => {
+        await funkHubService.importEngineFromFolder({ slug, versionHint, sourcePath, customName });
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
       updateEngine: async (engineId) => {
@@ -817,6 +818,11 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       addManualMod: async (input) => {
         await funkHubService.addManualModFromFolder(input);
         setInstalledMods(funkHubService.getInstalledMods());
+      },
+      autodetectInstalledMods: async () => {
+        const added = await funkHubService.scanInstalledEngineModFolders();
+        setInstalledMods(funkHubService.getInstalledMods());
+        return added;
       },
       reconcileDiskState: async () => {
         await funkHubService.reconcileDiskState();
