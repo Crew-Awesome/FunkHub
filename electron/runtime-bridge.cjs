@@ -187,6 +187,38 @@ function createUpdaterUnavailableInfo(releaseName = "Auto updater unavailable", 
   };
 }
 
+function isUpdaterUnavailableError(error) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message || "";
+  return /module is missing in this build/i.test(message)
+    || /cannot find module ['"]electron-updater['"]/i.test(message)
+    || /cannot find latest\.ya?ml/i.test(message)
+    || /updater cache dir/i.test(message)
+    || /app-update\.yml/i.test(message)
+    || /ERR_UPDATER_/i.test(message);
+}
+
+function splitCommandLine(raw) {
+  const input = String(raw || "").trim();
+  if (!input) {
+    return [];
+  }
+
+  const parts = [];
+  const matcher = /"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'|([^\s]+)/g;
+  let match = matcher.exec(input);
+  while (match) {
+    const token = match[1] ?? match[2] ?? match[3] ?? "";
+    parts.push(token.replace(/\\(["'])/g, "$1"));
+    match = matcher.exec(input);
+  }
+
+  return parts;
+}
+
 function ensureAppUpdaterInitialized() {
   if (appUpdateState.initialized && appUpdateState.autoUpdater) {
     return appUpdateState.autoUpdater;
@@ -384,8 +416,11 @@ async function getEffectiveSettings() {
     ? runtimeSettings.downloadsDirectory.trim()
     : "";
 
-  const dataRootDirectory = configuredDataRoot || getRecommendedDataRootPath();
-  const downloadsDirectory = configuredDownloads || getRecommendedDownloadsPath();
+  const inferredDataRootFromDownloads = configuredDownloads
+    ? path.join(path.dirname(path.resolve(configuredDownloads)), "FunkHubData")
+    : "";
+  const dataRootDirectory = configuredDataRoot || inferredDataRootFromDownloads || getRecommendedDataRootPath();
+  const downloadsDirectory = configuredDownloads || path.join(dataRootDirectory, "downloads");
 
   return {
     ...runtimeSettings,
@@ -1293,6 +1328,13 @@ async function handleLaunchEngine(payload) {
     }
     command = launcherPath || launcher;
     args = [launchable];
+  } else if (process.platform === "linux" && typeof launcherPath === "string" && launcherPath.trim().length > 0) {
+    const tokens = splitCommandLine(launcherPath);
+    if (tokens.length === 0) {
+      throw new Error("Launcher command is empty. Set a valid launcher path.");
+    }
+    command = tokens[0];
+    args = [...tokens.slice(1), launchable];
   }
 
   if (extraArgs.length > 0) {
@@ -1556,6 +1598,54 @@ async function handleInspectPath(payload) {
       ok: true,
       exists: false,
       absolutePath,
+    };
+  }
+}
+
+async function handleListDirectory(payload) {
+  const targetPath = payload?.targetPath;
+  if (!targetPath) {
+    throw new Error("targetPath is required");
+  }
+
+  const directoriesOnly = payload?.directoriesOnly === true;
+  const filesOnly = payload?.filesOnly === true;
+
+  const { dataRootDirectory } = await getEffectiveSettings();
+  const rootPath = dataRootDirectory
+    ? path.resolve(dataRootDirectory)
+    : getDefaultDataRoot();
+  const absolutePath = path.isAbsolute(targetPath)
+    ? path.resolve(targetPath)
+    : safeJoin(rootPath, targetPath);
+
+  try {
+    const entries = await fs.readdir(absolutePath, { withFileTypes: true });
+    const normalized = entries
+      .filter((entry) => {
+        if (directoriesOnly) {
+          return entry.isDirectory();
+        }
+        if (filesOnly) {
+          return entry.isFile();
+        }
+        return entry.isFile() || entry.isDirectory();
+      })
+      .map((entry) => ({
+        name: entry.name,
+        path: path.join(absolutePath, entry.name),
+        isDirectory: entry.isDirectory(),
+      }));
+
+    return {
+      ok: true,
+      entries: normalized,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      entries: [],
+      error: error instanceof Error ? error.message : "Failed to list directory",
     };
   }
 }
@@ -1945,6 +2035,9 @@ async function handleUpdateSettings(payload) {
   if (typeof next.downloadsDirectory === "string") {
     next.downloadsDirectory = next.downloadsDirectory.trim();
   }
+  if (typeof next.gameDirectory === "string") {
+    next.gameDirectory = next.gameDirectory.trim();
+  }
 
   await writeRuntimeSettings(next);
   return next;
@@ -1965,7 +2058,7 @@ async function handleCheckAppUpdate() {
     appUpdateState.lastInfo = mapped;
     return { ok: true, info: mapped };
   } catch (error) {
-    if (error instanceof Error && /module is missing in this build/i.test(error.message)) {
+    if (isUpdaterUnavailableError(error)) {
       return {
         ok: true,
         info: createUpdaterUnavailableInfo("Auto updater unavailable", "In-app auto updates are unavailable in this build. Use the GitHub release download link instead."),
@@ -2163,6 +2256,7 @@ module.exports = {
   handleResolveItchBaseGameDownload,
   handleInspectEngineInstall,
   handleInspectPath,
+  handleListDirectory,
   handleImportEngineFolder,
   handleImportModFolder,
   handleGetSettings,
