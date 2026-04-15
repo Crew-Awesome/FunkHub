@@ -7,13 +7,9 @@ import {
   InstalledEngine,
   InstalledMod,
 } from "./types";
-import { detectRequiredEngineFromMetadata } from "./engineDetection";
+import { detectExecutableFromCategories, detectRequiredEngineFromCategories } from "./engineDetection";
 
-const EXECUTABLE_EXTENSIONS = [".exe", ".msi", ".app", ".dmg", ".pkg", ".appimage", ".sh", ".bat"];
 const ARCHIVE_EXTENSIONS = [".zip", ".rar", ".7z"];
-const EXECUTABLE_CATEGORY_IDS = new Set([3827]);
-const HYBRID_EXECUTABLE_CATEGORY_IDS = new Set([3046, 3828]);
-const EXECUTABLE_HINTS = ["standalone", "portable", "launcher", "runtime", "binary", "exec"];
 
 type ModCategoryLike = {
   id?: number;
@@ -33,37 +29,8 @@ function sanitizeFileStem(fileName: string): string {
 }
 
 export class ModInstallerService {
-  private getCategoryCandidates(mod: ModCategorySource): ModCategoryLike[] {
-    return [mod.rootCategory, mod.category, mod.superCategory].filter((category): category is ModCategoryLike => Boolean(category));
-  }
-
-  private isExecutableCategory(category: ModCategoryLike): boolean {
-    const id = typeof category.id === "number" ? category.id : 0;
-    if (id > 0 && EXECUTABLE_CATEGORY_IDS.has(id)) {
-      return true;
-    }
-
-    const name = String(category.name || "").toLowerCase();
-    if (name.includes("executables") || name.includes("executable")) {
-      return true;
-    }
-
-    const profileUrl = String(category.profileUrl || "").toLowerCase();
-    return profileUrl.includes("/mods/cats/3827");
-  }
-
-  private isHybridExecutableCategory(category: ModCategoryLike): boolean {
-    const id = typeof category.id === "number" ? category.id : 0;
-    if (id > 0 && HYBRID_EXECUTABLE_CATEGORY_IDS.has(id)) {
-      return true;
-    }
-
-    const name = String(category.name || "").toLowerCase();
-    return name.includes("launcher") || name.includes("runtime");
-  }
-
   isExecutableCategoryMod(mod: ModCategorySource): boolean {
-    return this.getCategoryCandidates(mod).some((category) => this.isExecutableCategory(category));
+    return detectExecutableFromCategories(mod);
   }
 
   private extractDevelopers(mod: Pick<GameBananaModProfile, "credits" | "submitter">): string[] {
@@ -72,16 +39,12 @@ export class ModInstallerService {
     return Array.from(new Set([...fromSubmitter, ...fromCredits].map((name) => name.trim()).filter(Boolean))).slice(0, 12);
   }
 
-  detectRequiredEngine(mod: Pick<GameBananaModProfile, "requiredEngine" | "name" | "text" | "rootCategory">): EngineSlug | undefined {
+  detectRequiredEngine(mod: Pick<GameBananaModProfile, "requiredEngine" | "rootCategory" | "category" | "superCategory">): EngineSlug | undefined {
     if (mod.requiredEngine) {
       return mod.requiredEngine;
     }
 
-    return detectRequiredEngineFromMetadata({
-      name: mod.name,
-      text: mod.text,
-      rootCategoryName: mod.rootCategory?.name,
-    });
+    return detectRequiredEngineFromCategories(mod);
   }
 
   isArchive(file: Pick<GameBananaFile, "fileName">): boolean {
@@ -90,27 +53,12 @@ export class ModInstallerService {
   }
 
   isExecutableMod(mod: Pick<GameBananaModProfile, "rootCategory" | "category" | "superCategory">, file: Pick<GameBananaFile, "fileName">): boolean {
-    const lowerFileName = file.fileName.toLowerCase();
-    const fromExtension = EXECUTABLE_EXTENSIONS.some((extension) => lowerFileName.endsWith(extension));
-    const categories = this.getCategoryCandidates(mod);
-
-    if (fromExtension) {
-      return true;
-    }
-
-    if (categories.some((category) => this.isExecutableCategory(category))) {
-      return true;
-    }
-
-    if (categories.some((category) => this.isHybridExecutableCategory(category))) {
-      return EXECUTABLE_HINTS.some((hint) => lowerFileName.includes(hint));
-    }
-
-    return false;
+    void file;
+    return detectExecutableFromCategories(mod);
   }
 
   createInstallPlan(input: {
-    mod: Pick<GameBananaModProfile, "requiredEngine" | "rootCategory" | "category" | "superCategory" | "name" | "text">;
+    mod: Pick<GameBananaModProfile, "requiredEngine" | "rootCategory" | "category" | "superCategory">;
     file: Pick<GameBananaFile, "fileName">;
     selectedEngine?: InstalledEngine;
     forceInstallType?: "executable" | "standard_mod";
@@ -125,7 +73,7 @@ export class ModInstallerService {
         type: "executable",
         requiredEngine,
         targetPath: "executables",
-        reason: "Category or extension indicates standalone executable package.",
+        reason: "Category indicates standalone executable package.",
       };
     }
 
