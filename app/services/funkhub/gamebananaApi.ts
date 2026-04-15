@@ -338,9 +338,21 @@ export class GameBananaApiService {
   }
 
   async searchMods({ query, page = 1, perPage = 15, order = "best_match", fields }: SearchModsParams): Promise<GameBananaModSummary[]> {
+    const paged = await this.searchModsPage({ query, page, perPage, order, fields });
+    return paged.records;
+  }
+
+  async searchModsPage({ query, page = 1, perPage = 15, order = "best_match", fields }: SearchModsParams): Promise<PagedResult<GameBananaModSummary>> {
     const normalizedQuery = query.trim();
     if (normalizedQuery.length < 2) {
-      return [];
+      return {
+        records: [],
+        metadata: {
+          recordCount: 0,
+          perPage,
+          isComplete: true,
+        },
+      };
     }
 
     const directModIdMatch = normalizedQuery.match(/gamebanana\.com\/mods\/(\d+)/i);
@@ -349,7 +361,7 @@ export class GameBananaApiService {
       if (Number.isFinite(modId) && modId > 0) {
         try {
           const profile = await this.getModProfile(modId);
-          return [{
+          const summary: GameBananaModSummary = {
             id: profile.id,
             modelName: profile.modelName,
             name: profile.name,
@@ -370,7 +382,16 @@ export class GameBananaApiService {
             submitter: profile.submitter,
             game: profile.game,
             rootCategory: profile.rootCategory,
-          }];
+          };
+
+          return {
+            records: [summary],
+            metadata: {
+              recordCount: 1,
+              perPage,
+              isComplete: true,
+            },
+          };
         } catch {
           // Fall through to API search for graceful recovery.
         }
@@ -389,7 +410,7 @@ export class GameBananaApiService {
     }
 
     const cacheKey = `searchMods:${url.toString()}`;
-    const payload = await this.fetchJsonCached<{ _aRecords?: Record<string, unknown>[] }>({
+    const payload = await this.fetchJsonCached<{ _aMetadata?: Record<string, unknown>; _aRecords?: Record<string, unknown>[] }>({
       key: cacheKey,
       cache: this.listCache,
       ttlMs: LIST_CACHE_TTL_MS,
@@ -401,7 +422,10 @@ export class GameBananaApiService {
       .map(normalizeSummary)
       .filter((mod) => mod.modelName === "Mod" && mod.game?.id === FNF_GAME_ID);
     this.prefetchThumbnails(normalized);
-    return normalized;
+    return {
+      records: normalized,
+      metadata: this.extractMetadata(payload as Record<string, unknown>),
+    };
   }
 
   async getTrendingMods(): Promise<GameBananaModSummary[]> {
