@@ -153,6 +153,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const discoverPerPage = 24;
   const [hasMoreDiscover, setHasMoreDiscover] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [searchOrder, setSearchOrder] = useState<SearchSortOrder>("best_match");
   const [searchFields, setSearchFields] = useState<SearchField[]>(ALL_SEARCH_FIELDS);
   const [browseReleaseType, setBrowseReleaseType] = useState<ReleaseType>("");
@@ -171,6 +172,16 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const t = useCallback((key: string, fallback: string, vars?: Record<string, string | number>) => {
     return translate(normalizeLocale(settings.locale), key, fallback, vars);
   }, [settings.locale]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
 
   const collectCategoryIds = useCallback((targetId: number): Set<number> => {
     const ids = new Set<number>();
@@ -207,8 +218,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         ? collectCategoryIds(selectedCategoryId)
         : undefined;
 
-      if (searchQuery.trim().length >= 2) {
-        const results = await funkHubService.searchMods({ query: searchQuery, page: discoverPage, perPage: discoverPerPage, order: searchOrder, fields: searchFields });
+      if (debouncedSearchQuery.trim().length >= 2) {
+        const results = await funkHubService.searchMods({ query: debouncedSearchQuery, page: discoverPage, perPage: discoverPerPage, order: searchOrder, fields: searchFields });
         const filtered = selectedCategoryIds
           ? results.filter((mod) => selectedCategoryIds.has(mod.rootCategory?.id ?? -1))
           : results;
@@ -245,7 +256,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       setDiscoverMods([]);
       setHasMoreDiscover(false);
     }
-  }, [searchQuery, searchOrder, searchFields, selectedCategoryId, subfeedSort, categorySort, discoverPage, browseReleaseType, browseContentRatings, collectCategoryIds]);
+  }, [debouncedSearchQuery, searchOrder, searchFields, selectedCategoryId, subfeedSort, categorySort, discoverPage, browseReleaseType, browseContentRatings, collectCategoryIds]);
 
   const refreshModUpdates = useCallback(async () => {
     const updates = await funkHubService.refreshModUpdates();
@@ -510,7 +521,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setDiscoverPage(1);
-  }, [selectedCategoryId, subfeedSort, categorySort, searchQuery, searchOrder, searchFields, browseReleaseType, browseContentRatings]);
+  }, [selectedCategoryId, subfeedSort, categorySort, debouncedSearchQuery, searchOrder, searchFields, browseReleaseType, browseContentRatings]);
 
   useEffect(() => {
     if (!window.funkhubDesktop?.onDeepLink || !window.funkhubDesktop?.getPendingDeepLinks) {
