@@ -39,3 +39,4 @@ Desktop.ini
 
 # Electron builder cache
 .electron-builder-cache/
+gb-api-v11.postman_collection.json
