@@ -1,46 +1,57 @@
-import type { EngineSlug } from "./types";
+import type { EngineSlug, GameBananaModProfile } from "./types";
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+const ENGINE_CATEGORY_MAP: Partial<Record<number, EngineSlug>> = {
+  28367: "psych",
+  29202: "basegame",
+  34764: "codename",
+  43798: "p-slice",
+  43850: "fps-plus",
+  44037: "ale-psych",
+  44036: "js-engine",
+};
 
-function includesAny(text: string, tokens: string[]): boolean {
-  return tokens.some((token) => {
-    const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(token)}([^a-z0-9]|$)`, "i");
-    return pattern.test(text);
-  });
-}
+const EXECUTABLE_CATEGORY_IDS = new Set([3827]);
 
-export function detectRequiredEngineFromMetadata(input: {
+type CategoryLike = {
+  id?: number;
   name?: string;
-  text?: string;
-  rootCategoryName?: string;
-}): EngineSlug | undefined {
-  const haystack = `${input.name ?? ""} ${input.text ?? ""} ${input.rootCategoryName ?? ""}`.toLowerCase();
+  profileUrl?: string;
+} | undefined;
 
-  if (includesAny(haystack, ["base game", "basegame", "v-slice", "vanilla"])) {
-    return "basegame";
+export function collectModCategoryIds(input: {
+  rootCategory?: CategoryLike;
+  category?: CategoryLike;
+  superCategory?: CategoryLike;
+}): number[] {
+  return [input.category?.id, input.superCategory?.id, input.rootCategory?.id]
+    .filter((value): value is number => typeof value === "number" && value > 0);
+}
+
+export function detectRequiredEngineFromCategories(input: {
+  rootCategory?: CategoryLike;
+  category?: CategoryLike;
+  superCategory?: CategoryLike;
+}): EngineSlug | undefined {
+  const categoryIds = collectModCategoryIds(input);
+
+  for (const categoryId of categoryIds) {
+    const engine = ENGINE_CATEGORY_MAP[categoryId];
+    if (engine) {
+      return engine;
+    }
   }
-  if (includesAny(haystack, ["ale psych", "ale-psych", "ale engine"])) {
-    return "ale-psych";
-  }
-  if (includesAny(haystack, ["psych", "psych engine", "psychengine"])) {
-    return "psych";
-  }
-  if (includesAny(haystack, ["codename", "codename engine"])) {
-    return "codename";
-  }
-  if (includesAny(haystack, ["fps+", "fps plus"])) {
-    return "fps-plus";
-  }
-  if (includesAny(haystack, ["js engine", "fnf js"])) {
-    return "js-engine";
-  }
-  if (includesAny(haystack, ["p-slice", "pslice"])) {
-    return "p-slice";
-  }
-  if (includesAny(haystack, ["psych online", "psych-online", "psychonline", "snirozu"])) {
-    return "psych-online";
-  }
+
   return undefined;
+}
+
+export function detectExecutableFromCategories(input: {
+  rootCategory?: CategoryLike;
+  category?: CategoryLike;
+  superCategory?: CategoryLike;
+}): boolean {
+  return collectModCategoryIds(input).some((categoryId) => EXECUTABLE_CATEGORY_IDS.has(categoryId));
+}
+
+export function detectRequiredEngineForProfile(mod: Pick<GameBananaModProfile, "rootCategory" | "category" | "superCategory">): EngineSlug | undefined {
+  return detectRequiredEngineFromCategories(mod);
 }
