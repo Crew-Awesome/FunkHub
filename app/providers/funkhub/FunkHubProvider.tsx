@@ -160,6 +160,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const [browseContentRatings, setBrowseContentRatings] = useState<ContentRating[]>([]);
   const processedDeepLinksRef = useRef<Map<string, number>>(new Map());
   const processingDeepLinksRef = useRef<Set<string>>(new Set());
+  const discoverRequestIdRef = useRef(0);
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | undefined>(undefined);
   const [appUpdateChecking, setAppUpdateChecking] = useState(false);
   const [appUpdateError, setAppUpdateError] = useState<string | undefined>(undefined);
@@ -213,6 +214,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   }, [categories]);
 
   const refreshDiscover = useCallback(async () => {
+    const requestId = ++discoverRequestIdRef.current;
+
     try {
       const selectedCategoryIds = selectedCategoryId !== undefined
         ? collectCategoryIds(selectedCategoryId)
@@ -223,6 +226,11 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         const filtered = selectedCategoryIds
           ? results.filter((mod) => selectedCategoryIds.has(mod.rootCategory?.id ?? -1))
           : results;
+
+        if (requestId !== discoverRequestIdRef.current) {
+          return;
+        }
+
         setDiscoverMods(filtered);
         setHasMoreDiscover(filtered.length >= discoverPerPage);
         return;
@@ -236,6 +244,11 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
           page: discoverPage,
           perPage: discoverPerPage,
         });
+
+        if (requestId !== discoverRequestIdRef.current) {
+          return;
+        }
+
         setDiscoverMods(mods);
         setHasMoreDiscover(mods.length > 0);
         return;
@@ -250,9 +263,18 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         releaseType: browseReleaseType,
         contentRatings: browseContentRatings.length > 0 ? browseContentRatings : undefined,
       });
+
+      if (requestId !== discoverRequestIdRef.current) {
+        return;
+      }
+
       setDiscoverMods(mods);
       setHasMoreDiscover(mods.length >= discoverPerPage);
     } catch {
+      if (requestId !== discoverRequestIdRef.current) {
+        return;
+      }
+
       setDiscoverMods([]);
       setHasMoreDiscover(false);
     }
