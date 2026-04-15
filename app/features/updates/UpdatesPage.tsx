@@ -37,11 +37,16 @@ export function Updates() {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          disabled={appUpdateChecking}
           onClick={async () => {
-            await refreshModUpdates();
-            await checkAppUpdate();
+            try {
+              await refreshModUpdates();
+              await checkAppUpdate();
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : t("updates.checkFailed", "Failed to check updates"));
+            }
           }}
-          className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <RefreshCw className={`w-4 h-4 ${appUpdateChecking ? "animate-spin" : ""}`} />
           {t("updates.check", "Check for Updates")}
@@ -124,6 +129,9 @@ export function Updates() {
               <p className="text-xs text-warning mt-1">
                 {t("updates.autoCheckDisabled", "Startup check is off — updates won't be found automatically.")}
               </p>
+            )}
+            {!appUpdateChecking && appUpdate?.notes && /auto updater unavailable|in-app update/i.test(appUpdate.notes) && (
+              <p className="text-xs text-muted-foreground mt-1">{appUpdate.notes}</p>
             )}
           </div>
         )}
