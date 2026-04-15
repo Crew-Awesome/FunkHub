@@ -222,7 +222,8 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         : undefined;
 
       if (debouncedSearchQuery.trim().length >= 2) {
-        const results = await funkHubService.searchMods({ query: debouncedSearchQuery, page: discoverPage, perPage: discoverPerPage, order: searchOrder, fields: searchFields });
+        const paged = await funkHubService.searchModsPage({ query: debouncedSearchQuery, page: discoverPage, perPage: discoverPerPage, order: searchOrder, fields: searchFields });
+        const results = paged.records;
         const filtered = selectedCategoryIds
           ? results.filter((mod) => selectedCategoryIds.has(mod.rootCategory?.id ?? -1))
           : results;
@@ -232,30 +233,31 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         }
 
         setDiscoverMods(filtered);
-        setHasMoreDiscover(filtered.length >= discoverPerPage);
+        setHasMoreDiscover(paged.metadata.isComplete === false);
         return;
       }
 
       if (selectedCategoryId === undefined) {
         // No search, no category — use Subfeed (Ripe / New / Updated)
         // Subfeed returns up to ~15 items/page regardless of perPage, so check mods.length > 0
-        const mods = await funkHubService.getSubfeed({
+        const paged = await funkHubService.getSubfeedPage({
           sort: subfeedSort,
           page: discoverPage,
           perPage: discoverPerPage,
         });
+        const mods = paged.records;
 
         if (requestId !== discoverRequestIdRef.current) {
           return;
         }
 
         setDiscoverMods(mods);
-        setHasMoreDiscover(mods.length > 0);
+        setHasMoreDiscover(paged.metadata.isComplete === false);
         return;
       }
 
       // Category selected — use Mod/Index with user-chosen sort
-      const mods = await funkHubService.listMods({
+      const paged = await funkHubService.listModsPage({
         categoryId: selectedCategoryId,
         page: discoverPage,
         perPage: discoverPerPage,
@@ -263,13 +265,14 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         releaseType: browseReleaseType,
         contentRatings: browseContentRatings.length > 0 ? browseContentRatings : undefined,
       });
+      const mods = paged.records;
 
       if (requestId !== discoverRequestIdRef.current) {
         return;
       }
 
       setDiscoverMods(mods);
-      setHasMoreDiscover(mods.length >= discoverPerPage);
+      setHasMoreDiscover(paged.metadata.isComplete === false);
     } catch {
       if (requestId !== discoverRequestIdRef.current) {
         return;
