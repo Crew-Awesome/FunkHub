@@ -20,6 +20,7 @@ const iconByEngine: Record<EngineSlug, string> = {
   "ale-psych": alePsychIcon,
   "p-slice": pSliceIcon,
   "psych-online": "",
+  custom: "",
 };
 
 export function getEngineIcon(slug: EngineSlug): string | undefined {
