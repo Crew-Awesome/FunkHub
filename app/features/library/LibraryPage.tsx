@@ -24,6 +24,7 @@ export function Library() {
     browseFile,
     openFolderPath,
     addManualMod,
+    autodetectInstalledMods,
     updateInstalledModLaunchOptions,
     runningLaunchIds,
     killLaunch,
@@ -63,6 +64,7 @@ export function Library() {
   const [manualDescription, setManualDescription] = useState("");
   const [manualEngineId, setManualEngineId] = useState(installedEngines[0]?.id ?? "");
   const [manualSourcePath, setManualSourcePath] = useState("");
+  const [manualGameBananaUrl, setManualGameBananaUrl] = useState("");
   const [manualStandalone, setManualStandalone] = useState(false);
   const [launchMode, setLaunchMode] = useState<"native" | "wine" | "wine64" | "proton">("native");
   const [launchPath, setLaunchPath] = useState("");
@@ -323,6 +325,24 @@ export function Library() {
           <FolderPlus className="w-4 h-4" />
           {t("library.addManual", "Add Manual")}
         </button>
+        <button
+          onClick={async () => {
+            try {
+              const added = await autodetectInstalledMods();
+              if (added > 0) {
+                toast.success(t("library.autodetectAdded", "Detected {{count}} existing mods.", { count: added }));
+              } else {
+                toast(t("library.autodetectNone", "No new mods were detected."));
+              }
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : t("library.autodetectFailed", "Failed to autodetect mods"));
+            }
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-sm"
+        >
+          <RefreshCw className="w-4 h-4" />
+          {t("library.autodetectMods", "Autodetect")}
+        </button>
       </div>
     );
   }
@@ -345,6 +365,24 @@ export function Library() {
               aria-label={t("library.addManual", "Add Manual")}
             >
               <FolderPlus className="w-4 h-4" />
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const added = await autodetectInstalledMods();
+                  if (added > 0) {
+                    toast.success(t("library.autodetectAdded", "Detected {{count}} existing mods.", { count: added }));
+                  } else {
+                    toast(t("library.autodetectNone", "No new mods were detected."));
+                  }
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : t("library.autodetectFailed", "Failed to autodetect mods"));
+                }
+              }}
+              className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={t("library.autodetectMods", "Autodetect")}
+            >
+              <RefreshCw className="w-4 h-4" />
             </button>
           </div>
 
@@ -1126,6 +1164,10 @@ export function Library() {
 
           <div className="mt-2 space-y-3">
             <div>
+              <label htmlFor="manual-mod-link" className="mb-1 block text-xs text-muted-foreground">{t("library.gamebananaLinkOptional", "GameBanana link (optional)")}</label>
+              <input id="manual-mod-link" value={manualGameBananaUrl} onChange={(e) => setManualGameBananaUrl(e.target.value)} placeholder="https://gamebanana.com/mods/12345" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
+            </div>
+            <div>
               <label htmlFor="manual-mod-name" className="mb-1 block text-xs text-muted-foreground">{t("library.modName", "Mod name")}</label>
               <input id="manual-mod-name" value={manualName} onChange={(e) => setManualName(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
             </div>
@@ -1189,8 +1231,10 @@ export function Library() {
                     version: manualVersion,
                     author: manualAuthor,
                     standalone: manualStandalone,
+                    gameBananaUrl: manualGameBananaUrl,
                   });
                   setShowManualModal(false);
+                  setManualGameBananaUrl("");
                   setManualName("");
                   setManualAuthor("");
                   setManualVersion("");
