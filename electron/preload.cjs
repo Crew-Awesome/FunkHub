@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld("funkhubDesktop", {
   resolveItchBaseGameDownload: (payload) => ipcRenderer.invoke("funkhub:resolveItchBaseGameDownload", payload),
   inspectEngineInstall: (payload) => ipcRenderer.invoke("funkhub:inspectEngineInstall", payload),
   inspectPath: (payload) => ipcRenderer.invoke("funkhub:inspectPath", payload),
+  listDirectory: (payload) => ipcRenderer.invoke("funkhub:listDirectory", payload),
   importEngineFolder: (payload) => ipcRenderer.invoke("funkhub:importEngineFolder", payload),
   importModFolder: (payload) => ipcRenderer.invoke("funkhub:importModFolder", payload),
   pickFolder: (payload) => ipcRenderer.invoke("funkhub:pickFolder", payload),

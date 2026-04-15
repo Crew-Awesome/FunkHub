@@ -16,6 +16,7 @@ const {
   handleResolveItchBaseGameDownload,
   handleInspectEngineInstall,
   handleInspectPath,
+  handleListDirectory,
   handleImportEngineFolder,
   handleImportModFolder,
   handleGetSettings,
@@ -237,6 +238,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle("funkhub:inspectPath", async (_event, payload) => {
     return handleInspectPath(payload);
+  });
+
+  ipcMain.handle("funkhub:listDirectory", async (_event, payload) => {
+    return handleListDirectory(payload);
   });
 
   ipcMain.handle("funkhub:importEngineFolder", async (_event, payload) => {
