@@ -476,12 +476,17 @@ export class GameBananaApiService {
   }
 
   async getSubfeed({ sort = "default", page = 1, perPage = 15 }: SubfeedParams = {}): Promise<GameBananaModSummary[]> {
+    const paged = await this.getSubfeedPage({ sort, page, perPage });
+    return paged.records;
+  }
+
+  async getSubfeedPage({ sort = "default", page = 1, perPage = 15 }: SubfeedParams = {}): Promise<PagedResult<GameBananaModSummary>> {
     const url = new URL(`${APIV11_BASE}/Game/${FNF_GAME_ID}/Subfeed`);
     url.searchParams.set("_sSort", sort);
     url.searchParams.set("_nPage", String(page));
     url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
     const cacheKey = `subfeed:${url.toString()}`;
-    const payload = await this.fetchJsonCached<{ _aRecords?: Record<string, unknown>[] }>({
+    const payload = await this.fetchJsonCached<{ _aMetadata?: Record<string, unknown>; _aRecords?: Record<string, unknown>[] }>({
       key: cacheKey,
       cache: this.listCache,
       ttlMs: LIST_CACHE_TTL_MS,
@@ -490,7 +495,10 @@ export class GameBananaApiService {
     const records = payload._aRecords ?? [];
     const normalized = records.map(normalizeSummary).filter((mod) => mod.modelName === "Mod");
     this.prefetchThumbnails(normalized);
-    return normalized;
+    return {
+      records: normalized,
+      metadata: this.extractMetadata(payload as Record<string, unknown>),
+    };
   }
 
   /** Returns the raw file list inside a GameBanana archive (file paths as strings).
