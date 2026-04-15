@@ -22,6 +22,7 @@ import {
   InstalledMod,
   ListModsParams,
   ModUpdateInfo,
+  PagedResult,
   SearchModsParams,
   SubfeedParams,
 } from "./types";
@@ -665,6 +666,10 @@ export class FunkHubService {
 
   async listMods(params?: ListModsParams): Promise<GameBananaModSummary[]> {
     return gameBananaApiService.listMods(params);
+  }
+
+  async listModsPage(params?: ListModsParams): Promise<PagedResult<GameBananaModSummary>> {
+    return gameBananaApiService.listModsPage(params);
   }
 
   async getSubfeed(params?: SubfeedParams): Promise<GameBananaModSummary[]> {
