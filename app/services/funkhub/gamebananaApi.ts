@@ -6,6 +6,7 @@ import {
   GameBananaModProfile,
   GameBananaModSummary,
   ListModsParams,
+  PagedResult,
   SearchModsParams,
   type SubfeedParams,
 } from "./types";
@@ -270,6 +271,15 @@ export class GameBananaApiService {
     return new Error(context);
   }
 
+  private extractMetadata(payload: Record<string, unknown>): PagedResult<never>["metadata"] {
+    const raw = (payload._aMetadata ?? {}) as Record<string, unknown>;
+    return {
+      recordCount: firstDefinedNumber(raw._nRecordCount),
+      perPage: firstDefinedNumber(raw._nPerpage),
+      isComplete: typeof raw._bIsComplete === "boolean" ? raw._bIsComplete : undefined,
+    };
+  }
+
   async getModListFilterConfig(): Promise<{
     sorts: Array<{ alias: string; title: string }>;
   }> {
@@ -287,6 +297,11 @@ export class GameBananaApiService {
   }
 
   async listMods({ page = 1, perPage = 20, categoryId, submitterId, sort = "Generic_NewAndUpdated", releaseType, contentRatings }: ListModsParams = {}): Promise<GameBananaModSummary[]> {
+    const paged = await this.listModsPage({ page, perPage, categoryId, submitterId, sort, releaseType, contentRatings });
+    return paged.records;
+  }
+
+  async listModsPage({ page = 1, perPage = 20, categoryId, submitterId, sort = "Generic_NewAndUpdated", releaseType, contentRatings }: ListModsParams = {}): Promise<PagedResult<GameBananaModSummary>> {
     const url = new URL(`${APIV11_BASE}/Mod/Index`);
     url.searchParams.set("_nPage", String(page));
     url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
@@ -307,7 +322,7 @@ export class GameBananaApiService {
     }
 
     const cacheKey = `listMods:${url.toString()}`;
-    const payload = await this.fetchJsonCached<{ _aRecords?: Record<string, unknown>[] }>({
+    const payload = await this.fetchJsonCached<{ _aMetadata?: Record<string, unknown>; _aRecords?: Record<string, unknown>[] }>({
       key: cacheKey,
       cache: this.listCache,
       ttlMs: LIST_CACHE_TTL_MS,
@@ -316,7 +331,10 @@ export class GameBananaApiService {
     const records = payload._aRecords ?? [];
     const normalized = records.map(normalizeSummary).filter((mod) => mod.modelName === "Mod" && mod.game?.id === FNF_GAME_ID);
     this.prefetchThumbnails(normalized);
-    return normalized;
+    return {
+      records: normalized,
+      metadata: this.extractMetadata(payload as Record<string, unknown>),
+    };
   }
 
   async searchMods({ query, page = 1, perPage = 15, order = "best_match", fields }: SearchModsParams): Promise<GameBananaModSummary[]> {
