@@ -45,6 +45,8 @@ export function formatEngineName(slug: EngineSlug): string {
       return "P-Slice";
     case "psych-online":
       return "Psych Online";
+    case "custom":
+      return "Custom Engine";
     default:
       return slug;
   }
@@ -781,11 +783,12 @@ export class FunkHubService {
     }
   }
 
-  addEngineInstallation(input: { slug: EngineSlug; version: string; installPath: string; modsPath: string }): InstalledEngine {
+  addEngineInstallation(input: { slug: EngineSlug; version: string; installPath: string; modsPath: string; customName?: string }): InstalledEngine {
     const engine: InstalledEngine = {
       id: crypto.randomUUID(),
       slug: input.slug,
       name: formatEngineName(input.slug),
+      customName: input.customName,
       version: input.version,
       installPath: input.installPath,
       modsPath: input.modsPath,
@@ -1074,7 +1077,7 @@ export class FunkHubService {
     }
   }
 
-  async importEngineFromFolder(input: { slug: EngineSlug; versionHint?: string; sourcePath?: string }): Promise<InstalledEngine> {
+  async importEngineFromFolder(input: { slug: EngineSlug; versionHint?: string; sourcePath?: string; customName?: string }): Promise<InstalledEngine> {
     const sourcePath = input.sourcePath || await this.pickFolder({ title: "Select engine folder to import" });
     if (!sourcePath) {
       throw new Error("Engine import cancelled");
@@ -1099,9 +1102,68 @@ export class FunkHubService {
       version: result.detectedVersion || input.versionHint || "imported",
       installPath: result.installPath,
       modsPath: result.modsPath,
+      customName: input.customName?.trim() || undefined,
     });
     await this.refreshEngineHealth(installed.id);
     return installed;
+  }
+
+  async scanInstalledEngineModFolders(): Promise<number> {
+    if (!window.funkhubDesktop?.listDirectory || !window.funkhubDesktop?.inspectPath) {
+      return 0;
+    }
+
+    let added = 0;
+    const knownPaths = new Set(this.installedMods.map((mod) => mod.installPath));
+
+    for (const engine of this.installedEngines) {
+      const modsPathCheck = await window.funkhubDesktop.inspectPath({ targetPath: engine.modsPath });
+      if (!modsPathCheck.ok || !modsPathCheck.exists || !modsPathCheck.isDirectory) {
+        continue;
+      }
+
+      const listed = await window.funkhubDesktop.listDirectory({ targetPath: engine.modsPath, directoriesOnly: true });
+      if (!listed.ok) {
+        continue;
+      }
+
+      for (const entry of listed.entries) {
+        const relativeInstallPath = `${engine.modsPath}/${entry.name}`.replace(/\\/g, "/");
+        if (knownPaths.has(relativeInstallPath)) {
+          continue;
+        }
+
+        const manualId = -Math.floor((Date.now() + added + 1) / 10);
+        const record: InstalledMod = {
+          id: crypto.randomUUID(),
+          modId: manualId,
+          modName: entry.name,
+          version: "detected",
+          author: "Autodetected",
+          gamebananaUrl: "",
+          installedAt: Date.now(),
+          installPath: relativeInstallPath,
+          engine: engine.slug,
+          requiredEngine: engine.slug,
+          sourceFileId: -1,
+          description: "Detected from engine mods folder.",
+          developers: ["Autodetected"],
+          categoryName: "Autodetected",
+          manual: true,
+          standalone: false,
+        };
+
+        this.installedMods = [record, ...this.installedMods];
+        knownPaths.add(relativeInstallPath);
+        added += 1;
+      }
+    }
+
+    if (added > 0) {
+      funkHubStorageService.saveInstalledMods(this.installedMods);
+    }
+
+    return added;
   }
 
   async addManualModFromFolder(input: {
@@ -1112,11 +1174,16 @@ export class FunkHubService {
     version?: string;
     author?: string;
     standalone?: boolean;
+    gameBananaUrl?: string;
   }): Promise<InstalledMod> {
-    const modName = input.modName.trim();
-    if (!modName) {
-      throw new Error("Mod name is required");
-    }
+    const maybeUrl = (input.gameBananaUrl || "").trim();
+    const match = maybeUrl.match(/gamebanana\.com\/mods\/(\d+)/i);
+    const linkedModId = match ? Number(match[1]) : undefined;
+    const linkedProfile = linkedModId && Number.isFinite(linkedModId)
+      ? await this.getModProfile(linkedModId).catch(() => undefined)
+      : undefined;
+
+    const modName = input.modName.trim() || linkedProfile?.name || "Manual Mod";
 
     const standalone = Boolean(input.standalone);
     const engine = standalone ? undefined : this.installedEngines.find((entry) => entry.id === input.engineId);
@@ -1148,19 +1215,28 @@ export class FunkHubService {
     const manualId = -Math.floor(Date.now() / 10);
     const record: InstalledMod = {
       id: crypto.randomUUID(),
-      modId: manualId,
+      modId: linkedProfile?.id ?? manualId,
       modName,
-      version: input.version?.trim() || "manual",
-      author: input.author?.trim() || "Manual Import",
-      gamebananaUrl: "",
+      version: input.version?.trim() || linkedProfile?.version || "manual",
+      author: input.author?.trim() || linkedProfile?.submitter?.name || "Manual Import",
+      gamebananaUrl: maybeUrl || linkedProfile?.profileUrl || "",
       installedAt: Date.now(),
       installPath: result.installPath,
       engine: standalone ? "basegame" : engine!.slug,
       requiredEngine: standalone ? undefined : engine!.slug,
-      sourceFileId: -1,
-      description: input.description?.trim() || "Imported manually from local folder.",
-      developers: input.author?.trim() ? [input.author.trim()] : ["Manual Import"],
-      categoryName: standalone ? "Standalone" : "Manual",
+      sourceFileId: linkedProfile?.files?.[0]?.id ?? -1,
+      description: input.description?.trim() || linkedProfile?.description || linkedProfile?.text || "Imported manually from local folder.",
+      developers: input.author?.trim()
+        ? [input.author.trim()]
+        : (linkedProfile
+          ? Array.from(new Set([
+            linkedProfile.submitter?.name,
+            ...linkedProfile.credits.flatMap((group) => group.authors.map((author) => author.name)),
+          ].filter(Boolean) as string[]))
+          : ["Manual Import"]),
+      categoryName: standalone ? "Standalone" : (linkedProfile?.rootCategory?.name || "Manual"),
+      thumbnailUrl: linkedProfile?.thumbnailUrl || linkedProfile?.imageUrl,
+      screenshotUrls: linkedProfile?.screenshotUrls,
       manual: true,
       standalone,
     };
@@ -1257,6 +1333,7 @@ export class FunkHubService {
           requiredEngine: plan.requiredEngine,
           selectedEngine,
           plan,
+          userSelectedEngine: Boolean(input.selectedEngineId),
         });
 
         if (!compatibility.compatible) {
