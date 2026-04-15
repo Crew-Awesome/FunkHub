@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Download, Clock3, User, ExternalLink, ChevronLeft, ChevronRight, Tag } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
-import { modInstallerService, detectRequiredEngineFromMetadata } from "../../services/funkhub";
+import { modInstallerService, detectRequiredEngineFromCategories } from "../../services/funkhub";
 import type { GameBananaMember, GameBananaModProfile } from "../../services/funkhub";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
@@ -90,11 +90,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
         if (!cancelled) {
           setProfile(next);
           setActiveMediaIndex(0);
-          const detectedSlug = detectRequiredEngineFromMetadata({
-            name: next.name,
-            text: next.text ?? next.description,
-            rootCategoryName: next.rootCategory?.name ?? next.category?.name,
-          }) ?? next.requiredEngine;
+          const detectedSlug = detectRequiredEngineFromCategories(next) ?? next.requiredEngine;
           const matchingEngine = detectedSlug
             ? installedEngines.find((engine) => engine.slug === detectedSlug)
             : undefined;
@@ -138,11 +134,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
   const selectedEngine = installedEngines.find((engine) => engine.id === selectedEngineId);
   const installAsExecutable = installMode === "executable";
   const detectedEngineSlug = profile
-    ? (detectRequiredEngineFromMetadata({
-        name: profile.name,
-        text: profile.text ?? profile.description,
-        rootCategoryName: profile.rootCategory?.name ?? profile.category?.name,
-      }) ?? profile.requiredEngine)
+    ? (detectRequiredEngineFromCategories(profile) ?? profile.requiredEngine)
     : undefined;
   const detectedEngineInstalled = detectedEngineSlug
     ? installedEngines.find((engine) => engine.slug === detectedEngineSlug)
