@@ -741,7 +741,7 @@ export function Discover() {
               </p>
               {(browseReleaseType || browseContentRatings.length > 0) && (
                 <button
-                  onClick={() => { setBrowseReleaseType(undefined as unknown as ReleaseType); setBrowseContentRatings([]); }}
+                  onClick={() => { setBrowseReleaseType(""); setBrowseContentRatings([]); }}
                   className="text-xs text-primary hover:underline"
                 >
                   {t("discover.clearFilters", "Clear filters")}
