@@ -137,7 +137,12 @@ jobs:
           if ($files.Count -eq 0) {
             Write-Error "No Windows installers (.exe) were produced under dist-desktop/."
           }
+          $metadata = Get-ChildItem -Path dist-desktop -Recurse -Filter "latest*.yml" -File
+          if ($metadata.Count -eq 0) {
+            Write-Error "No Windows updater metadata (latest*.yml) was produced under dist-desktop/."
+          }
           $files | ForEach-Object { Write-Host "Found Windows installer: $($_.FullName)" }
+          $metadata | ForEach-Object { Write-Host "Found Windows updater metadata: $($_.FullName)" }
 
       - name: Verify macOS installer output
         if: matrix.os == 'macos-latest'
@@ -145,11 +150,23 @@ jobs:
         run: |
           set -euo pipefail
           dmg_count=$(find dist-desktop -type f -name "*.dmg" | wc -l | tr -d ' ')
+          zip_count=$(find dist-desktop -type f -name "*.zip" | wc -l | tr -d ' ')
+          updater_metadata_count=$(find dist-desktop -type f -name "latest*.yml" | wc -l | tr -d ' ')
           if [[ "$dmg_count" -eq 0 ]]; then
             echo "No macOS installer (.dmg) was produced under dist-desktop/."
             exit 1
           fi
+          if [[ "$zip_count" -eq 0 ]]; then
+            echo "No macOS updater package (.zip) was produced under dist-desktop/."
+            exit 1
+          fi
+          if [[ "$updater_metadata_count" -eq 0 ]]; then
+            echo "No macOS updater metadata (latest*.yml) was produced under dist-desktop/."
+            exit 1
+          fi
           find dist-desktop -type f -name "*.dmg" -print
+          find dist-desktop -type f -name "*.zip" -print
+          find dist-desktop -type f -name "latest*.yml" -print
 
       - name: Upload build artifacts
         if: matrix.os != 'ubuntu-latest'
