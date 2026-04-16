@@ -225,7 +225,10 @@ async function fetchGithubReleases(source: GithubEngineSource): Promise<EngineDe
       throw new Error(`GitHub release fetch failed for ${source.repo}`);
     }
 
-    const payload = (await response.json()) as GithubReleaseResponse[];
+    const payload = (await response.json()) as unknown;
+    if (!Array.isArray(payload)) {
+      throw new Error(`Unexpected GitHub releases payload for ${source.repo}`);
+    }
     const publishedReleases = payload
       .filter((release) => !release.draft)
       .sort((a, b) => {
@@ -236,7 +239,11 @@ async function fetchGithubReleases(source: GithubEngineSource): Promise<EngineDe
 
     const releases: EngineRelease[] = [];
     for (const release of publishedReleases) {
-      for (const asset of release.assets) {
+      const assets = Array.isArray(release.assets) ? release.assets : [];
+      for (const asset of assets) {
+        if (!asset?.name || !asset?.browser_download_url) {
+          continue;
+        }
         releases.push({
           platform: detectPlatformFromAsset(asset.name),
           version: normalizeVersionTag(release.tag_name || source.fallbackVersion, release.prerelease),
