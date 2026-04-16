@@ -39,14 +39,18 @@ jobs:
             package_cmd: node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION}
             artifact_glob: |
               dist-desktop/*.exe
+              dist-desktop/**/latest*.yml
               dist-desktop/**/builder-*.yml
               dist-desktop/**/*.blockmap
           - os: macos-latest
             artifact: FunkHub-macos
-            package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg --publish never --config.extraMetadata.version=${BUILD_VERSION}
+            package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never --config.extraMetadata.version=${BUILD_VERSION}
             artifact_glob: |
               dist-desktop/**/*.dmg
+              dist-desktop/**/*.zip
+              dist-desktop/**/latest*.yml
               dist-desktop/**/builder-*.yml
+              dist-desktop/**/*.blockmap
 
     steps:
       - name: Checkout
@@ -161,6 +165,9 @@ jobs:
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: FunkHub-linux-appimage
-          path: dist-desktop/**/*.AppImage
+          path: |
+            dist-desktop/**/*.AppImage
+            dist-desktop/**/latest*.yml
+            dist-desktop/**/*.blockmap
           if-no-files-found: error
           retention-days: 14
