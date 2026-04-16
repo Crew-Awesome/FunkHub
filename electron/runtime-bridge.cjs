@@ -243,12 +243,6 @@ function ensureAppUpdaterInitialized() {
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowPrerelease = false;
   autoUpdater.allowDowngrade = false;
-  autoUpdater.setFeedURL({
-    provider: "github",
-    owner: "Crew-Awesome",
-    repo: "FunkHub",
-    private: false,
-  });
 
   autoUpdater.on("checking-for-update", () => {
     emitAppUpdateStatus({ status: "checking", message: "Checking for app updates" });
