@@ -116,7 +116,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
     return () => {
       cancelled = true;
     };
-  }, [open, modId, getModProfile]);
+  }, [open, modId, getModProfile, installedEngines, t]);
 
   const mediaGallery = useMemo(() => {
     if (!profile) {
