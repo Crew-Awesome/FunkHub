@@ -214,7 +214,10 @@ jobs:
           set -euo pipefail
           linux_count=$(find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage" | wc -l | tr -d ' ')
           windows_count=$(find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe" | wc -l | tr -d ' ')
+          windows_update_metadata_count=$(find release-artifacts/FunkHub-windows -type f -name "latest*.yml" | wc -l | tr -d ' ')
           mac_dmg_count=$(find release-artifacts/FunkHub-macos -type f -name "*.dmg" | wc -l | tr -d ' ')
+          mac_zip_count=$(find release-artifacts/FunkHub-macos -type f -name "*.zip" | wc -l | tr -d ' ')
+          mac_update_metadata_count=$(find release-artifacts/FunkHub-macos -type f -name "latest*.yml" | wc -l | tr -d ' ')
           if [[ "$linux_count" -eq 0 ]]; then
             echo "Release payload missing Linux AppImage installer."
             exit 1
@@ -223,13 +226,28 @@ jobs:
             echo "Release payload missing Windows .exe installers."
             exit 1
           fi
+          if [[ "$windows_update_metadata_count" -eq 0 ]]; then
+            echo "Release payload missing Windows updater metadata (latest*.yml)."
+            exit 1
+          fi
           if [[ "$mac_dmg_count" -eq 0 ]]; then
             echo "Release payload missing macOS .dmg installer."
+            exit 1
+          fi
+          if [[ "$mac_zip_count" -eq 0 ]]; then
+            echo "Release payload missing macOS .zip package required for auto-updater."
+            exit 1
+          fi
+          if [[ "$mac_update_metadata_count" -eq 0 ]]; then
+            echo "Release payload missing macOS updater metadata (latest*.yml)."
             exit 1
           fi
           find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage" -print
           find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe" -print
           find release-artifacts/FunkHub-macos -type f -name "*.dmg" -print
+          find release-artifacts/FunkHub-windows -type f -name "latest*.yml" -print
+          find release-artifacts/FunkHub-macos -type f -name "*.zip" -print
+          find release-artifacts/FunkHub-macos -type f -name "latest*.yml" -print
 
       - name: Build release asset manifest
         id: assets
