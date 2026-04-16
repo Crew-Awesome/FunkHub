@@ -138,7 +138,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = () => {
-      setModeState((prev) => prev);
+      const systemMode = getSystemPreference();
+      setBaseMode(systemMode);
+      localStorage.setItem(STORAGE_KEYS.baseMode, systemMode);
     };
 
     mediaQuery.addEventListener("change", handler);
