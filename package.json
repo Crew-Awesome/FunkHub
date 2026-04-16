@@ -145,6 +145,13 @@
     },
     "portable": {
       "artifactName": "FunkHub ${version}.${ext}"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Crew-Awesome",
+        "repo": "FunkHub"
+      }
+    ]
   }
 }
