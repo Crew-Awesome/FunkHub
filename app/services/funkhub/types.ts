@@ -149,6 +149,13 @@ export interface EngineRelease {
   sourceUrl: string;
   fileName?: string;
   isPrerelease?: boolean;
+  channel?: string;
+  channelLabel?: string;
+  sourceKey?: string;
+  sourceLabel?: string;
+  sourceHint?: string;
+  packageLabel?: string;
+  packageHint?: string;
 }
 
 export interface EngineDefinition {
