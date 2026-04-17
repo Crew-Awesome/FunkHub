@@ -1,3 +1,4 @@
+import { gameBananaApiService } from "./gamebananaApi";
 import { EngineDefinition, EngineRelease, EngineSlug } from "./types";
 
 interface GithubReleaseAsset {
@@ -20,6 +21,14 @@ interface GithubEngineSource {
   description: string;
   repo: string;
   fallbackVersion: string;
+  fallbackReleases: EngineRelease[];
+}
+
+interface GameBananaEngineSource {
+  slug: EngineSlug;
+  name: string;
+  description: string;
+  modId: number;
   fallbackReleases: EngineRelease[];
 }
 
@@ -175,6 +184,57 @@ const githubEngineSources: GithubEngineSource[] = [
 
 const staticOnlyEngines: EngineDefinition[] = [
   {
+    slug: "codename",
+    name: "Codename Engine",
+    description: "Codename Engine nightlies and alternative downloads.",
+    releases: [
+      {
+        platform: "windows",
+        version: "nightly",
+        sourceUrl: "https://github.com/CodenameCrew/CodenameEngine/actions",
+        downloadUrl: "https://nightly.link/CodenameCrew/CodenameEngine/workflows/windows/main/Codename%20Engine.zip",
+        channel: "nightly",
+        channelLabel: "Nightly",
+        sourceKey: "codename-nightly",
+        sourceLabel: "GitHub Actions",
+        sourceHint: "Delivered by nightly.link",
+      },
+      {
+        platform: "macos",
+        version: "nightly",
+        sourceUrl: "https://github.com/CodenameCrew/CodenameEngine/actions",
+        downloadUrl: "https://nightly.link/CodenameCrew/CodenameEngine/workflows/macos/main/Codename%20Engine.zip",
+        channel: "nightly",
+        channelLabel: "Nightly",
+        sourceKey: "codename-nightly",
+        sourceLabel: "GitHub Actions",
+        sourceHint: "Delivered by nightly.link",
+      },
+      {
+        platform: "linux",
+        version: "nightly",
+        sourceUrl: "https://github.com/CodenameCrew/CodenameEngine/actions",
+        downloadUrl: "https://nightly.link/CodenameCrew/CodenameEngine/workflows/linux/main/Codename%20Engine.zip",
+        channel: "nightly",
+        channelLabel: "Nightly",
+        sourceKey: "codename-nightly",
+        sourceLabel: "GitHub Actions",
+        sourceHint: "Delivered by nightly.link",
+      },
+      {
+        platform: "any",
+        version: "latest",
+        sourceUrl: "https://gamebanana.com/mods/598553",
+        downloadUrl: "https://gamebanana.com/mods/download/598553",
+        channel: "alternative",
+        channelLabel: "Alternative",
+        sourceKey: "codename-gamebanana",
+        sourceLabel: "GameBanana",
+        sourceHint: "Community mirrors and file list",
+      },
+    ],
+  },
+  {
     slug: "ale-psych",
     name: "ALE Psych Engine",
     description: "ALE Psych nightly workflow artifacts.",
@@ -214,6 +274,28 @@ const staticOnlyEngines: EngineDefinition[] = [
         version: "nightly-android",
         sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
         downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/Android%20Build.zip",
+      },
+    ],
+  },
+];
+
+const gameBananaEngineSources: GameBananaEngineSource[] = [
+  {
+    slug: "codename",
+    name: "Codename Engine",
+    description: "Codename Engine GameBanana files.",
+    modId: 598553,
+    fallbackReleases: [
+      {
+        platform: "any",
+        version: "latest",
+        sourceUrl: "https://gamebanana.com/mods/598553",
+        downloadUrl: "https://gamebanana.com/mods/download/598553",
+        channel: "alternative",
+        channelLabel: "Alternative",
+        sourceKey: "codename-gamebanana",
+        sourceLabel: "GameBanana",
+        sourceHint: "Community mirrors and file list",
       },
     ],
   },
@@ -350,6 +432,28 @@ function dedupeReleases(releases: EngineRelease[]): EngineRelease[] {
   return Array.from(deduped.values());
 }
 
+function mergeEngineDefinitions(definitions: EngineDefinition[]): EngineDefinition[] {
+  const merged = new Map<EngineSlug, EngineDefinition>();
+
+  for (const definition of definitions) {
+    const current = merged.get(definition.slug);
+    if (!current) {
+      merged.set(definition.slug, {
+        ...definition,
+        releases: dedupeReleases(definition.releases),
+      });
+      continue;
+    }
+
+    current.releases = dedupeReleases([...current.releases, ...definition.releases]);
+    if (!current.description && definition.description) {
+      current.description = definition.description;
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
 function detectPlatformFromAsset(name: string): EngineRelease["platform"] {
   const lowered = name.toLowerCase();
 
@@ -433,10 +537,47 @@ async function fetchGithubReleases(source: GithubEngineSource): Promise<EngineDe
   }
 }
 
+async function fetchGameBananaReleases(source: GameBananaEngineSource): Promise<EngineDefinition> {
+  try {
+    const files = await gameBananaApiService.getModFiles(source.modId);
+    const releases = files.map((file) => ({
+      platform: detectPlatformFromAsset(file.fileName),
+      version: "latest",
+      sourceUrl: `https://gamebanana.com/mods/${source.modId}`,
+      downloadUrl: file.downloadUrl || `https://gamebanana.com/dl/${file.id}`,
+      fileName: file.fileName,
+      channel: "alternative",
+      channelLabel: "Alternative",
+      sourceKey: `${source.slug}-gamebanana`,
+      sourceLabel: "GameBanana",
+      sourceHint: "Community mirrors and file list",
+      publishedAt: file.dateAdded ? new Date(file.dateAdded * 1000).toISOString() : undefined,
+    } satisfies EngineRelease));
+
+    return {
+      slug: source.slug,
+      name: source.name,
+      description: source.description,
+      releases: dedupeReleases(releases.length > 0 ? releases : source.fallbackReleases),
+    };
+  } catch {
+    return {
+      slug: source.slug,
+      name: source.name,
+      description: source.description,
+      releases: dedupeReleases(source.fallbackReleases),
+    };
+  }
+}
+
 export class EngineCatalogService {
   async getEngineCatalog(): Promise<EngineDefinition[]> {
     const githubEngines = await Promise.all(githubEngineSources.map((source) => fetchGithubReleases(source)));
-    const all = [...githubEngines, ...staticOnlyEngines];
+    const gameBananaEngines = await Promise.all(gameBananaEngineSources.map((source) => fetchGameBananaReleases(source)));
+    const all = mergeEngineDefinitions([...githubEngines, ...gameBananaEngines, ...staticOnlyEngines.map((engine) => ({
+      ...engine,
+      releases: dedupeReleases(engine.releases),
+    }))]);
     return all.sort((a, b) => {
       if (a.slug === "ale-psych") return -1;
       if (b.slug === "ale-psych") return 1;
