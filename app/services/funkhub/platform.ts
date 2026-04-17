@@ -2,6 +2,46 @@ import type { EngineRelease } from "./types";
 
 export type ClientPlatform = EngineRelease["platform"] | "unknown";
 
+// Platform-specific default paths for the app (FunkHub folder locations)
+// These are used as defaults in the onboarding setup
+export function getPlatformDefaults(platform: ClientPlatform): {
+  dataRoot: string;
+  downloads: string;
+  game: string;
+} {
+  // All in one Documents/FunkHub folder - cleaner organization
+  const base = platform === "windows"
+    ? "C:\\Users\\%username%\\Documents\\FunkHub"
+    : platform === "macos"
+      ? "~/Documents/FunkHub"
+      : platform === "linux"
+        ? "~/Documents/FunkHub"
+        : "~/Documents/FunkHub";
+
+  // Downloads and game folder under the same FunkHub folder
+  const downloads = platform === "windows"
+    ? "C:\\Users\\%username%\\Documents\\FunkHub\\downloads"
+    : platform === "macos"
+      ? "~/Documents/FunkHub/downloads"
+      : platform === "linux"
+        ? "~/Documents/FunkHub/downloads"
+        : "~/Documents/FunkHub/downloads";
+
+  const game = platform === "windows"
+    ? "C:\\Users\\%username%\\Documents\\FunkHub\\game"
+    : platform === "macos"
+      ? "~/Documents/FunkHub/game"
+      : platform === "linux"
+        ? "~/Documents/FunkHub/game"
+        : "~/Documents/FunkHub/game";
+
+  return {
+    dataRoot: base,
+    downloads,
+    game,
+  };
+}
+
 export function detectClientPlatform(): ClientPlatform {
   if (typeof navigator === "undefined") {
     return "unknown";
