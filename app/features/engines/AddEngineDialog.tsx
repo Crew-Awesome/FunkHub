@@ -51,7 +51,7 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
   const [selectedReleaseKey, setSelectedReleaseKey] = useState<string | null>(null);
   const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(null);
   const [selectedPackageKey, setSelectedPackageKey] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState<"engine" | "release" | "source" | "package">("engine");
+  const [currentStep, setCurrentStep] = useState<"engine" | "release" | "source" | "package" | "install">("engine");
   const deferredQuery = useDeferredValue(query);
   const currentPlatform = detectClientPlatform();
 
@@ -191,6 +191,11 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
     setInstallError(null);
     setPlatformWarning(null);
 
+    if (currentStep === "install") {
+      // Go back to package only if there's a choice
+      setCurrentStep(hasPackageStep ? "package" : (hasSourceStep ? "source" : (hasReleaseStep ? "release" : "engine")));
+      return;
+    }
     if (currentStep === "package" && hasPackageStep) {
       setSelectedPackageKey(null);
       setCurrentStep(hasSourceStep ? "source" : "release");
@@ -323,12 +328,23 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                           type="button"
                           onClick={() => {
                             setSelectedEngineSlug(engine.slug);
-                            // Set step based on engine options
+                            // Set step based on engine options (use direct package if only 1 option each)
                             setTimeout(() => {
                               const pkgs = buildEngineInstallPackages(engine, currentPlatform);
                               const relOpts = buildReleaseOptions(pkgs);
                               const srcOpts = buildSourceOptions(pkgs, relOpts[0]?.key);
-                              setCurrentStep(relOpts.length > 1 ? "release" : (srcOpts.length > 1 ? "source" : "package"));
+                              const pkgOpts = buildPackageOptions(pkgs, relOpts[0]?.key, srcOpts[0]?.key);
+                              // Only show step if there are options to choose from
+                              if (relOpts.length > 1) {
+                                setCurrentStep("release");
+                              } else if (srcOpts.length > 1) {
+                                setCurrentStep("source");
+                              } else if (pkgOpts.length > 1) {
+                                setCurrentStep("package");
+                              } else {
+                                // Direct to install - no choices needed, just install
+                                setCurrentStep("install");
+                              }
                             }, 0);
                           }}
                           className="flex items-center gap-3 rounded-lg border border-border bg-secondary/20 px-3 py-2.5 text-left transition-colors hover:bg-secondary/30"
