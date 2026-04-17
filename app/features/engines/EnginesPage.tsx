@@ -288,7 +288,6 @@ export function Engines() {
 
         {availableEngines.length > 0 && (
           <div>
-            <p className="text-sm text-muted-foreground mb-4">Get started with:</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {availableEngines.slice(0, 3).map((engine) => {
                 const release = getSelectedRelease(engine.slug);
