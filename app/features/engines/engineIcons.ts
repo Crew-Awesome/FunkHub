@@ -8,7 +8,7 @@ import alePsychIcon from "../../../styles/assets/engine_ale_psych.png";
 import pSliceIcon from "../../../styles/assets/engine_p_slice.png";
 
 const remoteIconUrls: Partial<Record<EngineSlug, string>> = {
-  "fnf-love": "https://raw.githubusercontent.com/Stilic/FNF-LOVE/refs/heads/main/art/icon16.png",
+  "fnf-love": "https://raw.githubusercontent.com/Stilic/FNF-LOVE/main/art/logo.png",
   "psych-online": "https://raw.githubusercontent.com/Snirozu/Funkin-Online-Server/refs/heads/main/client/public/images/transwag.png",
 };
 
