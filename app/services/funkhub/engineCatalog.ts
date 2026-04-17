@@ -189,6 +189,137 @@ const staticOnlyEngines: EngineDefinition[] = [
   },
 ];
 
+function slugify(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unknown";
+}
+
+function detectSourceMetadata(release: Pick<EngineRelease, "sourceUrl" | "downloadUrl" | "sourceKey" | "sourceLabel" | "sourceHint">) {
+  if (release.sourceKey && release.sourceLabel) {
+    return {
+      key: release.sourceKey,
+      label: release.sourceLabel,
+      hint: release.sourceHint,
+    };
+  }
+
+  const combined = `${release.sourceUrl} ${release.downloadUrl}`.toLowerCase();
+  if (combined.includes("nightly.link")) {
+    return { key: "nightly-link", label: "nightly.link", hint: "Workflow artifact mirror" };
+  }
+  if (combined.includes("/actions/") || combined.includes("actions/workflows")) {
+    return { key: "github-actions", label: "GitHub Actions", hint: "Workflow artifacts" };
+  }
+  if (combined.includes("github.com")) {
+    return { key: "github-releases", label: "GitHub Releases", hint: "Official release feed" };
+  }
+  if (combined.includes("gamebanana.com")) {
+    return { key: "gamebanana", label: "GameBanana", hint: "Community portal" };
+  }
+  if (combined.includes("itch.io") || release.downloadUrl.startsWith("itch://")) {
+    return { key: "itch", label: "itch.io", hint: "Store portal" };
+  }
+  return { key: "direct", label: "Direct Download", hint: undefined };
+}
+
+function detectChannelMetadata(release: Pick<EngineRelease, "version" | "isPrerelease" | "channel" | "channelLabel" | "downloadUrl" | "sourceUrl" | "sourceKey" | "sourceLabel" | "sourceHint">) {
+  if (release.channel && release.channelLabel) {
+    return {
+      key: slugify(release.channel),
+      label: release.channelLabel,
+    };
+  }
+
+  const version = String(release.version || "").toLowerCase();
+  const source = detectSourceMetadata(release);
+
+  if (version.includes("nightly")) {
+    return { key: "nightly", label: "Nightly" };
+  }
+  if (release.isPrerelease) {
+    return { key: "prerelease", label: "Pre-release" };
+  }
+  if (source.key === "gamebanana") {
+    return { key: "alternative", label: "Alternative" };
+  }
+  return { key: "stable", label: "Stable" };
+}
+
+function decodeAssetName(raw?: string): string {
+  if (!raw) {
+    return "";
+  }
+
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function detectPackageMetadata(release: Pick<EngineRelease, "platform" | "fileName" | "downloadUrl" | "packageLabel" | "packageHint">) {
+  if (release.packageLabel) {
+    return {
+      label: release.packageLabel,
+      hint: release.packageHint,
+    };
+  }
+
+  const fileName = decodeAssetName(release.fileName || release.downloadUrl.split("?")[0].split("/").pop());
+  const lowered = `${fileName} ${release.downloadUrl}`.toLowerCase();
+
+  const platformLabel = lowered.includes("android")
+    ? "Android"
+    : release.platform === "windows"
+      ? "Windows"
+      : release.platform === "macos"
+        ? "macOS"
+        : release.platform === "linux"
+          ? "Linux"
+          : "Universal";
+
+  let architecture = "";
+  if (/arm64|aarch64/.test(lowered)) {
+    architecture = "ARM64";
+  } else if (/x32|win32|32-bit|x86(?!_64)/.test(lowered)) {
+    architecture = "32-bit";
+  } else if (/x64|64-bit|intel/.test(lowered)) {
+    architecture = platformLabel === "macOS" ? "Intel" : "64-bit";
+  }
+
+  return {
+    label: architecture ? `${platformLabel} (${architecture})` : platformLabel,
+    hint: fileName || undefined,
+  };
+}
+
+function enrichRelease(release: EngineRelease): EngineRelease {
+  const source = detectSourceMetadata(release);
+  const channel = detectChannelMetadata({ ...release, ...source });
+  const packageMeta = detectPackageMetadata(release);
+
+  return {
+    ...release,
+    channel: release.channel || channel.key,
+    channelLabel: release.channelLabel || channel.label,
+    sourceKey: release.sourceKey || source.key,
+    sourceLabel: release.sourceLabel || source.label,
+    sourceHint: release.sourceHint || source.hint,
+    packageLabel: release.packageLabel || packageMeta.label,
+    packageHint: release.packageHint || packageMeta.hint,
+  };
+}
+
+function dedupeReleases(releases: EngineRelease[]): EngineRelease[] {
+  const deduped = new Map<string, EngineRelease>();
+  for (const release of releases.map(enrichRelease)) {
+    const key = `${release.platform}|${release.version}|${release.downloadUrl}`;
+    if (!deduped.has(key)) {
+      deduped.set(key, release);
+    }
+  }
+  return Array.from(deduped.values());
+}
+
 function detectPlatformFromAsset(name: string): EngineRelease["platform"] {
   const lowered = name.toLowerCase();
 
@@ -251,16 +382,8 @@ async function fetchGithubReleases(source: GithubEngineSource): Promise<EngineDe
           sourceUrl: release.html_url,
           fileName: asset.name,
           isPrerelease: release.prerelease,
+          publishedAt: release.published_at,
         });
-      }
-    }
-
-    const normalized = releases.length > 0 ? releases : source.fallbackReleases;
-    const deduped = new Map<string, EngineRelease>();
-    for (const release of normalized) {
-      const key = `${release.platform}|${release.version}|${release.downloadUrl}`;
-      if (!deduped.has(key)) {
-        deduped.set(key, release);
       }
     }
 
@@ -268,14 +391,14 @@ async function fetchGithubReleases(source: GithubEngineSource): Promise<EngineDe
       slug: source.slug,
       name: source.name,
       description: source.description,
-      releases: Array.from(deduped.values()),
+      releases: dedupeReleases(releases.length > 0 ? releases : source.fallbackReleases),
     };
   } catch {
     return {
       slug: source.slug,
       name: source.name,
       description: source.description,
-      releases: source.fallbackReleases,
+      releases: dedupeReleases(source.fallbackReleases),
     };
   }
 }
