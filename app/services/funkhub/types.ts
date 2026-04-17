@@ -135,6 +135,7 @@ export type EngineSlug =
   | "basegame"
   | "codename"
   | "fps-plus"
+  | "fnf-love"
   | "js-engine"
   | "ale-psych"
   | "p-slice"
