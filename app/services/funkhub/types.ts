@@ -156,6 +156,7 @@ export interface EngineRelease {
   sourceHint?: string;
   packageLabel?: string;
   packageHint?: string;
+  publishedAt?: string;
 }
 
 export interface EngineDefinition {
