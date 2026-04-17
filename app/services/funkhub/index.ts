@@ -4,6 +4,6 @@ export { downloadManager } from "./downloadManager";
 export { modInstallerService } from "./installer";
 export { funkHubStorageService } from "./storage";
 export { funkHubService, formatEngineName } from "./funkhubService";
-export { detectClientPlatform, pickBestReleaseForPlatform } from "./platform";
+export { detectClientPlatform, pickBestReleaseForPlatform, getPlatformDefaults } from "./platform";
 export { detectRequiredEngineFromCategories, detectExecutableFromCategories } from "./engineDetection";
 export * from "./types";
