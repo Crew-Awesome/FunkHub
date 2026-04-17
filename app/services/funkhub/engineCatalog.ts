@@ -40,6 +40,21 @@ const githubEngineSources: GithubEngineSource[] = [
     ],
   },
   {
+    slug: "fnf-love",
+    name: "FNF Löve",
+    description: "FNF Löve release builds.",
+    repo: "Stilic/FNF-LOVE",
+    fallbackVersion: "latest",
+    fallbackReleases: [
+      {
+        platform: "any",
+        version: "latest",
+        sourceUrl: "https://github.com/Stilic/FNF-LOVE/releases",
+        downloadUrl: "https://github.com/Stilic/FNF-LOVE/releases",
+      },
+    ],
+  },
+  {
     slug: "js-engine",
     name: "JS Engine",
     description: "FNF-JS-Engine release feed.",
@@ -138,6 +153,21 @@ const githubEngineSources: GithubEngineSource[] = [
         version: "latest",
         sourceUrl: "https://github.com/Snirozu/Funkin-Psych-Online/releases",
         downloadUrl: "https://github.com/Snirozu/Funkin-Psych-Online/releases",
+      },
+    ],
+  },
+  {
+    slug: "ale-psych",
+    name: "ALE Psych Engine",
+    description: "ALE Psych stable and tagged releases.",
+    repo: "ALE-Psych-Crew/ALE-Psych",
+    fallbackVersion: "latest",
+    fallbackReleases: [
+      {
+        platform: "any",
+        version: "latest",
+        sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/releases",
+        downloadUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/releases",
       },
     ],
   },
