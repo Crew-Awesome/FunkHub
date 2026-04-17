@@ -51,12 +51,14 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
   const [selectedReleaseKey, setSelectedReleaseKey] = useState<string | null>(null);
   const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(null);
   const [selectedPackageKey, setSelectedPackageKey] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<"engine" | "release" | "source" | "package">("engine");
   const deferredQuery = useDeferredValue(query);
   const currentPlatform = detectClientPlatform();
 
   useEffect(() => {
     if (open) {
       resetWizard();
+      setCurrentStep("engine");
       return;
     }
 
@@ -65,6 +67,7 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
     setSelectedReleaseKey(null);
     setSelectedSourceKey(null);
     setSelectedPackageKey(null);
+    setCurrentStep("engine");
     resetWizard();
   }, [open]);
 
@@ -107,6 +110,7 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
     setSelectedReleaseKey(null);
     setSelectedSourceKey(null);
     setSelectedPackageKey(null);
+    setCurrentStep("engine");
   }, [selectedEngineSlug]);
 
   useEffect(() => {
@@ -188,22 +192,26 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
     setInstallError(null);
     setPlatformWarning(null);
 
-    if (selectedPackageKey && hasPackageStep) {
+    if (currentStep === "package" && hasPackageStep) {
       setSelectedPackageKey(null);
+      setCurrentStep(hasSourceStep ? "source" : "release");
       return;
     }
-    if (selectedSourceKey && hasSourceStep) {
+    if (currentStep === "source" && hasSourceStep) {
       setSelectedSourceKey(null);
       setSelectedPackageKey(null);
+      setCurrentStep("release");
       return;
     }
-    if (selectedReleaseKey && hasReleaseStep) {
+    if (currentStep === "release" && hasReleaseStep) {
       setSelectedReleaseKey(null);
       setSelectedSourceKey(null);
       setSelectedPackageKey(null);
+      setCurrentStep("engine");
       return;
     }
     setSelectedEngineSlug(null);
+    setCurrentStep("engine");
   };
 
   const importCustomEngine = async () => {
@@ -251,7 +259,7 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[90vh] w-[min(97vw,1280px)] max-w-none overflow-hidden p-0">
+      <DialogContent className="h-[95vh] w-[min(97vw,900px)] max-w-none overflow-hidden p-0">
         <div className="flex h-full min-h-0 flex-col">
           <div className="border-b border-border bg-card/95 px-6 py-5 backdrop-blur">
             <DialogHeader>
@@ -305,7 +313,7 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{t("engines.availableCount", "{{count}} engines available", { count: filteredEngines.length })}</span>
-                    <span>{t("engines.installerBrowseHint", "Pick an engine first — later steps only appear if that engine needs them.")}</span>
+                    
                   </div>
                   <div className="grid grid-cols-1 gap-3 xl:grid-cols-2 2xl:grid-cols-3">
                     {filteredEngines.map((engine) => {
@@ -316,7 +324,14 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                         <button
                           key={engine.slug}
                           type="button"
-                          onClick={() => setSelectedEngineSlug(engine.slug)}
+                          onClick={() => {
+                          setSelectedEngineSlug(engine.slug);
+                          const pkgs = buildEngineInstallPackages(engine, currentPlatform);
+                          const relOpts = buildReleaseOptions(pkgs);
+                          const srcOpts = buildSourceOptions(pkgs, relOpts[0]?.key);
+                          const pkgOpts = buildPackageOptions(pkgs, relOpts[0]?.key, srcOpts[0]?.key);
+                          setCurrentStep(relOpts.length > 1 ? "release" : (srcOpts.length > 1 ? "source" : "package"));
+                        }}
                           className="rounded-xl border border-border bg-secondary/20 p-4 text-left transition-colors hover:bg-secondary/30"
                         >
                           <div className="flex items-start gap-3">
@@ -367,13 +382,12 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                     </button>
                   </div>
 
-                  {hasReleaseStep ? (
+{hasReleaseStep && currentStep === "release" ? (
                     <section className="space-y-3">
                       <div>
                         <p className="text-sm font-medium text-foreground">{t("engines.installerStepRelease", "Release")}</p>
-                        <p className="text-xs text-muted-foreground">{t("engines.installerReleaseHint", "Choose the release line you want before picking a source or package.")}</p>
                       </div>
-                      <div className="grid gap-3 xl:grid-cols-2">
+                      <div className="grid gap-3">
                         {releaseOptions.map((option) => (
                           <button
                             key={option.key}
@@ -382,6 +396,11 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                               setSelectedReleaseKey(option.key);
                               setSelectedSourceKey(null);
                               setSelectedPackageKey(null);
+                              if (hasSourceStep) {
+                                setCurrentStep("source");
+                              } else {
+                                setCurrentStep("package");
+                              }
                             }}
                             className={`rounded-xl border p-4 text-left transition-colors ${effectiveReleaseKey === option.key ? "border-primary/30 bg-primary/10" : "border-border bg-secondary/20 hover:bg-secondary/30"}`}
                           >
@@ -396,50 +415,47 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                         ))}
                       </div>
                     </section>
-                  ) : selectedRelease ? (
+                  ) : !hasReleaseStep && selectedRelease ? (
                     <div className="rounded-xl border border-border bg-secondary/15 px-4 py-3 text-sm text-foreground">
                       <span className="text-muted-foreground">{t("engines.installerStepRelease", "Release")}:</span> {selectedRelease.badge} · {selectedRelease.title}
                     </div>
                   ) : null}
 
-                  {selectedRelease ? (
-                    hasSourceStep ? (
-                      <section className="space-y-3">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{t("engines.installerStepSource", "Source")}</p>
-                          <p className="text-xs text-muted-foreground">{t("engines.installerSourceHint", "Pick where this release should come from.")}</p>
-                        </div>
-                        <div className="grid gap-3 xl:grid-cols-2">
-                          {sourceOptions.map((option) => (
-                            <button
-                              key={option.key}
-                              type="button"
-                              onClick={() => {
-                                setSelectedSourceKey(option.key);
-                                setSelectedPackageKey(null);
-                              }}
-                              className={`rounded-xl border p-4 text-left transition-colors ${effectiveSourceKey === option.key ? "border-primary/30 bg-primary/10" : "border-border bg-secondary/20 hover:bg-secondary/30"}`}
-                            >
-                              <p className="text-sm font-medium text-foreground">{option.label}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">{option.hint || option.description}</p>
-                            </button>
-                          ))}
-                        </div>
-                      </section>
-                    ) : selectedSource ? (
-                      <div className="rounded-xl border border-border bg-secondary/15 px-4 py-3 text-sm text-foreground">
-                        <span className="text-muted-foreground">{t("engines.installerStepSource", "Source")}:</span> {selectedSource.label}
+                  {(!hasReleaseStep || selectedRelease) && hasSourceStep && currentStep === "source" ? (
+                    <section className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{t("engines.installerStepSource", "Source")}</p>
                       </div>
-                    ) : null
+                      <div className="grid gap-3">
+                        {sourceOptions.map((option) => (
+                          <button
+                            key={option.key}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSourceKey(option.key);
+                              setSelectedPackageKey(null);
+                              setCurrentStep("package");
+                            }}
+                            className={`rounded-xl border p-4 text-left transition-colors ${effectiveSourceKey === option.key ? "border-primary/30 bg-primary/10" : "border-border bg-secondary/20 hover:bg-secondary/30"}`}
+                          >
+                            <p className="text-sm font-medium text-foreground">{option.label}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{option.hint || option.description}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  ) : !hasSourceStep && selectedSource ? (
+                    <div className="rounded-xl border border-border bg-secondary/15 px-4 py-3 text-sm text-foreground">
+                      <span className="text-muted-foreground">{t("engines.installerStepSource", "Source")}:</span> {selectedSource.label}
+                    </div>
                   ) : null}
 
-                  {selectedRelease && (!hasSourceStep || selectedSource) ? (
+                  {(!hasReleaseStep || selectedRelease) && (!hasSourceStep || selectedSource) && currentStep === "package" ? (
                     <section className="space-y-3">
                       <div>
                         <p className="text-sm font-medium text-foreground">{t("engines.installerStepPackage", "Package")}</p>
-                        <p className="text-xs text-muted-foreground">{t("engines.installerPackageHint", "Platform packages stay here so release choices stay human-readable.")}</p>
                       </div>
-                      <div className="grid gap-3 xl:grid-cols-2">
+                      <div className="grid gap-3">
                         {packageOptions.map((pkg) => (
                           <button
                             key={pkg.packageKey}
@@ -457,7 +473,8 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                       </div>
                     </section>
                   ) : null}
-                </div>
+
+                  </div>
               )}
 
               {installError ? (
