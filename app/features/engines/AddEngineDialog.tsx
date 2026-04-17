@@ -110,7 +110,6 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
     setSelectedReleaseKey(null);
     setSelectedSourceKey(null);
     setSelectedPackageKey(null);
-    setCurrentStep("engine");
   }, [selectedEngineSlug]);
 
   useEffect(() => {
@@ -259,7 +258,7 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[95vh] w-[min(97vw,900px)] max-w-none overflow-hidden p-0">
+      <DialogContent className="h-[95vh] w-[min(97vw,1150px)] max-w-none overflow-hidden p-0">
         <div className="flex h-full min-h-0 flex-col">
           <div className="border-b border-border bg-card/95 px-6 py-5 backdrop-blur">
             <DialogHeader>
@@ -307,7 +306,7 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
             </div>
           </div>
 
-          <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(0,1.6fr)_360px]">
+          <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(0,2fr)_400px]">
             <div className="min-h-0 overflow-y-auto px-6 py-5">
               {!selectedEngine ? (
                 <div className="space-y-4">
@@ -315,46 +314,29 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                     <span>{t("engines.availableCount", "{{count}} engines available", { count: filteredEngines.length })}</span>
                     
                   </div>
-                  <div className="grid grid-cols-1 gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
                     {filteredEngines.map((engine) => {
-                      const installedCount = installedCountBySlug.get(engine.slug) ?? 0;
                       const iconSrc = getEngineIcon(engine.slug);
-                      const releasePreview = buildReleaseOptions(buildEngineInstallPackages(engine, currentPlatform)).slice(0, 2);
                       return (
                         <button
                           key={engine.slug}
                           type="button"
                           onClick={() => {
-                          setSelectedEngineSlug(engine.slug);
-                          const pkgs = buildEngineInstallPackages(engine, currentPlatform);
-                          const relOpts = buildReleaseOptions(pkgs);
-                          const srcOpts = buildSourceOptions(pkgs, relOpts[0]?.key);
-                          const pkgOpts = buildPackageOptions(pkgs, relOpts[0]?.key, srcOpts[0]?.key);
-                          setCurrentStep(relOpts.length > 1 ? "release" : (srcOpts.length > 1 ? "source" : "package"));
-                        }}
-                          className="rounded-xl border border-border bg-secondary/20 p-4 text-left transition-colors hover:bg-secondary/30"
+                            setSelectedEngineSlug(engine.slug);
+                            // Set step based on engine options
+                            setTimeout(() => {
+                              const pkgs = buildEngineInstallPackages(engine, currentPlatform);
+                              const relOpts = buildReleaseOptions(pkgs);
+                              const srcOpts = buildSourceOptions(pkgs, relOpts[0]?.key);
+                              setCurrentStep(relOpts.length > 1 ? "release" : (srcOpts.length > 1 ? "source" : "package"));
+                            }, 0);
+                          }}
+                          className="flex items-center gap-3 rounded-lg border border-border bg-secondary/20 px-3 py-2.5 text-left transition-colors hover:bg-secondary/30"
                         >
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-card">
-                              {iconSrc ? <img src={iconSrc} alt="" className="h-7 w-7 object-contain" loading="lazy" /> : <Cpu className="h-5 w-5 text-primary" />}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="truncate text-sm font-medium text-foreground">{engine.name}</p>
-                                {installedCount > 0 ? <span className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] text-success">{t("engines.installed", "Installed")}</span> : null}
-                              </div>
-                              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{engine.description}</p>
-                              {releasePreview.length > 0 ? (
-                                <div className="mt-3 flex flex-wrap gap-1.5">
-                                  {releasePreview.map((option) => (
-                                    <span key={option.key} className="rounded-full bg-secondary px-2 py-1 text-[10px] text-muted-foreground">
-                                      {option.badge} · {option.title}
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : null}
-                            </div>
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-card">
+                            {iconSrc ? <img src={iconSrc} alt="" className="h-5 w-5 object-contain" loading="lazy" /> : <Cpu className="h-4 w-4 text-primary" />}
                           </div>
+                          <p className="truncate text-sm font-medium text-foreground">{engine.name}</p>
                         </button>
                       );
                     })}
@@ -367,10 +349,12 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                 </div>
               ) : (
                 <div className="space-y-5">
-                  <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">{selectedEngine.name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{selectedEngine.description}</p>
+                  <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/20 p-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-card">
+                        {getEngineIcon(selectedEngine.slug) ? <img src={getEngineIcon(selectedEngine.slug)} alt="" className="h-5 w-5 object-contain" loading="lazy" /> : <Cpu className="h-4 w-4 text-primary" />}
+                      </div>
+                      <p className="truncate text-sm font-medium text-foreground">{selectedEngine.name}</p>
                     </div>
                     <button
                       type="button"
@@ -384,9 +368,6 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
 
 {hasReleaseStep && currentStep === "release" ? (
                     <section className="space-y-3">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{t("engines.installerStepRelease", "Release")}</p>
-                      </div>
                       <div className="grid gap-3">
                         {releaseOptions.map((option) => (
                           <button
@@ -452,9 +433,6 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
 
                   {(!hasReleaseStep || selectedRelease) && (!hasSourceStep || selectedSource) && currentStep === "package" ? (
                     <section className="space-y-3">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{t("engines.installerStepPackage", "Package")}</p>
-                      </div>
                       <div className="grid gap-3">
                         {packageOptions.map((pkg) => (
                           <button
@@ -471,7 +449,7 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                           </button>
                         ))}
                       </div>
-                    </section>
+                      </section>
                   ) : null}
 
                   </div>
