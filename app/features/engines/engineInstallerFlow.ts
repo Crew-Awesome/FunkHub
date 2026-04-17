@@ -66,6 +66,31 @@ function compareVersionsDescending(left: string, right: string): number {
   return right.localeCompare(left, undefined, { numeric: true, sensitivity: "base" });
 }
 
+function comparePublishedDescending(left?: string, right?: string): number {
+  const leftTime = left ? Date.parse(left) : NaN;
+  const rightTime = right ? Date.parse(right) : NaN;
+  const normalizedLeft = Number.isNaN(leftTime) ? 0 : leftTime;
+  const normalizedRight = Number.isNaN(rightTime) ? 0 : rightTime;
+  return normalizedRight - normalizedLeft;
+}
+
+function formatPublishedAt(value?: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    return undefined;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(timestamp));
+}
+
 function packagePlatformScore(pkg: Pick<EngineInstallPackage, "platform">, currentPlatform: ClientPlatform): number {
   if (pkg.platform === currentPlatform) {
     return 0;
@@ -95,9 +120,12 @@ export function buildEngineInstallPackages(engine: EngineDefinition | null, curr
       const channelLabel = release.channelLabel || (channelKey === "prerelease" ? "Pre-release" : "Stable");
       const sourceKey = release.sourceKey || release.sourceLabel?.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "direct";
       const sourceLabel = release.sourceLabel || "Direct Download";
-      const sourceHint = release.sourceHint;
+      const publishedAtLabel = formatPublishedAt(release.publishedAt);
+      const sourceHint = release.sourceHint || publishedAtLabel;
       const packageLabel = release.packageLabel || "Package";
-      const packageHint = release.packageHint;
+      const packageHint = release.packageHint
+        ? publishedAtLabel ? `${release.packageHint} · ${publishedAtLabel}` : release.packageHint
+        : publishedAtLabel;
       const normalizedVersion = normalizeReleaseVersion(release.version, channelKey);
       const releaseTitle = channelKey === "nightly" && normalizedVersion === "nightly"
         ? channelLabel
@@ -133,6 +161,10 @@ export function buildEngineInstallPackages(engine: EngineDefinition | null, curr
       const channelDiff = releaseChannelPriority(left.channelKey) - releaseChannelPriority(right.channelKey);
       if (channelDiff !== 0) {
         return channelDiff;
+      }
+      const publishedDiff = comparePublishedDescending(left.publishedAt, right.publishedAt);
+      if (publishedDiff !== 0) {
+        return publishedDiff;
       }
       const versionDiff = compareVersionsDescending(left.version, right.version);
       if (versionDiff !== 0) {
@@ -177,6 +209,10 @@ export function buildReleaseOptions(packages: EngineInstallPackage[]): EngineIns
     const channelDiff = releaseChannelPriority(left.packages[0].channelKey) - releaseChannelPriority(right.packages[0].channelKey);
     if (channelDiff !== 0) {
       return channelDiff;
+    }
+    const publishedDiff = comparePublishedDescending(left.packages[0].publishedAt, right.packages[0].publishedAt);
+    if (publishedDiff !== 0) {
+      return publishedDiff;
     }
     return compareVersionsDescending(left.packages[0].version, right.packages[0].version);
   });
