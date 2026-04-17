@@ -5,7 +5,7 @@ import { useNavigate } from "react-router";
 import { ModCard, ModVisualizerModal, UserProfileModal } from "../mods";
 import { useFunkHub, useI18n } from "../../providers";
 import type { CategoryNode, ContentRating, GameBananaMember, ReleaseType, SearchField, SearchSortOrder, SubfeedSort } from "../../services/funkhub";
-import { CONTENT_RATING_OPTIONS, RELEASE_TYPE_OPTIONS, SEARCH_FIELD_OPTIONS, SEARCH_SORT_OPTIONS } from "../../services/funkhub";
+import { CONTENT_RATING_OPTIONS, RELEASE_TYPE_OPTIONS, SEARCH_FIELD_OPTIONS, SEARCH_SORT_OPTIONS, detectClientPlatform, getPlatformDefaults } from "../../services/funkhub";
 import type { SupportedLocale } from "../../i18n";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../shared/ui/sheet";
@@ -163,6 +163,8 @@ export function Discover() {
   const needsOnboarding = !settings.firstRunCompleted;
   const hasGameFolder = settings.gameDirectory.trim().length > 0;
   const hasDataRoot = settings.dataRootDirectory.trim().length > 0;
+  const platform = detectClientPlatform();
+  const defaults = getPlatformDefaults(platform);
 
   useEffect(() => {
     if (needsOnboarding) {
@@ -172,7 +174,18 @@ export function Discover() {
   }, [needsOnboarding]);
 
   const completeOnboarding = async () => {
-    await updateSettings({ firstRunCompleted: true });
+    // Auto-fill any empty settings with platform defaults
+    const updates: Partial<typeof settings> = { firstRunCompleted: true };
+    if (!settings.gameDirectory.trim()) {
+      updates.gameDirectory = defaults.game;
+    }
+    if (!settings.dataRootDirectory.trim()) {
+      updates.dataRootDirectory = defaults.dataRoot;
+    }
+    if (!settings.downloadsDirectory.trim()) {
+      updates.downloadsDirectory = defaults.downloads;
+    }
+    await updateSettings(updates);
     setOnboardingOpen(false);
   };
 
@@ -881,11 +894,12 @@ export function Discover() {
               <div className="rounded-lg border border-border p-3">
                 <p className="font-medium text-foreground">{t("discover.step1", "1) Choose your game folder")}</p>
                 <p className="mt-1 text-muted-foreground">{t("discover.step1Desc", "Select the folder that contains your Friday Night Funkin' executable.")}</p>
+                <p className="mt-1 text-xs text-muted-foreground break-all">{t("discover.defaultPath", "Default")}: {defaults.game}</p>
                 <button
                   onClick={async () => {
                     const selected = await browseFolder({
                       title: t("discover.chooseGameFolder", "Choose your FNF base game folder"),
-                      defaultPath: settings.gameDirectory || undefined,
+                      defaultPath: settings.gameDirectory || defaults.game,
                     });
                     if (selected) {
                       await updateSettings({ gameDirectory: selected });
@@ -895,6 +909,14 @@ export function Discover() {
                 >
                   {t("discover.chooseGameFolderBtn", "Choose Game Folder")}
                 </button>
+                <button
+                  onClick={async () => {
+                    await updateSettings({ gameDirectory: defaults.game });
+                  }}
+                  className="mt-2 ml-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                >
+                  {t("discover.useDefault", "Use Default")}
+                </button>
                 <p className="mt-2 text-xs text-muted-foreground break-all">{t("discover.current", "Current")}: {settings.gameDirectory || t("discover.notSet", "Not set")}</p>
               </div>
             )}
@@ -903,12 +925,12 @@ export function Discover() {
               <div className="rounded-lg border border-border p-3">
                 <p className="font-medium text-foreground">{t("discover.step2", "2) Choose FunkHub data folder")}</p>
                 <p className="mt-1 text-muted-foreground">{t("discover.step2Desc", "FunkHub stores engine installs and managed content here (engines, imported mods, and app-managed files).")}</p>
-                <p className="mt-1 text-xs text-muted-foreground break-all">{t("discover.defaultPath", "Default")}: {settings.dataRootDirectory}</p>
+                <p className="mt-1 text-xs text-muted-foreground break-all">{t("discover.defaultPath", "Default")}: {defaults.dataRoot}</p>
                 <button
                   onClick={async () => {
                     const selected = await browseFolder({
                       title: t("discover.chooseEngineRoot", "Choose your FunkHub data folder"),
-                      defaultPath: settings.dataRootDirectory || undefined,
+                      defaultPath: settings.dataRootDirectory || defaults.dataRoot,
                     });
                     if (selected) {
                       await updateSettings({ dataRootDirectory: selected });
@@ -920,7 +942,7 @@ export function Discover() {
                 </button>
                 <button
                   onClick={async () => {
-                    await updateSettings({ dataRootDirectory: "" });
+                    await updateSettings({ dataRootDirectory: defaults.dataRoot });
                   }}
                   className="mt-2 ml-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
                 >
@@ -934,12 +956,12 @@ export function Discover() {
               <div className="rounded-lg border border-border p-3">
                 <p className="font-medium text-foreground">{t("discover.stepDownloads", "3) Choose download folder")}</p>
                 <p className="mt-1 text-muted-foreground">{t("discover.stepDownloadsDesc", "Downloaded archives are saved here before install/import. You can keep default if unsure.")}</p>
-                <p className="mt-1 text-xs text-muted-foreground break-all">{t("discover.defaultPath", "Default")}: {settings.downloadsDirectory}</p>
+                <p className="mt-1 text-xs text-muted-foreground break-all">{t("discover.defaultPath", "Default")}: {defaults.downloads}</p>
                 <button
                   onClick={async () => {
                     const selected = await browseFolder({
                       title: t("discover.chooseDownloadsFolder", "Choose your download folder"),
-                      defaultPath: settings.downloadsDirectory || undefined,
+                      defaultPath: settings.downloadsDirectory || defaults.downloads,
                     });
                     if (selected) {
                       await updateSettings({ downloadsDirectory: selected });
@@ -948,6 +970,14 @@ export function Discover() {
                   className="mt-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
                 >
                   {t("discover.chooseDownloadsFolderBtn", "Choose Download Folder")}
+                </button>
+                <button
+                  onClick={async () => {
+                    await updateSettings({ downloadsDirectory: defaults.downloads });
+                  }}
+                  className="mt-2 ml-2 rounded-lg border border-border px-3 py-2 text-foreground hover:bg-secondary"
+                >
+                  {t("discover.useDefault", "Use Default")}
                 </button>
                 <button
                   onClick={async () => {
