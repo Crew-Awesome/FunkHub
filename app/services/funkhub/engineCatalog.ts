@@ -32,6 +32,47 @@ interface GameBananaEngineSource {
   fallbackReleases: EngineRelease[];
 }
 
+interface GithubWorkflowRun {
+  id: number;
+  html_url: string;
+  run_number: number;
+  head_branch?: string;
+  status?: string;
+  conclusion?: string;
+  created_at?: string;
+  artifacts_url: string;
+}
+
+interface GithubWorkflowRunResponse {
+  workflow_runs: GithubWorkflowRun[];
+}
+
+interface GithubActionArtifact {
+  id: number;
+  name: string;
+  expired: boolean;
+}
+
+interface GithubActionArtifactResponse {
+  artifacts: GithubActionArtifact[];
+}
+
+interface GithubActionWorkflowSource {
+  workflow: string;
+  label: string;
+  branch?: string;
+  maxRuns?: number;
+}
+
+interface GithubActionEngineSource {
+  slug: EngineSlug;
+  name: string;
+  description: string;
+  repo: string;
+  workflows: GithubActionWorkflowSource[];
+  fallbackReleases: EngineRelease[];
+}
+
 const githubEngineSources: GithubEngineSource[] = [
   {
     slug: "fps-plus",
@@ -234,46 +275,118 @@ const staticOnlyEngines: EngineDefinition[] = [
       },
     ],
   },
+];
+
+const githubActionEngineSources: GithubActionEngineSource[] = [
+  {
+    slug: "js-engine",
+    name: "JS Engine",
+    description: "JS Engine GitHub Actions builds.",
+    repo: "JordanSantiagoYT/FNF-JS-Engine",
+    workflows: [
+      {
+        workflow: "main.yml",
+        label: "Build",
+        branch: "main",
+        maxRuns: 3,
+      },
+    ],
+    fallbackReleases: [],
+  },
+  {
+    slug: "psych-online",
+    name: "Psych Online",
+    description: "Psych Online GitHub Actions builds.",
+    repo: "Snirozu/Funkin-Psych-Online",
+    workflows: [
+      {
+        workflow: "main.yml",
+        label: "Build",
+        branch: "main",
+        maxRuns: 3,
+      },
+    ],
+    fallbackReleases: [],
+  },
   {
     slug: "ale-psych",
     name: "ALE Psych Engine",
-    description: "ALE Psych nightly workflow artifacts.",
-    releases: [
+    description: "ALE Psych GitHub Actions builds.",
+    repo: "ALE-Psych-Crew/ALE-Psych",
+    workflows: [
+      {
+        workflow: "builds.yaml",
+        label: "ALE Psych Builds",
+        branch: "main",
+        maxRuns: 3,
+      },
+    ],
+    fallbackReleases: [
       {
         platform: "windows",
         version: "nightly",
         sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
         downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/Windows%20Build.zip",
+        channel: "nightly",
+        channelLabel: "Nightly",
+        sourceKey: "ale-psych-nightly",
+        sourceLabel: "GitHub Actions",
+        sourceHint: "Delivered by nightly.link",
       },
       {
         platform: "windows",
         version: "nightly-x32",
         sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
         downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/Windows%20x32%20Build.zip",
+        channel: "nightly",
+        channelLabel: "Nightly",
+        sourceKey: "ale-psych-nightly",
+        sourceLabel: "GitHub Actions",
+        sourceHint: "Delivered by nightly.link",
       },
       {
         platform: "linux",
         version: "nightly",
         sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
         downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/Linux%20Build.zip",
+        channel: "nightly",
+        channelLabel: "Nightly",
+        sourceKey: "ale-psych-nightly",
+        sourceLabel: "GitHub Actions",
+        sourceHint: "Delivered by nightly.link",
       },
       {
         platform: "macos",
         version: "nightly",
         sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
         downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/MacOS%20Build.zip",
+        channel: "nightly",
+        channelLabel: "Nightly",
+        sourceKey: "ale-psych-nightly",
+        sourceLabel: "GitHub Actions",
+        sourceHint: "Delivered by nightly.link",
       },
       {
         platform: "macos",
         version: "nightly-x64",
         sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
         downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/MacOS%20x64%20Build.zip",
+        channel: "nightly",
+        channelLabel: "Nightly",
+        sourceKey: "ale-psych-nightly",
+        sourceLabel: "GitHub Actions",
+        sourceHint: "Delivered by nightly.link",
       },
       {
         platform: "any",
         version: "nightly-android",
         sourceUrl: "https://github.com/ALE-Psych-Crew/ALE-Psych/actions/workflows/builds.yaml",
         downloadUrl: "https://nightly.link/ALE-Psych-Crew/ALE-Psych/workflows/builds.yaml/main/Android%20Build.zip",
+        channel: "nightly",
+        channelLabel: "Nightly",
+        sourceKey: "ale-psych-nightly",
+        sourceLabel: "GitHub Actions",
+        sourceHint: "Delivered by nightly.link",
       },
     ],
   },
@@ -457,6 +570,16 @@ function mergeEngineDefinitions(definitions: EngineDefinition[]): EngineDefiniti
 function detectPlatformFromAsset(name: string): EngineRelease["platform"] {
   const lowered = name.toLowerCase();
 
+  if (lowered.includes("windowsbuild") || lowered.includes("windows build")) {
+    return "windows";
+  }
+  if (lowered.includes("linuxbuild") || lowered.includes("linux build")) {
+    return "linux";
+  }
+  if (lowered.includes("macbuild") || lowered.includes("mac build") || lowered.includes("macos build")) {
+    return "macos";
+  }
+
   const hasToken = (tokens: string[]) => {
     return tokens.some((token) => new RegExp(`(^|[^a-z0-9])${token}([^a-z0-9]|$)`).test(lowered));
   };
@@ -476,6 +599,23 @@ function detectPlatformFromAsset(name: string): EngineRelease["platform"] {
 function normalizeVersionTag(tag: string, prerelease: boolean): string {
   const cleaned = tag.replace(/^v/i, "") || "latest";
   return prerelease ? `${cleaned}-pre` : cleaned;
+}
+
+function formatActionRunVersion(input: { createdAt?: string; runNumber: number }): string {
+  const timestamp = input.createdAt ? Date.parse(input.createdAt) : NaN;
+  const dateLabel = Number.isNaN(timestamp)
+    ? "Workflow Run"
+    : new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(timestamp));
+
+  return `${dateLabel} · Run ${input.runNumber}`;
+}
+
+function buildNightlyRunDownloadUrl(repo: string, runId: number, artifactName: string): string {
+  return `https://nightly.link/${repo}/actions/runs/${runId}/${encodeURIComponent(artifactName)}.zip`;
 }
 
 async function fetchGithubReleases(source: GithubEngineSource): Promise<EngineDefinition> {
@@ -570,11 +710,90 @@ async function fetchGameBananaReleases(source: GameBananaEngineSource): Promise<
   }
 }
 
+async function fetchGithubActionReleases(source: GithubActionEngineSource): Promise<EngineDefinition> {
+  try {
+    const releases = await Promise.all(source.workflows.map(async (workflow) => {
+      const params = new URLSearchParams({
+        per_page: String(workflow.maxRuns ?? 3),
+        status: "completed",
+      });
+      const response = await fetch(`https://api.github.com/repos/${source.repo}/actions/workflows/${encodeURIComponent(workflow.workflow)}/runs?${params.toString()}`, {
+        headers: {
+          Accept: "application/vnd.github+json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`GitHub workflow runs fetch failed for ${source.repo}/${workflow.workflow}`);
+      }
+
+      const payload = await response.json() as GithubWorkflowRunResponse;
+      const runs = Array.isArray(payload.workflow_runs) ? payload.workflow_runs : [];
+      const successfulRuns = runs.filter((run) => {
+        if (run.status !== "completed" || run.conclusion !== "success") {
+          return false;
+        }
+        if (workflow.branch && run.head_branch !== workflow.branch) {
+          return false;
+        }
+        return true;
+      });
+
+      return Promise.all(successfulRuns.map(async (run) => {
+        const artifactsResponse = await fetch(run.artifacts_url, {
+          headers: {
+            Accept: "application/vnd.github+json",
+          },
+        });
+
+        if (!artifactsResponse.ok) {
+          throw new Error(`GitHub artifacts fetch failed for run ${run.id}`);
+        }
+
+        const artifactsPayload = await artifactsResponse.json() as GithubActionArtifactResponse;
+        const artifacts = Array.isArray(artifactsPayload.artifacts) ? artifactsPayload.artifacts : [];
+
+        return artifacts
+          .filter((artifact) => !artifact.expired && artifact.name)
+          .map((artifact) => ({
+            platform: detectPlatformFromAsset(artifact.name),
+            version: formatActionRunVersion({ createdAt: run.created_at, runNumber: run.run_number }),
+            sourceUrl: run.html_url,
+            downloadUrl: buildNightlyRunDownloadUrl(source.repo, run.id, artifact.name),
+            fileName: artifact.name,
+            channel: "nightly",
+            channelLabel: "Nightly",
+            sourceKey: `${source.slug}-actions`,
+            sourceLabel: "GitHub Actions",
+            sourceHint: workflow.label,
+            publishedAt: run.created_at,
+          } satisfies EngineRelease));
+      }));
+    }));
+
+    const flattened = releases.flat(2);
+    return {
+      slug: source.slug,
+      name: source.name,
+      description: source.description,
+      releases: dedupeReleases(flattened.length > 0 ? flattened : source.fallbackReleases),
+    };
+  } catch {
+    return {
+      slug: source.slug,
+      name: source.name,
+      description: source.description,
+      releases: dedupeReleases(source.fallbackReleases),
+    };
+  }
+}
+
 export class EngineCatalogService {
   async getEngineCatalog(): Promise<EngineDefinition[]> {
     const githubEngines = await Promise.all(githubEngineSources.map((source) => fetchGithubReleases(source)));
+    const githubActionEngines = await Promise.all(githubActionEngineSources.map((source) => fetchGithubActionReleases(source)));
     const gameBananaEngines = await Promise.all(gameBananaEngineSources.map((source) => fetchGameBananaReleases(source)));
-    const all = mergeEngineDefinitions([...githubEngines, ...gameBananaEngines, ...staticOnlyEngines.map((engine) => ({
+    const all = mergeEngineDefinitions([...githubEngines, ...githubActionEngines, ...gameBananaEngines, ...staticOnlyEngines.map((engine) => ({
       ...engine,
       releases: dedupeReleases(engine.releases),
     }))]);
