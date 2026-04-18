@@ -2,7 +2,8 @@ import { lazy } from "react";
 import { createBrowserRouter, createHashRouter, useNavigate, useRouteError } from "react-router";
 import { Layout } from "./app-shell";
 
-const Discover = lazy(() => import("./features/discover").then((module) => ({ default: module.Discover })));
+const GameBanana = lazy(() => import("./features/gamebanana").then((module) => ({ default: module.GameBanana })));
+const GameJolt = lazy(() => import("./features/gamejolt").then((module) => ({ default: module.GameJolt })));
 const Downloads = lazy(() => import("./features/downloads").then((module) => ({ default: module.Downloads })));
 const Engines = lazy(() => import("./features/engines").then((module) => ({ default: module.Engines })));
 const Library = lazy(() => import("./features/library").then((module) => ({ default: module.Library })));
@@ -44,14 +45,16 @@ export const router = routerFactory([
     Component: Layout,
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true, Component: Discover },
-      { path: "discover", Component: Discover },
+      { index: true, Component: GameBanana },
+      { path: "discover", Component: GameBanana },
+      { path: "gamebanana", Component: GameBanana },
+      { path: "gamejolt", Component: GameJolt },
       { path: "library", Component: Library },
       { path: "downloads", Component: Downloads },
       { path: "updates", Component: Updates },
       { path: "engines", Component: Engines },
       { path: "settings", Component: Settings },
-      { path: "*", Component: Discover },
+      { path: "*", Component: GameBanana },
     ],
   },
 ]);
