@@ -31,6 +31,23 @@ export interface GameBananaFile {
   downloadUrl: string;
   md5Checksum?: string;
   hasArchiveContents?: boolean;
+  version?: string;
+  description?: string;
+  analysisState?: string;
+  analysisResult?: string;
+  analysisResultVerbose?: string;
+  avState?: string;
+  avResult?: string;
+  modManagerIntegrations?: Array<{
+    toolId?: number;
+    gameRowIds?: number[];
+    alias?: string;
+    installerName?: string;
+    submitterId?: number;
+    installerUrl?: string;
+    iconUrl?: string;
+    downloadUrl?: string;
+  }>;
 }
 
 export interface GameBananaModSummary {
@@ -76,6 +93,24 @@ export interface GameBananaModProfile extends GameBananaModSummary {
   category?: Pick<GameBananaCategory, "id" | "name" | "profileUrl" | "iconUrl">;
   superCategory?: Pick<GameBananaCategory, "id" | "name" | "profileUrl" | "iconUrl">;
   credits: GameBananaCredit[];
+  embeddedMedia?: string[];
+  embeddables?: {
+    imageBaseUrl?: string;
+    variants?: string[];
+  };
+  alternateFileSources?: Array<{
+    url: string;
+    description?: string;
+  }>;
+  tags?: string[];
+  devNotes?: string;
+  license?: string;
+  likeCount?: number;
+  downloadCount?: number;
+  viewCount?: number;
+  postCount?: number;
+  subscriberCount?: number;
+  thanksCount?: number;
   requiredEngine?: EngineSlug;
   dependencies: string[];
 }

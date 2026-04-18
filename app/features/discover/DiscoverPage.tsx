@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall, UserCircle2, Layers, SlidersHorizontal } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FolderTree, ChevronDown, ChevronRight as ChevronRightSmall, UserCircle2, Layers, SlidersHorizontal, Heart, MessageCircle, Eye, Download, Clock3 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
-import { ModCard, ModVisualizerModal, UserProfileModal } from "../mods";
+import { useLocation, useNavigate } from "react-router";
+import { ModCard, UserProfileModal } from "../mods";
 import { useFunkHub, useI18n } from "../../providers";
 import type { CategoryNode, ContentRating, GameBananaMember, ReleaseType, SearchField, SearchSortOrder, SubfeedSort } from "../../services/funkhub";
 import { CONTENT_RATING_OPTIONS, RELEASE_TYPE_OPTIONS, SEARCH_FIELD_OPTIONS, SEARCH_SORT_OPTIONS, detectClientPlatform, getPlatformDefaults } from "../../services/funkhub";
@@ -62,12 +62,12 @@ export function Discover() {
     "3month": "3 Months", "6month": "6 Months", year: "This Year", alltime: "All Time",
   };
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<number[]>([]);
   const [categorySearch, setCategorySearch] = useState("");
   const [showBrowseFilters, setShowBrowseFilters] = useState(false);
   const [showRatingPicker, setShowRatingPicker] = useState(false);
-  const [selectedModId, setSelectedModId] = useState<number | undefined>(undefined);
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
   const [onboardingOpen, setOnboardingOpen] = useState(!settings.firstRunCompleted);
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -78,6 +78,30 @@ export function Discover() {
   const [progress, setProgress] = useState(0);
   const STRIP_SIZE = 4;
   const AUTO_ADVANCE_MS = 4000;
+
+  const formatCompactCount = (value?: number) => {
+    if (value === undefined || value < 0) return "0";
+    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+    return String(value);
+  };
+
+  const formatRelativeTime = (timestamp?: number) => {
+    if (!timestamp) return null;
+    const ms = timestamp * 1000;
+    if (!Number.isFinite(ms)) return null;
+    const diff = Date.now() - ms;
+    const minute = 60_000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    if (diff < minute) return "now";
+    if (diff < hour) return `${Math.floor(diff / minute)}m`;
+    if (diff < day) return `${Math.floor(diff / hour)}h`;
+    if (diff < day * 30) return `${Math.floor(diff / day)}d`;
+    if (diff < day * 365) return `${Math.floor(diff / (day * 30))}mo`;
+    return `${Math.floor(diff / (day * 365))}y`;
+  };
 
   // Flat list of all bestOfMods sorted by period order (today first, alltime last)
   const bestOfFlat = useMemo(() => {
@@ -466,7 +490,19 @@ export function Discover() {
             className="mb-6 rounded-2xl overflow-hidden border border-border bg-card"
           >
             {/* Large hero image with crossfade */}
-            <div className="relative h-56 cursor-pointer overflow-hidden" role="button" tabIndex={0} onClick={() => setSelectedModId(hero.id)} onKeyDown={(e) => e.key === "Enter" && setSelectedModId(hero.id)} aria-label={`View ${hero.name}`}>
+            <div
+              className="relative h-64 md:h-72 cursor-pointer overflow-hidden"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/mods/${hero.id}`, { state: { from: location.pathname + location.search } })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  navigate(`/mods/${hero.id}`, { state: { from: location.pathname + location.search } });
+                }
+              }}
+              aria-label={`View ${hero.name}`}
+            >
               <AnimatePresence mode="wait">
                 <motion.div
                   key={hero.id}
@@ -489,7 +525,7 @@ export function Discover() {
                   />
                 </motion.div>
               </AnimatePresence>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10" />
               {hero.period && (
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -497,11 +533,17 @@ export function Discover() {
                   transition={{ delay: 0.2, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                   className="absolute top-3 left-3"
                 >
-                  <span className="bg-primary/90 text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full backdrop-blur-sm">
+                  <span className="bg-primary/90 text-primary-foreground text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm border border-white/20 shadow-md">
                     Best of {PERIOD_LABELS[hero.period] ?? hero.period}
                   </span>
                 </motion.div>
               )}
+              <div className="absolute top-3 right-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-2.5 py-1 text-[11px] text-white/85 backdrop-blur">
+                {hero.rootCategory?.iconUrl && (
+                  <img src={hero.rootCategory.iconUrl} alt="" className="h-4 w-4 object-contain" loading="lazy" />
+                )}
+                <span className="line-clamp-1">{hero.modelName}</span>
+              </div>
               {/* Progress bar for auto-advance */}
               <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
                 <motion.div
@@ -511,7 +553,20 @@ export function Discover() {
                   transition={{ duration: 0.1, ease: "linear" }}
                 />
               </div>
-              <div className="absolute bottom-4 left-4 right-4">
+              <div className="absolute bottom-4 left-4 right-4 space-y-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-2 py-1 text-xs text-white/90 backdrop-blur-sm">
+                  {hero.submitter?.avatarUrl ? (
+                    <img
+                      src={hero.submitter.avatarUrl}
+                      alt=""
+                      className="h-5 w-5 rounded-full border border-white/20 object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <UserCircle2 className="h-4 w-4" />
+                  )}
+                  <span className="line-clamp-1">{hero.submitter?.name ?? t("discover.communityUploader", "Community uploader")}</span>
+                </div>
                 <motion.h3
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -530,16 +585,38 @@ export function Discover() {
                     {hero.description}
                   </motion.p>
                 )}
-                {hero.likeCount !== undefined && (
-                  <motion.span
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                    className="text-white/60 text-xs mt-1.5 inline-block"
-                  >
-                    ♥ {hero.likeCount.toLocaleString()}
-                  </motion.span>
-                )}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex flex-wrap items-center gap-2 text-[11px] text-white/80"
+                >
+                  {typeof hero.likeCount === "number" && hero.likeCount > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/35 px-1.5 py-1">
+                      <Heart className="h-3.5 w-3.5 text-primary" /> {formatCompactCount(hero.likeCount)}
+                    </span>
+                  )}
+                  {typeof hero.postCount === "number" && hero.postCount > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/35 px-1.5 py-1">
+                      <MessageCircle className="h-3.5 w-3.5" /> {formatCompactCount(hero.postCount)}
+                    </span>
+                  )}
+                  {typeof hero.viewCount === "number" && hero.viewCount > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/35 px-1.5 py-1">
+                      <Eye className="h-3.5 w-3.5" /> {formatCompactCount(hero.viewCount)}
+                    </span>
+                  )}
+                  {typeof hero.downloadCount === "number" && hero.downloadCount > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/35 px-1.5 py-1">
+                      <Download className="h-3.5 w-3.5" /> {formatCompactCount(hero.downloadCount)}
+                    </span>
+                  )}
+                  {formatRelativeTime(hero.dateUpdated ?? hero.dateAdded) && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/35 px-1.5 py-1">
+                      <Clock3 className="h-3.5 w-3.5" /> {formatRelativeTime(hero.dateUpdated ?? hero.dateAdded)}
+                    </span>
+                  )}
+                </motion.div>
               </div>
             </div>
 
@@ -572,9 +649,9 @@ export function Discover() {
                         resetProgress();
                       }}
                       title={mod.period ? `${mod.name} — Best of ${PERIOD_LABELS[mod.period] ?? mod.period}` : mod.name}
-                      className={`relative w-full aspect-video rounded-lg overflow-hidden border-2 transition-all ${
-                        isSelected ? "border-primary shadow-lg shadow-primary/20" : "border-transparent opacity-60 hover:opacity-100 hover:border-primary/50"
-                      }`}
+                       className={`relative w-full aspect-video rounded-lg overflow-hidden border-2 transition-all ${
+                         isSelected ? "border-primary shadow-lg shadow-primary/20" : "border-transparent opacity-60 hover:opacity-100 hover:border-primary/50"
+                       }`}
                       aria-label={mod.name}
                       aria-pressed={isSelected}
                     >
@@ -589,6 +666,15 @@ export function Discover() {
                           img.src = `${import.meta.env.BASE_URL}mod-placeholder.svg`;
                         }}
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                      <div className="absolute inset-x-1.5 bottom-1.5 flex items-center justify-between gap-1 text-[10px] text-white/90">
+                        <span className="line-clamp-1 rounded border border-white/15 bg-black/45 px-1.5 py-0.5 backdrop-blur-sm">
+                          {mod.period ? `Best of ${PERIOD_LABELS[mod.period] ?? mod.period}` : mod.modelName}
+                        </span>
+                        <span className="rounded border border-white/15 bg-black/45 px-1.5 py-0.5 backdrop-blur-sm">
+                          {formatCompactCount(mod.likeCount)}♥
+                        </span>
+                      </div>
                     </motion.button>
                   );
                 })}
@@ -762,7 +848,7 @@ export function Discover() {
               )}
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
             {visibleMods.map((mod, index) => (
               <motion.div
                 key={mod.id}
@@ -771,13 +857,19 @@ export function Discover() {
                 transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.3) }}
               >
                 <ModCard
-                  id={mod.id}
                   title={mod.name}
                   author={mod.submitter?.name ?? t("discover.communityUploader", "Community uploader")}
                   thumbnail={mod.imageUrl ?? mod.thumbnailUrl ?? `${import.meta.env.BASE_URL}mod-placeholder.svg`}
                   likes={mod.likeCount}
                   downloads={mod.downloadCount}
-                  onView={() => setSelectedModId(mod.id)}
+                  modelName={mod.modelName}
+                  submitterAvatar={mod.submitter?.avatarUrl}
+                  rootCategoryIcon={mod.rootCategory?.iconUrl}
+                  postCount={mod.postCount}
+                  viewCount={mod.viewCount}
+                  dateAdded={mod.dateAdded}
+                  dateUpdated={mod.dateUpdated ?? mod.dateModified}
+                  onView={() => navigate(`/mods/${mod.id}`, { state: { from: location.pathname + location.search } })}
                   onAuthorClick={() => {
                     if (mod.submitter?.id) {
                       setSelectedSubmitter({
@@ -831,20 +923,13 @@ export function Discover() {
         </button>
       </div>
 
-      <ModVisualizerModal
-        modId={selectedModId}
-        open={Boolean(selectedModId)}
-        onClose={() => setSelectedModId(undefined)}
-        onOpenSubmitter={(submitter) => setSelectedSubmitter(submitter)}
-      />
-
       <UserProfileModal
         open={Boolean(selectedSubmitter)}
         submitter={selectedSubmitter}
         onClose={() => setSelectedSubmitter(undefined)}
         onOpenMod={(modId) => {
           setSelectedSubmitter(undefined);
-          setSelectedModId(modId);
+          navigate(`/mods/${modId}`, { state: { from: location.pathname + location.search } });
         }}
       />
 

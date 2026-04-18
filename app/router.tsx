@@ -3,6 +3,7 @@ import { createBrowserRouter, createHashRouter, useNavigate, useRouteError } fro
 import { Layout } from "./app-shell";
 
 const GameBanana = lazy(() => import("./features/gamebanana").then((module) => ({ default: module.GameBanana })));
+const ModDetailsPage = lazy(() => import("./features/mods").then((module) => ({ default: module.ModDetailsPage })));
 const GameJolt = lazy(() => import("./features/gamejolt").then((module) => ({ default: module.GameJolt })));
 const Downloads = lazy(() => import("./features/downloads").then((module) => ({ default: module.Downloads })));
 const Engines = lazy(() => import("./features/engines").then((module) => ({ default: module.Engines })));
@@ -48,6 +49,7 @@ export const router = routerFactory([
       { index: true, Component: GameBanana },
       { path: "discover", Component: GameBanana },
       { path: "gamebanana", Component: GameBanana },
+      { path: "mods/:modId", Component: ModDetailsPage },
       { path: "gamejolt", Component: GameJolt },
       { path: "library", Component: Library },
       { path: "downloads", Component: Downloads },

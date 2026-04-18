@@ -100,6 +100,30 @@ function normalizeFile(file: Record<string, unknown>): GameBananaFile {
     downloadUrl: String(file._sDownloadUrl ?? ""),
     md5Checksum: typeof file._sMd5Checksum === "string" ? file._sMd5Checksum : undefined,
     hasArchiveContents: Boolean(file._bHasContents),
+    version: typeof file._sVersion === "string" ? file._sVersion : undefined,
+    description: typeof file._sDescription === "string" ? file._sDescription : undefined,
+    analysisState: typeof file._sAnalysisState === "string" ? file._sAnalysisState : undefined,
+    analysisResult: typeof file._sAnalysisResult === "string" ? file._sAnalysisResult : undefined,
+    analysisResultVerbose: typeof file._sAnalysisResultVerbose === "string" ? file._sAnalysisResultVerbose : undefined,
+    avState: typeof file._sAvState === "string" ? file._sAvState : undefined,
+    avResult: typeof file._sAvResult === "string" ? file._sAvResult : undefined,
+    modManagerIntegrations: Array.isArray(file._aModManagerIntegrations)
+      ? file._aModManagerIntegrations.map((entry) => {
+          const integration = entry as Record<string, unknown>;
+          return {
+            toolId: toNumber(integration._idToolRow),
+            gameRowIds: Array.isArray(integration._aGameRowIds)
+              ? integration._aGameRowIds.map((id) => toNumber(id))
+              : undefined,
+            alias: typeof integration._sModManagerAlias === "string" ? integration._sModManagerAlias : undefined,
+            installerName: typeof integration._sInstallerName === "string" ? integration._sInstallerName : undefined,
+            submitterId: toNumber(integration._idSubmitterRow),
+            installerUrl: typeof integration._sInstallerUrl === "string" ? integration._sInstallerUrl : undefined,
+            iconUrl: typeof integration._sIconUrl === "string" ? integration._sIconUrl : undefined,
+            downloadUrl: typeof integration._sDownloadUrl === "string" ? integration._sDownloadUrl : undefined,
+          };
+        })
+      : undefined,
   };
 }
 
@@ -596,6 +620,45 @@ export class GameBananaApiService {
     const profile: GameBananaModProfile = {
       ...summary,
       text: typeof payload._sText === "string" ? payload._sText : undefined,
+      devNotes: typeof payload._sDevNotes === "string" ? payload._sDevNotes : undefined,
+      license: typeof payload._sLicense === "string" ? payload._sLicense : undefined,
+      embeddedMedia: Array.isArray(payload._aEmbeddedMedia)
+        ? payload._aEmbeddedMedia.filter((entry): entry is string => typeof entry === "string")
+        : [],
+      embeddables: payload._aEmbeddables && typeof payload._aEmbeddables === "object"
+        ? {
+            imageBaseUrl: typeof (payload._aEmbeddables as Record<string, unknown>)._sEmbeddableImageBaseUrl === "string"
+              ? (payload._aEmbeddables as Record<string, unknown>)._sEmbeddableImageBaseUrl as string
+              : undefined,
+            variants: Array.isArray((payload._aEmbeddables as Record<string, unknown>)._aVariants)
+              ? ((payload._aEmbeddables as Record<string, unknown>)._aVariants as unknown[])
+                .filter((entry): entry is string => typeof entry === "string")
+              : [],
+          }
+        : undefined,
+      alternateFileSources: Array.isArray(payload._aAlternateFileSources)
+        ? payload._aAlternateFileSources.reduce<Array<{ url: string; description?: string }>>((acc, entry) => {
+            const source = entry as Record<string, unknown>;
+            const url = typeof source.url === "string" ? source.url : "";
+            if (!url) return acc;
+            acc.push({
+              url,
+              description: typeof source.description === "string" ? source.description : undefined,
+            });
+            return acc;
+          }, [])
+        : [],
+      tags: Array.isArray(payload._aTags)
+        ? payload._aTags
+          .map((entry) => {
+            if (typeof entry === "string") return entry;
+            if (entry && typeof entry === "object" && typeof (entry as Record<string, unknown>)._sName === "string") {
+              return (entry as Record<string, unknown>)._sName as string;
+            }
+            return "";
+          })
+          .filter(Boolean)
+        : [],
       category: {
         id: toNumber(categoryRaw._idRow),
         name: String(categoryRaw._sName ?? "Unknown"),
@@ -611,6 +674,12 @@ export class GameBananaApiService {
       files: filesRaw.map((entry) => normalizeFile(entry as Record<string, unknown>)),
       screenshotUrls: allImageUrls(payload._aPreviewMedia, "_sFile530"),
       credits,
+      likeCount: firstDefinedNumber(payload._nLikeCount, payload._nLikes),
+      downloadCount: firstDefinedNumber(payload._nDownloadCount, payload._nDownloads),
+      viewCount: firstDefinedNumber(payload._nViewCount, payload._nViews),
+      postCount: firstDefinedNumber(payload._nPostCount),
+      subscriberCount: firstDefinedNumber(payload._nSubscriberCount),
+      thanksCount: firstDefinedNumber(payload._nThanksCount),
       requiredEngine: undefined,
       dependencies: [],
     };
