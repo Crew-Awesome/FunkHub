@@ -16,6 +16,15 @@ const buildChannel = process.env.BUILD_CHANNEL
 export default defineConfig({
   base: "./",
   plugins: [react(), tailwindcss()],
+  server: {
+    proxy: {
+      "/api/gamejolt/site-api/web": {
+        target: "https://gamejolt.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/gamejolt/, ""),
+      },
+    },
+  },
   define: {
     __FUNKHUB_VERSION__: JSON.stringify(appVersion),
     __FUNKHUB_CHANNEL__: JSON.stringify(buildChannel),
