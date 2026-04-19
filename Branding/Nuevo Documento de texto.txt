@@ -1,0 +1,4 @@
+bg 7b99b3
+main color fefefe
+first outline 50a5eb
+second outline 000000
