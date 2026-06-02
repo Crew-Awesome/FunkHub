@@ -206,8 +206,8 @@ export function Discover() {
   }, [discoverMods, usernameFilter]);
 
   const curatedCategories = useMemo(() => {
-    const PRIMARY_CATEGORY_IDS = [29202, 34764, 44037, 28367, 43850, 3827, 43798, 44036] as const;
-    const HIDDEN_CATEGORY_IDS = [8367, 29203, 29204] as const;
+    const PRIMARY_CATEGORY_IDS = [3827, 43771, 29202, 34764, 28367, 43798, 43850, 44037] as const;
+    const HIDDEN_CATEGORY_IDS = [3046, 3828, 43772] as const;
     const primaryIdSet = new Set<number>(PRIMARY_CATEGORY_IDS);
     const hiddenIdSet = new Set<number>(HIDDEN_CATEGORY_IDS);
     const byId = (id: number) => categories.find((c) => c.id === id);
