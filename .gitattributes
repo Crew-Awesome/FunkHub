@@ -18,7 +18,7 @@
 # Shell scripts should be executable
 *.sh    text eol=lf
 
-# Binaries — diff/merge disabled
+# Binaries - diff/merge disabled
 *.png   binary
 *.jpg   binary
 *.jpeg  binary

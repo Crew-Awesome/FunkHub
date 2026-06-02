@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Play, RefreshCw, Trash2, FolderPlus, FolderOpen, ChevronLeft, ChevronRight, ChevronDown, Settings2, Square, ImagePlus, Eye, EyeOff, Search, Layers, Tag, X, Check, Plus, Pin, Copy, RotateCcw, ExternalLink, FileText, Pencil } from "lucide-react";
+import { Play, RefreshCw, Trash2, FolderOpen, ChevronLeft, ChevronRight, ChevronDown, Settings2, Square, ImagePlus, Eye, EyeOff, Search, Layers, Tag, X, Check, Plus, Pin, Copy, RotateCcw, ExternalLink, FileText, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useFunkHub, useI18n } from "../../providers";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
@@ -19,12 +19,10 @@ export function Library() {
     removeInstalledMod,
     refreshModUpdates,
     installMod,
+    addManualModFromFolder,
     launchInstalledMod,
-    browseFolder,
     browseFile,
     openFolderPath,
-    addManualMod,
-    autodetectInstalledMods,
     updateInstalledModLaunchOptions,
     runningLaunchIds,
     killLaunch,
@@ -55,17 +53,8 @@ export function Library() {
   const listRef = useRef<HTMLDivElement>(null);
   const [deleteFilesOnRemove, setDeleteFilesOnRemove] = useState(true);
   const [selectedProfileShots, setSelectedProfileShots] = useState<string[]>([]);
-  const [showManualModal, setShowManualModal] = useState(false);
   const [showLaunchSettings, setShowLaunchSettings] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const [manualName, setManualName] = useState("");
-  const [manualAuthor, setManualAuthor] = useState("");
-  const [manualVersion, setManualVersion] = useState("");
-  const [manualDescription, setManualDescription] = useState("");
-  const [manualEngineId, setManualEngineId] = useState(installedEngines[0]?.id ?? "");
-  const [manualSourcePath, setManualSourcePath] = useState("");
-  const [manualGameBananaUrl, setManualGameBananaUrl] = useState("");
-  const [manualStandalone, setManualStandalone] = useState(false);
   const [launchMode, setLaunchMode] = useState<"native" | "wine" | "wine64" | "proton">("native");
   const [launchPath, setLaunchPath] = useState("");
   const [launchExecutablePath, setLaunchExecutablePath] = useState("");
@@ -203,12 +192,6 @@ export function Library() {
     };
   }, [selectedMod?.modId, getModProfile]);
 
-  useEffect(() => {
-    if (!manualEngineId && installedEngines.length > 0) {
-      setManualEngineId(installedEngines[0].id);
-    }
-  }, [installedEngines, manualEngineId]);
-
   const renderModRow = (mod: (typeof installedMods)[number]) => (
     <div
       key={mod.id}
@@ -318,31 +301,6 @@ export function Library() {
         <p className="text-muted-foreground text-center max-w-sm">
           {t("library.empty", "No installed mods yet. Install one from Discover.")}
         </p>
-        <button
-          onClick={() => setShowManualModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
-        >
-          <FolderPlus className="w-4 h-4" />
-          {t("library.addManual", "Add Manual")}
-        </button>
-        <button
-          onClick={async () => {
-            try {
-              const added = await autodetectInstalledMods();
-              if (added > 0) {
-                toast.success(t("library.autodetectAdded", "Detected {{count}} existing mods.", { count: added }));
-              } else {
-                toast(t("library.autodetectNone", "No new mods were detected."));
-              }
-            } catch (error) {
-              toast.error(error instanceof Error ? error.message : t("library.autodetectFailed", "Failed to autodetect mods"));
-            }
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-sm"
-        >
-          <RefreshCw className="w-4 h-4" />
-          {t("library.autodetectMods", "Autodetect")}
-        </button>
       </div>
     );
   }
@@ -360,29 +318,24 @@ export function Library() {
               {t("library.installedMods", "Installed Mods")} <span className="text-muted-foreground font-normal">({installedMods.length})</span>
             </span>
             <button
-              onClick={() => setShowManualModal(true)}
-              className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={t("library.addManual", "Add Manual")}
-            >
-              <FolderPlus className="w-4 h-4" />
-            </button>
-            <button
+              type="button"
               onClick={async () => {
                 try {
-                  const added = await autodetectInstalledMods();
-                  if (added > 0) {
-                    toast.success(t("library.autodetectAdded", "Detected {{count}} existing mods.", { count: added }));
-                  } else {
-                    toast(t("library.autodetectNone", "No new mods were detected."));
+                  if (installedEngines.length === 0) {
+                    toast.error(t("library.addManualNoEngine", "Install an engine first."));
+                    return;
                   }
+                  const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
+                  await addManualModFromFolder(defaultEngine.id);
+                  toast.success(t("library.addManualSuccess", "Manual mod added."));
                 } catch (error) {
-                  toast.error(error instanceof Error ? error.message : t("library.autodetectFailed", "Failed to autodetect mods"));
+                  toast.error(error instanceof Error ? error.message : t("library.addManualError", "Failed to add manual mod"));
                 }
               }}
-              className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={t("library.autodetectMods", "Autodetect")}
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-secondary/30 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary/60"
             >
-              <RefreshCw className="w-4 h-4" />
+              <Plus className="h-3.5 w-3.5" />
+              {t("library.addManual", "Add Manual")}
             </button>
           </div>
 
@@ -460,8 +413,8 @@ export function Library() {
             >
               <option value="newest">{t("library.sortNewest", "Newest")}</option>
               <option value="oldest">{t("library.sortOldest", "Oldest")}</option>
-              <option value="name">{t("library.sortName", "A–Z")}</option>
-              <option value="nameDesc">{t("library.sortNameDesc", "Z–A")}</option>
+              <option value="name">{t("library.sortName", "A-Z")}</option>
+              <option value="nameDesc">{t("library.sortNameDesc", "Z-A")}</option>
               <option value="engine">{t("library.sortEngine", "Engine")}</option>
               <option value="updates">{t("library.sortUpdates", "Updates")}</option>
             </select>
@@ -705,7 +658,7 @@ export function Library() {
             </div>
 
             <div className="p-5 md:p-6 space-y-6">
-              {/* Screenshots / Media — front and center */}
+              {/* Screenshots / Media - front and center */}
               {hasScreenshots && (
                 <div>
                   <h2 className="text-sm font-semibold text-foreground mb-3">{t("library.screenshots", "Screenshots")}</h2>
@@ -794,7 +747,7 @@ export function Library() {
                 <div className="bg-card border border-border rounded-lg p-3">
                   <p className="text-xs text-muted-foreground mb-0.5">{t("library.version", "Version")}</p>
                   <p className="text-sm font-semibold text-foreground truncate">
-                    {selectedMod.version ? `v${selectedMod.version}` : "—"}
+                    {selectedMod.version ? `v${selectedMod.version}` : "-"}
                     {selectedMod.latestVersion ? <span className="text-primary ml-1 text-xs">→ v{selectedMod.latestVersion}</span> : null}
                   </p>
                 </div>
@@ -878,7 +831,7 @@ export function Library() {
                 />
               </div>
 
-              {/* Install path — subtle */}
+              {/* Install path - subtle */}
               <div className="text-xs text-muted-foreground border-t border-border pt-4">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="font-medium text-foreground/60">{t("library.installedLocation", "Location")}</span>
@@ -1096,7 +1049,7 @@ export function Library() {
                 )}
                 {detectedRuntimes !== null && detectedRuntimes.length > 0 && (
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">{t("library.detectedRuntimes", "Detected runtimes — click to use:")}</p>
+                    <p className="text-xs text-muted-foreground">{t("library.detectedRuntimes", "Detected runtimes - click to use:")}</p>
                     {detectedRuntimes.map((rt) => (
                       <button
                         key={rt.path}
@@ -1149,106 +1102,6 @@ export function Library() {
               className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
             >
               {t("library.saveLaunchSettings", "Save")}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Manual Mod dialog */}
-      <Dialog open={showManualModal} onOpenChange={setShowManualModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t("library.addManualMod", "Add Manual Mod")}</DialogTitle>
-            <DialogDescription>{t("library.addManualModDesc", "Import a local mod folder into an installed engine or as standalone.")}</DialogDescription>
-          </DialogHeader>
-
-          <div className="mt-2 space-y-3">
-            <div>
-              <label htmlFor="manual-mod-link" className="mb-1 block text-xs text-muted-foreground">{t("library.gamebananaLinkOptional", "GameBanana link (optional)")}</label>
-              <input id="manual-mod-link" value={manualGameBananaUrl} onChange={(e) => setManualGameBananaUrl(e.target.value)} placeholder="https://gamebanana.com/mods/12345" className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
-            </div>
-            <div>
-              <label htmlFor="manual-mod-name" className="mb-1 block text-xs text-muted-foreground">{t("library.modName", "Mod name")}</label>
-              <input id="manual-mod-name" value={manualName} onChange={(e) => setManualName(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
-            </div>
-            <div>
-              <label htmlFor="manual-mod-author" className="mb-1 block text-xs text-muted-foreground">{t("library.authorOptional", "Author (optional)")}</label>
-              <input id="manual-mod-author" value={manualAuthor} onChange={(e) => setManualAuthor(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
-            </div>
-            <div>
-              <label htmlFor="manual-mod-version" className="mb-1 block text-xs text-muted-foreground">{t("library.versionOptional", "Version (optional)")}</label>
-              <input id="manual-mod-version" value={manualVersion} onChange={(e) => setManualVersion(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
-            </div>
-            <div>
-              <label htmlFor="manual-mod-description" className="mb-1 block text-xs text-muted-foreground">{t("library.descriptionOptional", "Description (optional)")}</label>
-              <textarea id="manual-mod-description" value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm min-h-20" />
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="manual-standalone"
-                checked={manualStandalone}
-                onCheckedChange={(checked: boolean | "indeterminate") => setManualStandalone(checked === true)}
-              />
-              <label htmlFor="manual-standalone" className="text-sm text-muted-foreground cursor-pointer">{t("library.importStandalone", "Import as standalone executable package")}</label>
-            </div>
-            {!manualStandalone && (
-              <div>
-                <label htmlFor="manual-mod-engine" className="mb-1 block text-xs text-muted-foreground">{t("library.targetEngine", "Target engine")}</label>
-                <select id="manual-mod-engine" value={manualEngineId} onChange={(e) => setManualEngineId(e.target.value)} className="w-full px-3 py-2 bg-input-background border border-border rounded-lg text-sm">
-                  {installedEngines.map((engine) => (
-                    <option key={engine.id} value={engine.id}>{engine.name} ({engine.version})</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div>
-              <label htmlFor="manual-mod-source" className="mb-1 block text-xs text-muted-foreground">{t("library.modFolderPath", "Mod folder path")}</label>
-              <div className="flex gap-2">
-                <input id="manual-mod-source" value={manualSourcePath} onChange={(e) => setManualSourcePath(e.target.value)} className="flex-1 px-3 py-2 bg-input-background border border-border rounded-lg text-sm" />
-                <button
-                  onClick={async () => {
-                    const selected = await browseFolder({ title: t("library.selectModFolder", "Select mod folder") });
-                    if (selected) setManualSourcePath(selected);
-                  }}
-                  className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
-                >
-                  {t("library.browse", "Browse")}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 flex justify-end gap-2">
-            <button onClick={() => setShowManualModal(false)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("library.cancel", "Cancel")}</button>
-            <button
-              onClick={async () => {
-                try {
-                  await addManualMod({
-                    modName: manualName,
-                    engineId: manualStandalone ? undefined : manualEngineId,
-                    sourcePath: manualSourcePath || undefined,
-                    description: manualDescription,
-                    version: manualVersion,
-                    author: manualAuthor,
-                    standalone: manualStandalone,
-                    gameBananaUrl: manualGameBananaUrl,
-                  });
-                  setShowManualModal(false);
-                  setManualGameBananaUrl("");
-                  setManualName("");
-                  setManualAuthor("");
-                  setManualVersion("");
-                  setManualDescription("");
-                  setManualSourcePath("");
-                  setManualStandalone(false);
-                  toast.success(t("library.modAdded", "Mod added to library."));
-                } catch (error) {
-                  toast.error(error instanceof Error ? error.message : t("library.addManualError", "Failed to add manual mod"));
-                }
-              }}
-              className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
-            >
-              {t("library.importMod", "Import Mod")}
             </button>
           </div>
         </DialogContent>

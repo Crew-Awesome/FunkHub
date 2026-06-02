@@ -19,19 +19,21 @@ if not exist "node_modules" (
   )
 )
 
-echo [FunkHub] Starting renderer dev server on 127.0.0.1:5173...
-start "FunkHub Dev Server" cmd /k "cd /d "%CD%" && npm.cmd run dev -- --host 127.0.0.1 --port 5173"
+echo [FunkHub] Building Windows desktop app...
+call npm.cmd run build:desktop:win
+if errorlevel 1 (
+  echo [FunkHub] Build failed.
+  exit /b 1
+)
 
-echo [FunkHub] Waiting for dev server...
-ping 127.0.0.1 -n 5 >nul
+set "APP_EXE="
+for /f "delims=" %%f in ('powershell -NoProfile -Command "Get-ChildItem -Path 'dist-desktop' -Filter '*.exe' -File | Where-Object { $_.Name -notmatch 'Setup' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName"') do set "APP_EXE=%%f"
 
-echo [FunkHub] Launching Electron app...
-call npm.cmd run electron:start
-set "APP_EXIT=%ERRORLEVEL%"
+if "%APP_EXE%"=="" (
+  echo [FunkHub] Could not find portable app executable in dist-desktop.
+  exit /b 1
+)
 
-echo.
-echo [FunkHub] Electron exited with code %APP_EXIT%.
-echo [FunkHub] Dev server is still running in the "FunkHub Dev Server" window.
-echo [FunkHub] Close that window when you are done testing.
-
-exit /b %APP_EXIT%
+echo [FunkHub] Launching packaged app: %APP_EXE%
+start "" "%APP_EXE%"
+exit /b 0

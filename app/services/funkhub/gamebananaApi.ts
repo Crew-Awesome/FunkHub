@@ -11,6 +11,7 @@ import {
   type SubfeedParams,
 } from "./types";
 import { detectRequiredEngineForProfile } from "./engineDetection";
+import { gameBananaOpenApiAdapter } from "./gamebanana/openapi/adapter";
 
 const APIV11_BASE = "https://gamebanana.com/apiv11";
 const APIV7_BASE = "https://gamebanana.com/apiv7";
@@ -322,32 +323,12 @@ export class GameBananaApiService {
   }
 
   async listModsPage({ page = 1, perPage = 20, categoryId, submitterId, sort = "Generic_NewAndUpdated", releaseType, contentRatings }: ListModsParams = {}): Promise<PagedResult<GameBananaModSummary>> {
-    const url = new URL(`${APIV11_BASE}/Mod/Index`);
-    url.searchParams.set("_nPage", String(page));
-    url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
-    url.searchParams.set("_sSort", sort);
-    url.searchParams.set("_idGameRow", String(FNF_GAME_ID));
-
-    if (categoryId) {
-      url.searchParams.set("_aFilters[Generic_Category]", String(categoryId));
+    const cacheKey = `listMods:${page}:${perPage}:${categoryId ?? ""}:${submitterId ?? ""}:${sort}:${releaseType ?? ""}:${(contentRatings ?? []).join(",")}`;
+    const cached = this.getCached<{ _aMetadata?: Record<string, unknown>; _aRecords?: Record<string, unknown>[] }>(this.listCache, cacheKey);
+    const payload = cached ?? await gameBananaOpenApiAdapter.getModIndex({ page, perPage, categoryId, submitterId, sort, releaseType, contentRatings });
+    if (!cached) {
+      this.setCached(this.listCache, cacheKey, payload, LIST_CACHE_TTL_MS);
     }
-    if (submitterId) {
-      url.searchParams.set("_aFilters[Generic_Submitter]", String(submitterId));
-    }
-    if (releaseType) {
-      url.searchParams.set("_aFilters[Generic_ReleaseType]", releaseType);
-    }
-    if (contentRatings && contentRatings.length > 0) {
-      url.searchParams.set("_aFilters[Generic_ContentRatings]", contentRatings.join(","));
-    }
-
-    const cacheKey = `listMods:${url.toString()}`;
-    const payload = await this.fetchJsonCached<{ _aMetadata?: Record<string, unknown>; _aRecords?: Record<string, unknown>[] }>({
-      key: cacheKey,
-      cache: this.listCache,
-      ttlMs: LIST_CACHE_TTL_MS,
-      url: url.toString(),
-    });
     const records = payload._aRecords ?? [];
     const normalized = records.map(normalizeSummary).filter((mod) => mod.modelName === "Mod" && mod.game?.id === FNF_GAME_ID);
     this.prefetchThumbnails(normalized);
@@ -418,24 +399,12 @@ export class GameBananaApiService {
       }
     }
 
-    const url = new URL(`${APIV11_BASE}/Util/Search/Results`);
-    url.searchParams.set("_sSearchString", normalizedQuery);
-    url.searchParams.set("_nPage", String(page));
-    url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
-    url.searchParams.set("_sModelName", "Mod");
-    url.searchParams.set("_idGameRow", String(FNF_GAME_ID));
-    url.searchParams.set("_sOrder", order);
-    if (fields && fields.length > 0) {
-      url.searchParams.set("_csvFields", fields.join(","));
+    const cacheKey = `searchMods:${normalizedQuery}:${page}:${perPage}:${order}:${(fields ?? []).join(",")}`;
+    const cached = this.getCached<{ _aMetadata?: Record<string, unknown>; _aRecords?: Record<string, unknown>[] }>(this.listCache, cacheKey);
+    const payload = cached ?? await gameBananaOpenApiAdapter.getSearchResults({ query: normalizedQuery, page, perPage, order, fields });
+    if (!cached) {
+      this.setCached(this.listCache, cacheKey, payload, LIST_CACHE_TTL_MS);
     }
-
-    const cacheKey = `searchMods:${url.toString()}`;
-    const payload = await this.fetchJsonCached<{ _aMetadata?: Record<string, unknown>; _aRecords?: Record<string, unknown>[] }>({
-      key: cacheKey,
-      cache: this.listCache,
-      ttlMs: LIST_CACHE_TTL_MS,
-      url: url.toString(),
-    });
     const records = payload._aRecords ?? [];
 
     const normalized = records
@@ -449,16 +418,15 @@ export class GameBananaApiService {
   }
 
   async getTrendingMods(): Promise<GameBananaModSummary[]> {
-    // Request _aPreviewMedia explicitly — TopSubs doesn't include it by default
-    const url = `${APIV11_BASE}/Game/${FNF_GAME_ID}/TopSubs?_csvFields=_idRow,_sModelName,_sName,_sProfileUrl,_sPeriod,_aPreviewMedia,_aSubmitter,_nLikeCount,_nViewCount,_nDownloadCount,_sDescription`;
-    const payload = await this.fetchJsonCached<Record<string, unknown>[]>({
-      key: "trendingMods",
-      cache: this.listCache,
-      ttlMs: LIST_CACHE_TTL_MS,
-      url,
-    });
+    // Request _aPreviewMedia explicitly - TopSubs doesn't include it by default
+    const trendingCacheKey = "trendingMods";
+    const cachedTrending = this.getCached<Record<string, unknown>[]>(this.listCache, trendingCacheKey);
+    const payload = cachedTrending ?? await gameBananaOpenApiAdapter.getTopSubs();
+    if (!cachedTrending) {
+      this.setCached(this.listCache, trendingCacheKey, payload, LIST_CACHE_TTL_MS);
+    }
 
-    // TopSubs response has no _aGame field, so game.id would be 0 — do not filter by game id.
+    // TopSubs response has no _aGame field, so game.id would be 0 - do not filter by game id.
     // The endpoint is already scoped to FNF.
     const normalized = payload
       .filter((record) => String(record._sModelName ?? "Mod") === "Mod")
@@ -467,7 +435,7 @@ export class GameBananaApiService {
         period: typeof record._sPeriod === "string" ? record._sPeriod : undefined,
       }));
 
-    // TopSubs may not include _aPreviewMedia even with _csvFields — hydrate missing images
+    // TopSubs may not include _aPreviewMedia even with _csvFields - hydrate missing images
     // from individual mod profiles (results are cached so this only runs once per session).
     const result = [...normalized];
     const maxHydrationConcurrency = 4;
@@ -514,17 +482,12 @@ export class GameBananaApiService {
   }
 
   async getSubfeedPage({ sort = "default", page = 1, perPage = 15 }: SubfeedParams = {}): Promise<PagedResult<GameBananaModSummary>> {
-    const url = new URL(`${APIV11_BASE}/Game/${FNF_GAME_ID}/Subfeed`);
-    url.searchParams.set("_sSort", sort);
-    url.searchParams.set("_nPage", String(page));
-    url.searchParams.set("_nPerpage", String(Math.min(50, Math.max(1, perPage))));
-    const cacheKey = `subfeed:${url.toString()}`;
-    const payload = await this.fetchJsonCached<{ _aMetadata?: Record<string, unknown>; _aRecords?: Record<string, unknown>[] }>({
-      key: cacheKey,
-      cache: this.listCache,
-      ttlMs: LIST_CACHE_TTL_MS,
-      url: url.toString(),
-    });
+    const cacheKey = `subfeed:${sort}:${page}:${perPage}`;
+    const cached = this.getCached<{ _aMetadata?: Record<string, unknown>; _aRecords?: Record<string, unknown>[] }>(this.listCache, cacheKey);
+    const payload = cached ?? await gameBananaOpenApiAdapter.getSubfeed({ sort, page, perPage });
+    if (!cached) {
+      this.setCached(this.listCache, cacheKey, payload, LIST_CACHE_TTL_MS);
+    }
     const records = payload._aRecords ?? [];
     const normalized = records.map(normalizeSummary).filter((mod) => mod.modelName === "Mod");
     this.prefetchThumbnails(normalized);
@@ -535,24 +498,24 @@ export class GameBananaApiService {
   }
 
   /** Returns the raw file list inside a GameBanana archive (file paths as strings).
-   *  Best-effort — returns [] on any error so callers can treat it as non-blocking. */
+   *  Best-effort - returns [] on any error so callers can treat it as non-blocking. */
   async getRawFileList(fileId: number): Promise<string[]> {
     try {
       const data = await this.fetchJson<unknown>(`${APIV11_BASE}/File/${fileId}/RawFileList`);
       if (Array.isArray(data)) return data.filter((x): x is string => typeof x === "string");
     } catch {
-      // Silently ignore — network errors, CORS, etc. should not block installs
+      // Silently ignore - network errors, CORS, etc. should not block installs
     }
     return [];
   }
 
   async getModFiles(modId: number): Promise<GameBananaFile[]> {
-    const payload = await this.fetchJsonCached<Record<string, unknown>[]>({
-      key: `modFiles:${modId}`,
-      cache: this.metadataCache,
-      ttlMs: METADATA_CACHE_TTL_MS,
-      url: `${APIV11_BASE}/Mod/${modId}/Files`,
-    });
+    const cacheKey = `modFiles:${modId}`;
+    const cached = this.getCached<Record<string, unknown>[]>(this.metadataCache, cacheKey);
+    const payload = cached ?? await gameBananaOpenApiAdapter.getModFiles(modId);
+    if (!cached) {
+      this.setCached(this.metadataCache, cacheKey, payload, METADATA_CACHE_TTL_MS);
+    }
     return payload.map(normalizeFile);
   }
 
@@ -565,7 +528,7 @@ export class GameBananaApiService {
 
     let payload: Record<string, unknown>;
     try {
-      payload = await this.fetchJson<Record<string, unknown>>(`${APIV11_BASE}/Mod/${modId}/ProfilePage`);
+      payload = await gameBananaOpenApiAdapter.getModProfilePage(modId);
     } catch (error) {
       const fallback = await this.getModProfileFromApiv7(modId);
       if (!fallback.id) {
@@ -761,13 +724,12 @@ export class GameBananaApiService {
   }
 
   async getRootCategories(): Promise<GameBananaCategory[]> {
-    const url = `${APIV11_BASE}/Mod/Categories?_sSort=a_to_z&_idGameRow=${FNF_GAME_ID}`;
-    const payload = await this.fetchJsonCached<Array<Record<string, unknown>>>({
-      key: "rootCategories",
-      cache: this.metadataCache,
-      ttlMs: METADATA_CACHE_TTL_MS,
-      url,
-    });
+    const cacheKey = "rootCategories";
+    const cached = this.getCached<Array<Record<string, unknown>>>(this.metadataCache, cacheKey);
+    const payload = cached ?? await gameBananaOpenApiAdapter.getRootCategories();
+    if (!cached) {
+      this.setCached(this.metadataCache, cacheKey, payload, METADATA_CACHE_TTL_MS);
+    }
 
     return payload.map((entry) => {
       const profileUrl = String(entry._sUrl ?? "");

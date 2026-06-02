@@ -32,7 +32,7 @@ export function formatEngineName(slug: EngineSlug): string {
     case "psych":
       return "Psych Engine";
     case "basegame":
-      return "Base Game";
+      return "Base Game / V-Slice";
     case "codename":
       return "Codename Engine";
     case "fps-plus":
@@ -81,6 +81,16 @@ function compareVersions(a?: string, b?: string): number {
 
 function sanitizePathSegment(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "latest";
+}
+
+function sanitizeModFolderName(value: string): string {
+  return value.trim().replace(/[<>:"/\\|?*\x00-\x1F]+/g, "_").replace(/\s+/g, " ").replace(/^\.+$/, "").trim() || "manual-mod";
+}
+
+function getPathBaseName(value: string): string {
+  const normalized = value.replace(/[\\/]+$/, "");
+  const parts = normalized.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] || "manual-mod";
 }
 
 function mergeSettings(base: FunkHubSettings, patch?: Partial<FunkHubSettings>): FunkHubSettings {
@@ -132,7 +142,10 @@ export class FunkHubService {
       && engine.version === "latest"
       && engine.installPath === "engines/psych"
       && engine.modsPath === "engines/psych/mods"
-    ));
+    )).map((engine) => ({
+      ...engine,
+      name: engine.slug === "basegame" ? formatEngineName("basegame") : engine.name,
+    }));
     this.downloadHistory = funkHubStorageService.getDownloadHistory();
     downloadManager.setMaxConcurrent(this.settings.maxConcurrentDownloads);
 
@@ -270,13 +283,6 @@ export class FunkHubService {
     }
 
     const platform = detectClientPlatform();
-
-    if (window.funkhubDesktop?.checkAppUpdate && (platform === "windows" || platform === "macos")) {
-      const result = await window.funkhubDesktop.checkAppUpdate();
-      if (result.ok && result.info) {
-        return result.info;
-      }
-    }
 
     return checkLatestAppUpdate({
       currentVersion,
@@ -520,38 +526,7 @@ export class FunkHubService {
   }
 
   async getEngineCatalog(): Promise<EngineDefinition[]> {
-    const catalog = await engineCatalogService.getEngineCatalog();
-    const basegame = catalog.find((entry) => entry.slug === "basegame");
-
-    if (basegame && window.funkhubDesktop?.listItchBaseGameReleases) {
-      try {
-        const itch = await window.funkhubDesktop.listItchBaseGameReleases();
-        if (itch.ok && itch.releases.length > 0) {
-          const dynamic = itch.releases.map((release) => ({
-            platform: release.platform,
-            version: release.version,
-            sourceUrl: release.sourceUrl,
-            downloadUrl: release.downloadUrl,
-            fileName: release.fileName,
-            isPrerelease: false,
-          }));
-
-          const merged = [...dynamic, ...basegame.releases];
-          const deduped = new Map<string, (typeof merged)[number]>();
-          for (const release of merged) {
-            const key = `${release.platform}|${release.version}|${release.downloadUrl}`;
-            if (!deduped.has(key)) {
-              deduped.set(key, release);
-            }
-          }
-          basegame.releases = Array.from(deduped.values());
-        }
-      } catch {
-        // Keep static fallback catalog when itch API isn't connected.
-      }
-    }
-
-    return catalog;
+    return engineCatalogService.getEngineCatalog();
   }
 
   async installEngineFromRelease(input: {
@@ -560,37 +535,12 @@ export class FunkHubService {
     releaseVersion: string;
     allowMissingExecutable?: boolean;
   }): Promise<InstalledEngine> {
+    await this.ensureDataRootConfiguredForInstall("engine");
+    this.ensureEngineInstallConfirmed(input.slug);
+
     let resolvedDownloadUrl = input.releaseUrl;
     let resolvedVersion = input.releaseVersion;
     let resolvedFileName = `${input.slug}-${input.releaseVersion}.zip`;
-
-    if (input.slug === "basegame" && input.releaseUrl.startsWith("itch://")) {
-      if (!window.funkhubDesktop?.resolveItchBaseGameDownload) {
-        throw new Error("Desktop bridge unavailable for itch.io base game resolution");
-      }
-
-      const clientPlatform = detectClientPlatform();
-      const releasePlatformMatch = input.releaseUrl.match(/^itch:\/\/funkin\/basegame\/(windows|linux|macos)$/i);
-      const releasePlatform = releasePlatformMatch?.[1]?.toLowerCase() as "windows" | "linux" | "macos" | undefined;
-      const itchPlatform = releasePlatform
-        ?? (clientPlatform === "unknown" || clientPlatform === "any" ? "unknown" : clientPlatform);
-
-      const uploadIdMatch = input.releaseUrl.match(/^itch:\/\/upload\/(\d+)$/);
-      const uploadId = uploadIdMatch ? Number(uploadIdMatch[1]) : undefined;
-
-      const itch = await window.funkhubDesktop.resolveItchBaseGameDownload({
-        platform: itchPlatform,
-        uploadId,
-      });
-
-      if (!itch.ok || !itch.downloadUrl) {
-        throw new Error(itch.message || "Failed to resolve itch.io base game download");
-      }
-
-      resolvedDownloadUrl = itch.downloadUrl;
-      resolvedVersion = itch.version || resolvedVersion;
-      resolvedFileName = itch.fileName || resolvedFileName;
-    }
 
     const jobId = `engine-${input.slug}-${Date.now()}`;
     const versionTag = sanitizePathSegment(resolvedVersion);
@@ -1108,142 +1058,49 @@ export class FunkHubService {
     return installed;
   }
 
-  async scanInstalledEngineModFolders(): Promise<number> {
-    if (!window.funkhubDesktop?.listDirectory || !window.funkhubDesktop?.inspectPath) {
-      return 0;
-    }
-
-    let added = 0;
-    const knownPaths = new Set(this.installedMods.map((mod) => mod.installPath));
-
-    for (const engine of this.installedEngines) {
-      const modsPathCheck = await window.funkhubDesktop.inspectPath({ targetPath: engine.modsPath });
-      if (!modsPathCheck.ok || !modsPathCheck.exists || !modsPathCheck.isDirectory) {
-        continue;
-      }
-
-      const listed = await window.funkhubDesktop.listDirectory({ targetPath: engine.modsPath, directoriesOnly: true });
-      if (!listed.ok) {
-        continue;
-      }
-
-      for (const entry of listed.entries) {
-        const relativeInstallPath = `${engine.modsPath}/${entry.name}`.replace(/\\/g, "/");
-        if (knownPaths.has(relativeInstallPath)) {
-          continue;
-        }
-
-        const manualId = -Math.floor((Date.now() + added + 1) / 10);
-        const record: InstalledMod = {
-          id: crypto.randomUUID(),
-          modId: manualId,
-          modName: entry.name,
-          version: "detected",
-          author: "Autodetected",
-          gamebananaUrl: "",
-          installedAt: Date.now(),
-          installPath: relativeInstallPath,
-          engine: engine.slug,
-          requiredEngine: engine.slug,
-          sourceFileId: -1,
-          description: "Detected from engine mods folder.",
-          developers: ["Autodetected"],
-          categoryName: "Autodetected",
-          manual: true,
-          standalone: false,
-        };
-
-        this.installedMods = [record, ...this.installedMods];
-        knownPaths.add(relativeInstallPath);
-        added += 1;
-      }
-    }
-
-    if (added > 0) {
-      funkHubStorageService.saveInstalledMods(this.installedMods);
-    }
-
-    return added;
-  }
-
-  async addManualModFromFolder(input: {
-    modName: string;
-    engineId?: string;
-    sourcePath?: string;
-    description?: string;
-    version?: string;
-    author?: string;
-    standalone?: boolean;
-    gameBananaUrl?: string;
-  }): Promise<InstalledMod> {
-    const maybeUrl = (input.gameBananaUrl || "").trim();
-    const match = maybeUrl.match(/gamebanana\.com\/mods\/(\d+)/i);
-    const linkedModId = match ? Number(match[1]) : undefined;
-    const linkedProfile = linkedModId && Number.isFinite(linkedModId)
-      ? await this.getModProfile(linkedModId).catch(() => undefined)
-      : undefined;
-
-    const modName = input.modName.trim() || linkedProfile?.name || "Manual Mod";
-
-    const standalone = Boolean(input.standalone);
-    const engine = standalone ? undefined : this.installedEngines.find((entry) => entry.id === input.engineId);
-    if (!standalone && !engine) {
-      throw new Error("Select an installed engine");
+  async addManualModFromFolder(input: { engineId: string; sourcePath?: string; modName?: string }): Promise<InstalledMod> {
+    const engine = this.installedEngines.find((entry) => entry.id === input.engineId);
+    if (!engine) {
+      throw new Error("Engine installation not found");
     }
 
     const sourcePath = input.sourcePath || await this.pickFolder({ title: "Select mod folder to import" });
     if (!sourcePath) {
-      throw new Error("Mod import cancelled");
+      throw new Error("Manual mod import cancelled");
     }
 
     if (!window.funkhubDesktop?.importModFolder) {
-      throw new Error("Desktop bridge unavailable for manual mod import");
+      throw new Error("Desktop bridge unavailable for mod import");
     }
 
-    const installSubdir = sanitizePathSegment(`${modName}-${Date.now()}`);
-    const targetModsPath = standalone ? "executables/manual" : engine!.modsPath;
+    const folderName = sanitizeModFolderName(getPathBaseName(sourcePath));
     const result = await window.funkhubDesktop.importModFolder({
       sourcePath,
-      targetModsPath,
-      installSubdir,
+      targetModsPath: engine.modsPath,
+      installSubdir: folderName,
     });
 
     if (!result.ok || !result.installPath) {
-      throw new Error(result.error || "Failed to import manual mod folder");
+      throw new Error(result.error || "Failed to import mod folder");
     }
 
-    const manualId = -Math.floor(Date.now() / 10);
-    const record: InstalledMod = {
+    const installed: InstalledMod = {
       id: crypto.randomUUID(),
-      modId: linkedProfile?.id ?? manualId,
-      modName,
-      version: input.version?.trim() || linkedProfile?.version || "manual",
-      author: input.author?.trim() || linkedProfile?.submitter?.name || "Manual Import",
-      gamebananaUrl: maybeUrl || linkedProfile?.profileUrl || "",
+      modId: -1,
+      modName: input.modName?.trim() || folderName,
+      version: "manual",
+      gamebananaUrl: "",
       installedAt: Date.now(),
       installPath: result.installPath,
-      engine: standalone ? "basegame" : engine!.slug,
-      requiredEngine: standalone ? undefined : engine!.slug,
-      sourceFileId: linkedProfile?.files?.[0]?.id ?? -1,
-      description: input.description?.trim() || linkedProfile?.description || linkedProfile?.text || "Imported manually from local folder.",
-      developers: input.author?.trim()
-        ? [input.author.trim()]
-        : (linkedProfile
-          ? Array.from(new Set([
-            linkedProfile.submitter?.name,
-            ...linkedProfile.credits.flatMap((group) => group.authors.map((author) => author.name)),
-          ].filter(Boolean) as string[]))
-          : ["Manual Import"]),
-      categoryName: standalone ? "Standalone" : (linkedProfile?.rootCategory?.name || "Manual"),
-      thumbnailUrl: linkedProfile?.thumbnailUrl || linkedProfile?.imageUrl,
-      screenshotUrls: linkedProfile?.screenshotUrls,
+      engine: engine.slug,
+      requiredEngine: engine.slug,
+      sourceFileId: 0,
       manual: true,
-      standalone,
     };
 
-    this.installedMods = [record, ...this.installedMods];
+    this.installedMods = [installed, ...this.installedMods];
     funkHubStorageService.saveInstalledMods(this.installedMods);
-    return record;
+    return installed;
   }
 
   retryDownload(taskId: string): void {
@@ -1293,6 +1150,7 @@ export class FunkHubService {
       },
       cancel: () => abortController.abort(),
       run: async (task, update) => {
+        await this.ensureDataRootConfiguredForInstall("mod");
         const profile = await this.getModProfile(input.modId);
         const profileFile = profile.files.find((file) => file.id === input.fileId) ?? profile.files[0];
 
@@ -1308,13 +1166,7 @@ export class FunkHubService {
           ? this.installedEngines.find((engine) => engine.id === input.selectedEngineId)
           : undefined;
 
-        const requiredHint = modInstallerService.detectRequiredEngine(profile);
-        const compatibleEngine = requiredHint
-          ? this.installedEngines.find((engine) => engine.slug === requiredHint)
-          : undefined;
-
         const selectedEngine = preferredEngine
-          ?? compatibleEngine
           ?? this.installedEngines.find((engine) => engine.isDefault)
           ?? this.installedEngines[0];
 
@@ -1465,6 +1317,40 @@ export class FunkHubService {
       priority,
       forceInstallType: options?.forceInstallType,
     });
+  }
+
+  private async ensureDataRootConfiguredForInstall(mode: "engine" | "mod"): Promise<void> {
+    if (this.settings.dataRootDirectory.trim()) {
+      return;
+    }
+
+    const selected = await this.pickFolder({
+      title: mode === "engine"
+        ? "Select root folder before installing engines"
+        : "Select root folder before installing mods",
+    });
+
+    if (!selected) {
+      throw new Error("Install cancelled: a root folder must be selected first.");
+    }
+
+    await this.updateSettings({ dataRootDirectory: selected });
+  }
+
+  private ensureEngineInstallConfirmed(slug: EngineSlug): void {
+    if (slug !== "ale-psych" && slug !== "psych-online") {
+      return;
+    }
+
+    const proceed = window.confirm(
+      "This engine is not Psych Engine. You selected "
+      + `${formatEngineName(slug)}.\n\n`
+      + "Do you want to continue with this install?",
+    );
+
+    if (!proceed) {
+      throw new Error("Install cancelled.");
+    }
   }
 }
 

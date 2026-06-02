@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS: FunkHubSettings = {
   compatibilityChecks: true,
   checkAppUpdatesOnStartup: true,
   autoDownloadAppUpdates: false,
+  skippedAppVersion: undefined,
   autoUpdateMods: false,
   showAnimations: true,
   gameBananaIntegration: {

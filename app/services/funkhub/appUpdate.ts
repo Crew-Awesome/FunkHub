@@ -2,6 +2,8 @@ import type { ClientPlatform } from "./platform";
 import type { AppUpdateInfo } from "./types";
 
 const RELEASES_LATEST_API = "https://api.github.com/repos/Crew-Awesome/FunkHub/releases/latest";
+const RELEASES_PAGE_URL = "https://github.com/Crew-Awesome/FunkHub/releases";
+const GAMEBANANA_TOOL_URL = "https://gamebanana.com/tools/22153";
 
 interface GitHubReleaseAsset {
   name?: string;
@@ -98,7 +100,8 @@ export async function checkLatestAppUpdate(input: {
     currentVersion,
     latestVersion,
     releaseName: String(payload.name || `FunkHub v${latestVersion}`),
-    releaseUrl: String(payload.html_url || "https://github.com/Crew-Awesome/FunkHub/releases/latest"),
+    releaseUrl: String(payload.html_url || RELEASES_PAGE_URL),
+    alternateReleaseUrl: GAMEBANANA_TOOL_URL,
     publishedAt: payload.published_at,
     notes: payload.body || "",
     downloadUrl: pickDownloadAsset(payload.assets || [], input.platform),

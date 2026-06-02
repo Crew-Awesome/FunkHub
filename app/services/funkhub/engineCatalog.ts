@@ -151,28 +151,16 @@ const githubEngineSources: GithubEngineSource[] = [
   },
   {
     slug: "basegame",
-    name: "Funkin Base Game",
+    name: "Base Game / V-Slice",
     description: "Official FunkinCrew base game releases.",
     repo: "FunkinCrew/Funkin",
     fallbackVersion: "unknown",
     fallbackReleases: [
       {
-        platform: "windows",
-        version: "0.8.3",
-        sourceUrl: "https://ninja-muffin24.itch.io/funkin",
-        downloadUrl: "itch://funkin/basegame/windows",
-      },
-      {
-        platform: "linux",
-        version: "0.8.3",
-        sourceUrl: "https://ninja-muffin24.itch.io/funkin",
-        downloadUrl: "itch://funkin/basegame/linux",
-      },
-      {
-        platform: "macos",
-        version: "0.8.3",
-        sourceUrl: "https://ninja-muffin24.itch.io/funkin",
-        downloadUrl: "itch://funkin/basegame/macos",
+        platform: "any",
+        version: "latest",
+        sourceUrl: "https://github.com/FunkinCrew/Funkin/releases",
+        downloadUrl: "https://github.com/FunkinCrew/Funkin/releases",
       },
     ],
   },

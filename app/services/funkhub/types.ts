@@ -240,6 +240,7 @@ export interface FunkHubSettings {
   compatibilityChecks: boolean;
   checkAppUpdatesOnStartup: boolean;
   autoDownloadAppUpdates: boolean;
+  skippedAppVersion?: string;
   autoUpdateMods: boolean;
   showAnimations: boolean;
   gameBananaIntegration: {
@@ -380,6 +381,7 @@ export interface AppUpdateInfo {
   latestVersion: string;
   releaseName: string;
   releaseUrl: string;
+  alternateReleaseUrl?: string;
   publishedAt?: string;
   notes?: string;
   downloadUrl?: string;

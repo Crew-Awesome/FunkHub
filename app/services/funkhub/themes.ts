@@ -194,7 +194,7 @@ function createDarkColors(primary: string, background: string): ThemeDefinition[
   };
 }
 
-/** Vibrant — electric night. Deep black backgrounds, hyper-saturated neon accents. */
+/** Vibrant - electric night. Deep black backgrounds, hyper-saturated neon accents. */
 function createVibrantColors(primary: string, background: string): ThemeDefinition["colors"]["vibrant"] {
   const vPrimary = saturateColor(primary, 1.8);
   const vBg = mixColors(background, "#000000", 0.6);
@@ -234,7 +234,7 @@ function createVibrantColors(primary: string, background: string): ThemeDefiniti
 }
 
 
-/** Focus — minimal dark. Near-monochrome, very muted accents for distraction-free use. */
+/** Focus - minimal dark. Near-monochrome, very muted accents for distraction-free use. */
 function createFocusColors(primary: string, _background: string): ThemeDefinition["colors"]["focus"] {
   const fPrimary = mixColors(primary, "#5A5A5A", 0.35);
   const foreground = "#9A938D";

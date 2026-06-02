@@ -16,14 +16,12 @@ export function Updates() {
     appUpdateChecking,
     checkAppUpdate,
     openAppUpdateDownload,
-    downloadAppUpdate,
-    installAppUpdate,
-    appUpdateStatus,
+    skipAppUpdate,
   } = useFunkHub();
 
-  const autoUpdaterSupported = Boolean(window.funkhubDesktop?.downloadAppUpdate && window.funkhubDesktop?.installAppUpdate);
-  const isDownloadingAppUpdate = appUpdateStatus?.status === "downloading";
-  const appUpdateReadyToInstall = appUpdateStatus?.status === "downloaded";
+  const openExternal = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="p-8">
@@ -63,58 +61,34 @@ export function Updates() {
         {appUpdate?.available ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              {t("updates.newVersion", "New version available")}: <span className="text-foreground font-medium">v{appUpdate.latestVersion}</span>
+              {t("updates.newVersion", "Update has been released")}: <span className="text-foreground font-medium">v{appUpdate.latestVersion}</span>
               {" "}{t("updates.currentVersionInline", "({label}: v{{version}})", {
                 label: t("updates.current", "Current").toLowerCase(),
                 version: appUpdate.currentVersion,
               })}
             </p>
             <div className="flex flex-wrap gap-2">
-              {autoUpdaterSupported ? (
-                appUpdateReadyToInstall ? (
-                  <button
-                    onClick={() => installAppUpdate().catch((error) => toast.error(error instanceof Error ? error.message : t("updates.installUpdateError", "Unable to install update")))}
-                    className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium"
-                  >
-                    {t("updates.installAndRestart", "Install and Restart")}
-                  </button>
-                ) : (
-                  <button
-                    disabled={isDownloadingAppUpdate}
-                    onClick={() => downloadAppUpdate().catch((error) => toast.error(error instanceof Error ? error.message : t("updates.downloadUpdateError", "Unable to download update")))}
-                    className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed text-primary-foreground rounded-lg text-sm font-medium"
-                  >
-                    {isDownloadingAppUpdate
-                      ? t("updates.downloadingUpdate", "Downloading Update...")
-                      : t("updates.downloadUpdate", "Download Update")}
-                  </button>
-                )
-              ) : (
+              <button
+                onClick={() => openAppUpdateDownload().catch((error) => toast.error(error instanceof Error ? error.message : t("updates.openUpdateError", "Unable to open update")))}
+                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium"
+              >
+                {t("updates.downloadUpdate", "Please update")}
+              </button>
+              {appUpdate.alternateReleaseUrl && (
                 <button
-                  onClick={() => openAppUpdateDownload().catch((error) => toast.error(error instanceof Error ? error.message : t("updates.openUpdateError", "Unable to open update")))}
-                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium"
+                  onClick={() => openExternal(appUpdate.alternateReleaseUrl!)}
+                  className="px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-sm font-medium"
                 >
-                  {t("updates.downloadUpdate", "Download Update")}
+                  {t("updates.altSource", "Open GameBanana")}
                 </button>
               )}
+              <button
+                onClick={() => skipAppUpdate().catch((error) => toast.error(error instanceof Error ? error.message : "Unable to skip update"))}
+                className="px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-sm font-medium"
+              >
+                {t("updates.skipUpdate", "Skip this update")}
+              </button>
             </div>
-            {isDownloadingAppUpdate && (
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-muted-foreground">{t("updates.downloading", "Downloading…")}</span>
-                  <span className="text-xs font-medium text-foreground">{Math.max(0, Math.min(100, Math.round(appUpdateStatus?.progress || 0)))}%</span>
-                </div>
-                <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all duration-300"
-                    style={{ width: `${Math.max(0, Math.min(100, Math.round(appUpdateStatus?.progress || 0)))}%` }}
-                  />
-                </div>
-              </div>
-            )}
-            {appUpdateReadyToInstall && (
-              <p className="text-xs text-muted-foreground">{t("updates.readyToInstall", "Update downloaded. Install and restart to apply it.")}</p>
-            )}
           </div>
         ) : (
           <div className="space-y-1">
@@ -127,10 +101,10 @@ export function Updates() {
             </p>
             {!appUpdateChecking && !appUpdate && !settings.checkAppUpdatesOnStartup && (
               <p className="text-xs text-warning mt-1">
-                {t("updates.autoCheckDisabled", "Startup check is off — updates won't be found automatically.")}
+                {t("updates.autoCheckDisabled", "Startup check is off - updates won't be found automatically.")}
               </p>
             )}
-            {!appUpdateChecking && appUpdate?.notes && /auto updater unavailable|in-app update/i.test(appUpdate.notes) && (
+            {!appUpdateChecking && appUpdate?.notes && (
               <p className="text-xs text-muted-foreground mt-1">{appUpdate.notes}</p>
             )}
           </div>
@@ -158,7 +132,7 @@ export function Updates() {
                         v{update.currentVersion}
                       </span>
                     </div>
-                    <span className="text-muted-foreground">→</span>
+                    <span className="text-muted-foreground">{"->"}</span>
                     <div className="flex items-center gap-2">
                        <span className="text-muted-foreground">{t("updates.new", "New")}:</span>
                       <span className="px-2 py-1 bg-primary/10 text-primary rounded font-medium">
@@ -214,7 +188,6 @@ export function Updates() {
         </motion.div>
       )}
 
-      {/* Update Settings */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -272,7 +245,7 @@ export function Updates() {
               <div>
                 <p className="font-medium text-foreground">{t("updates.autoOpenUpdate", "Auto-open app update when found")}</p>
                 <p id="desc-auto-open-update" className="text-sm text-muted-foreground">
-                  {t("updates.autoOpenUpdateDesc", "Opens your platform download link after startup update check")}
+                  {t("updates.autoOpenUpdateDesc", "Opens release page after startup update check")}
                 </p>
               </div>
               <input

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Cpu, Loader2, AlertCircle, Download, ImagePlus } from "lucide-react";
+import { useLocation } from "react-router";
+import { Plus, Cpu, AlertCircle, ImagePlus } from "lucide-react";
 import { EngineCard } from "./EngineCard";
 import { AddEngineDialog } from "./AddEngineDialog";
 import { getEngineIcon } from "./engineIcons";
@@ -11,6 +12,7 @@ import { useEngineManage } from "./useEngineManage";
 
 export function Engines() {
   const { t } = useI18n();
+  const location = useLocation();
   const {
     installedEngines,
     enginesCatalog,
@@ -18,8 +20,6 @@ export function Engines() {
     settings,
     updateSettings,
     setDefaultEngine,
-    installEngine,
-    importEngineFromFolder,
     updateEngine,
     uninstallEngine,
     launchEngine,
@@ -53,8 +53,6 @@ export function Engines() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyEngineId, setBusyEngineId] = useState<string | null>(null);
   const [confirmUninstall, setConfirmUninstall] = useState<{ id: string; name: string; version: string; path: string } | null>(null);
-  const [quickInstallingSlug, setQuickInstallingSlug] = useState<string | null>(null);
-  const [quickInstallError, setQuickInstallError] = useState<string | null>(null);
 
   useEffect(() => {
     refreshEngineHealth().catch((error) => {
@@ -62,7 +60,14 @@ export function Engines() {
     });
   }, []);
 
-  const availableEngines = enginesCatalog;
+  useEffect(() => {
+    const state = location.state as { openAddEngine?: boolean } | null;
+    if (state?.openAddEngine) {
+      setShowAddDialog(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   const hasEngines = installedEngines.length > 0;
   const currentPlatform = detectClientPlatform();
 
@@ -80,23 +85,6 @@ export function Engines() {
   }, [installedEngines]);
 
   const showGroupHeaders = engineGroups.length > 1 || (engineGroups[0]?.[1].length ?? 0) > 1;
-
-  const installFeaturedEngine = async (
-    engineSlug: EngineSlug,
-    releaseUrl: string,
-    releaseVersion: string,
-  ) => {
-    setQuickInstallError(null);
-    setQuickInstallingSlug(engineSlug);
-    try {
-      await installEngine(engineSlug, releaseUrl, releaseVersion);
-      await refreshEngineHealth();
-    } catch (error) {
-      setQuickInstallError(error instanceof Error ? error.message : t("engines.installFailed", "Engine install failed"));
-    } finally {
-      setQuickInstallingSlug(null);
-    }
-  };
 
   const handleLaunch = async (engineId: string) => {
     setActionError(null);
@@ -147,20 +135,6 @@ export function Engines() {
       setActionError(error instanceof Error ? error.message : t("engines.uninstallFailed", "Failed to uninstall engine"));
     } finally {
       setBusyEngineId(null);
-    }
-  };
-
-  const handleImport = async (slug: EngineSlug) => {
-    setQuickInstallError(null);
-    setQuickInstallingSlug(slug);
-    try {
-      await importEngineFromFolder(slug, "imported");
-      await refreshEngineHealth();
-      setShowAddDialog(false);
-    } catch (error) {
-      setQuickInstallError(error instanceof Error ? error.message : t("engines.importFailed", "Engine import failed"));
-    } finally {
-      setQuickInstallingSlug(null);
     }
   };
 
@@ -222,31 +196,6 @@ export function Engines() {
     return false;
   };
 
-  const getInstallableReleases = (engineSlug: EngineSlug) => {
-    const definition = availableEngines.find((engine) => engine.slug === engineSlug);
-    if (!definition) return [];
-
-    const list = [...definition.releases].sort((a, b) => {
-      const aPlatformScore = a.platform === currentPlatform ? 0 : (a.platform === "any" ? 1 : 2);
-      const bPlatformScore = b.platform === currentPlatform ? 0 : (b.platform === "any" ? 1 : 2);
-      if (aPlatformScore !== bPlatformScore) return aPlatformScore - bPlatformScore;
-      if (a.isPrerelease !== b.isPrerelease) return Number(a.isPrerelease) - Number(b.isPrerelease);
-      return String(b.version).localeCompare(String(a.version), undefined, { numeric: true, sensitivity: "base" });
-    });
-    const deduped = new Map<string, (typeof list)[number]>();
-    for (const release of list) {
-      const key = `${release.version}|${release.downloadUrl}`;
-      if (!deduped.has(key)) deduped.set(key, release);
-    }
-    return Array.from(deduped.values());
-  };
-
-  const getSelectedRelease = (engineSlug: EngineSlug) => {
-    const releases = getInstallableReleases(engineSlug);
-    if (releases.length === 0) return undefined;
-    return pickBestReleaseForPlatform(releases, currentPlatform) ?? releases[0];
-  };
-
   if (!hasEngines) {
     return (
       <div className="p-4 md:p-6 lg:p-8">
@@ -285,65 +234,6 @@ export function Engines() {
             {t("engines.noneInstalledDesc", "Install or import an engine to start playing mods.")}
           </p>
         </motion.div>
-
-        {availableEngines.length > 0 && (
-          <div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {availableEngines.slice(0, 3).map((engine) => {
-                const release = getSelectedRelease(engine.slug);
-                const iconSrc = getEngineIcon(engine.slug);
-                return (
-                  <motion.div
-                    key={engine.slug}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-card rounded-xl border border-border p-5"
-                  >
-                    <div className="flex items-start gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-lg bg-secondary/70 border border-border flex items-center justify-center shrink-0 overflow-hidden">
-                        {iconSrc
-                          ? <img src={iconSrc} alt="" className="w-7 h-7 object-contain" loading="lazy" />
-                          : <Cpu className="w-5 h-5 text-primary" />}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">{engine.name}</h3>
-                        <p className="text-xs text-muted-foreground">{release?.version ?? "latest"}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={async () => {
-                          if (release) await installFeaturedEngine(engine.slug, release.downloadUrl, release.version);
-                        }}
-                        disabled={!release || quickInstallingSlug === engine.slug}
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        {quickInstallingSlug === engine.slug
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <Download className="w-3.5 h-3.5" />}
-                        {t("engines.install", "Install")}
-                      </button>
-                      <button
-                        onClick={() => handleImport(engine.slug)}
-                        disabled={quickInstallingSlug === engine.slug}
-                        className="rounded-lg bg-secondary border border-border px-3 py-2 text-sm text-foreground hover:bg-secondary/80 disabled:opacity-50"
-                      >
-                        {t("engines.importFolder", "Import")}
-                      </button>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {quickInstallError && (
-          <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {quickInstallError}
-          </div>
-        )}
 
         <AddEngineDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
       </div>

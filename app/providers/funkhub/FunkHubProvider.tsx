@@ -65,6 +65,7 @@ interface FunkHubContextValue {
   installMod: (modId: number, fileId: number, selectedEngineId?: string, priority?: number, options?: InstallOptions) => void;
   installEngine: (slug: InstalledEngine["slug"], downloadUrl: string, version: string, options?: { allowMissingExecutable?: boolean }) => Promise<void>;
   importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string, sourcePath?: string, customName?: string) => Promise<void>;
+  addManualModFromFolder: (engineId: string, sourcePath?: string, modName?: string) => Promise<void>;
   updateEngine: (engineId: string) => Promise<void>;
   uninstallEngine: (engineId: string) => Promise<void>;
   launchEngine: (
@@ -102,8 +103,6 @@ interface FunkHubContextValue {
   browseFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
   browseFile: (options?: { title?: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => Promise<string | undefined>;
   openFolderPath: (targetPath: string) => Promise<void>;
-  addManualMod: (input: { modName: string; engineId?: string; sourcePath?: string; description?: string; version?: string; author?: string; standalone?: boolean; gameBananaUrl?: string }) => Promise<void>;
-  autodetectInstalledMods: () => Promise<number>;
   reconcileDiskState: () => Promise<void>;
   connectItch: (clientId: string) => Promise<void>;
   disconnectItch: () => Promise<void>;
@@ -113,6 +112,7 @@ interface FunkHubContextValue {
   appUpdateChecking: boolean;
   checkAppUpdate: () => Promise<void>;
   openAppUpdateDownload: () => Promise<void>;
+  skipAppUpdate: () => Promise<void>;
   downloadAppUpdate: () => Promise<void>;
   installAppUpdate: () => Promise<void>;
   appUpdateStatus?: DesktopAppUpdateStatus;
@@ -120,6 +120,7 @@ interface FunkHubContextValue {
   killLaunch: (launchId: string) => Promise<void>;
   detectWineRuntimes: () => Promise<Array<{ type: "wine" | "wine64" | "proton"; path: string; label: string }>>;
   scanCommonEnginePaths: () => Promise<string[]>;
+  wipeData: (mode: "records" | "disk" | "full") => Promise<void>;
   clearAllData: () => Promise<void>;
   clearAllMods: () => Promise<void>;
   clearAllEngines: () => Promise<void>;
@@ -239,7 +240,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       }
 
       if (selectedCategoryId === undefined) {
-        // No search, no category — use Subfeed (Ripe / New / Updated)
+        // No search, no category - use Subfeed (Ripe / New / Updated)
         // Subfeed returns up to ~15 items/page regardless of perPage, so check mods.length > 0
         const paged = await funkHubService.getSubfeedPage({
           sort: subfeedSort,
@@ -257,7 +258,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Category selected — use Mod/Index with user-chosen sort
+      // Category selected - use Mod/Index with user-chosen sort
       const paged = await funkHubService.listModsPage({
         categoryId: selectedCategoryId,
         page: discoverPage,
@@ -295,13 +296,17 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     setAppUpdateError(undefined);
     try {
       const result = await funkHubService.checkAppUpdate();
-      setAppUpdate(result);
+      if (result.available && settings.skippedAppVersion && settings.skippedAppVersion === result.latestVersion) {
+        setAppUpdate({ ...result, available: false, notes: `Skipped update v${result.latestVersion}.` });
+      } else {
+        setAppUpdate(result);
+      }
     } catch (error) {
       setAppUpdateError(error instanceof Error ? error.message : "Failed to check app updates");
     } finally {
       setAppUpdateChecking(false);
     }
-  }, []);
+  }, [settings.skippedAppVersion]);
 
   const openAppUpdateDownload = useCallback(async () => {
     if (!appUpdate?.available) {
@@ -319,6 +324,15 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   const installAppUpdate = useCallback(async () => {
     await funkHubService.installAppUpdate();
   }, []);
+
+  const skipAppUpdate = useCallback(async () => {
+    if (!appUpdate?.latestVersion) {
+      return;
+    }
+    const next = await funkHubService.updateSettings({ skippedAppVersion: appUpdate.latestVersion });
+    setSettings(next);
+    setAppUpdate((prev) => prev ? { ...prev, available: false, notes: `Skipped update v${prev.latestVersion}.` } : prev);
+  }, [appUpdate]);
 
   const getModProfile = useCallback((modId: number) => funkHubService.getModProfile(modId), []);
 
@@ -412,7 +426,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         throw new Error("No downloadable files found for this mod");
       }
 
-      // Check the archive's raw file list for executables — best-effort, non-blocking on failure
+      // Check the archive's raw file list for executables - best-effort, non-blocking on failure
       const rawFileList = await funkHubService.getRawFileList(selectedFileId);
       const hasExe = rawFileList.some((f) => /\.(exe|msi|bat|cmd|ps1|sh|appimage|dmg|pkg)$/i.test(f));
       if (settings.compatibilityChecks && hasExe) {
@@ -613,16 +627,12 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
     funkHubService.checkAppUpdate()
       .then(async (latest) => {
         setAppUpdate(latest);
+        if (latest.available && settings.skippedAppVersion && settings.skippedAppVersion === latest.latestVersion) {
+          setAppUpdate({ ...latest, available: false, notes: `Skipped update v${latest.latestVersion}.` });
+          return;
+        }
         if (latest.available && settings.autoDownloadAppUpdates) {
-          if (window.funkhubDesktop?.downloadAppUpdate) {
-            try {
-              await funkHubService.downloadAppUpdate();
-            } catch {
-              await funkHubService.openExternalUrl(latest.downloadUrl || latest.releaseUrl);
-            }
-          } else {
-            await funkHubService.openExternalUrl(latest.downloadUrl || latest.releaseUrl);
-          }
+          await funkHubService.openExternalUrl(latest.downloadUrl || latest.releaseUrl);
         }
       })
       .catch((error) => {
@@ -631,7 +641,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       .finally(() => {
         setAppUpdateChecking(false);
       });
-  }, [settings.autoDownloadAppUpdates, settings.checkAppUpdatesOnStartup]);
+  }, [settings.autoDownloadAppUpdates, settings.checkAppUpdatesOnStartup, settings.skippedAppVersion]);
 
   useEffect(() => {
     if (!window.funkhubDesktop?.getRunningLaunches || !window.funkhubDesktop?.onLaunchExit) {
@@ -700,7 +710,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       installMod: (modId, fileId, selectedEngineId, priority = 0, options) => {
         try {
           funkHubService.queueInstall(modId, fileId, selectedEngineId, priority, options);
-          toast.success(t("provider.installQueued", "Install queued — check Downloads for progress."));
+          toast.success(t("provider.installQueued", "Install queued - check Downloads for progress."));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : t("provider.unableQueueInstall", "Unable to queue install"));
         }
@@ -717,6 +727,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       importEngineFromFolder: async (slug, versionHint, sourcePath, customName) => {
         await funkHubService.importEngineFromFolder({ slug, versionHint, sourcePath, customName });
         setInstalledEngines(funkHubService.getInstalledEngines());
+      },
+      addManualModFromFolder: async (engineId, sourcePath, modName) => {
+        await funkHubService.addManualModFromFolder({ engineId, sourcePath, modName });
+        setInstalledMods(funkHubService.getInstalledMods());
       },
       updateEngine: async (engineId) => {
         await funkHubService.updateEngine(engineId);
@@ -815,15 +829,6 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       openFolderPath: async (targetPath) => {
         await funkHubService.openAnyPath(targetPath);
       },
-      addManualMod: async (input) => {
-        await funkHubService.addManualModFromFolder(input);
-        setInstalledMods(funkHubService.getInstalledMods());
-      },
-      autodetectInstalledMods: async () => {
-        const added = await funkHubService.scanInstalledEngineModFolders();
-        setInstalledMods(funkHubService.getInstalledMods());
-        return added;
-      },
       reconcileDiskState: async () => {
         await funkHubService.reconcileDiskState();
         setInstalledMods(funkHubService.getInstalledMods());
@@ -845,6 +850,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       appUpdateChecking,
       checkAppUpdate,
       openAppUpdateDownload,
+      skipAppUpdate,
       downloadAppUpdate,
       installAppUpdate,
       appUpdateStatus,
@@ -861,13 +867,56 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         const result = await window.funkhubDesktop?.scanCommonEnginePaths?.();
         return result?.paths ?? [];
       },
+      wipeData: async (mode) => {
+        const shouldClearRecords = mode === "records" || mode === "full";
+        const shouldClearDisk = mode === "disk" || mode === "full";
+
+        if (shouldClearDisk && window.funkhubDesktop?.deletePath) {
+          const targets = new Set<string>();
+          targets.add("engines");
+          targets.add("executables");
+          if (settings.downloadsDirectory.trim()) {
+            targets.add(settings.downloadsDirectory.trim());
+          } else {
+            targets.add("downloads");
+          }
+
+          for (const targetPath of targets) {
+            const result = await window.funkhubDesktop.deletePath({ targetPath });
+            if (!result.ok) {
+              throw new Error(result.error || `Failed to delete ${targetPath}`);
+            }
+          }
+        }
+
+        if (shouldClearRecords) {
+          funkHubStorageService.clearAllData();
+          setInstalledMods([]);
+          setInstalledEngines([]);
+          setDownloads([]);
+          setSettings(DEFAULT_SETTINGS);
+        }
+
+        await funkHubService.reconcileDiskState();
+        setInstalledMods(funkHubService.getInstalledMods());
+        setInstalledEngines(funkHubService.getInstalledEngines());
+        setDownloads(funkHubService.getDownloadHistory());
+      },
       clearAllData: async () => {
+        if (window.funkhubDesktop?.deletePath) {
+          for (const targetPath of ["engines", "executables", settings.downloadsDirectory.trim() || "downloads"]) {
+            const result = await window.funkhubDesktop.deletePath({ targetPath });
+            if (!result.ok) {
+              throw new Error(result.error || `Failed to delete ${targetPath}`);
+            }
+          }
+        }
         funkHubStorageService.clearAllData();
         setInstalledMods([]);
         setInstalledEngines([]);
         setDownloads([]);
         setSettings(DEFAULT_SETTINGS);
-        window.location.reload();
+        await funkHubService.reconcileDiskState();
       },
       clearAllMods: async () => {
         funkHubStorageService.clearMods();

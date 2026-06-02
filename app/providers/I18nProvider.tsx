@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { normalizeLocale, supportedLocales, translate, type SupportedLocale } from "../i18n";
+import { translate, type SupportedLocale } from "../i18n";
 import { useFunkHub } from "./funkhub/FunkHubProvider";
 
 interface I18nContextValue {
@@ -13,16 +13,19 @@ const I18nContext = createContext<I18nContextValue | undefined>(undefined);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const { settings, updateSettings } = useFunkHub();
-  const [locale, setLocaleState] = useState<SupportedLocale>(() => normalizeLocale(settings.locale || navigator.language));
+  const [locale, setLocaleState] = useState<SupportedLocale>("en");
 
   useEffect(() => {
-    setLocaleState(normalizeLocale(settings.locale || navigator.language));
-  }, [settings.locale]);
+    if (settings.locale !== "en") {
+      void updateSettings({ locale: "en" });
+    }
+    setLocaleState("en");
+  }, [settings.locale, updateSettings]);
 
   const setLocale = useCallback(async (nextLocale: SupportedLocale) => {
-    const normalized = normalizeLocale(nextLocale);
-    setLocaleState(normalized);
-    await updateSettings({ locale: normalized });
+    void nextLocale;
+    setLocaleState("en");
+    await updateSettings({ locale: "en" });
   }, [updateSettings]);
 
   const t = useCallback((key: string, fallback?: string, vars?: Record<string, string | number>) => {
@@ -31,7 +34,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<I18nContextValue>(() => ({
     locale,
-    locales: supportedLocales,
+    locales: [{ code: "en", label: "English" }],
     setLocale,
     t,
   }), [locale, setLocale, t]);

@@ -1,6 +1,6 @@
 export type ThemeMode = "light" | "dark" | "auto" | "vibrant" | "focus";
 export type BaseMode = "light" | "dark";
-/** Resolved color-set key — every mode maps to one of these */
+/** Resolved color-set key - every mode maps to one of these */
 export type ColorSetKey = "light" | "dark" | "vibrant" | "focus";
 
 export interface ThemeColors {

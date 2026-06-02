@@ -513,6 +513,48 @@ async function ensureModFolderStructure(extractDir, modFolderName) {
   return modRoot;
 }
 
+const CODENAME_CONTENT_DIRS = new Set([
+  "data",
+  "fonts",
+  "images",
+  "languages",
+  "music",
+  "shaders",
+  "songs",
+  "sounds",
+  "videos",
+]);
+
+async function detectCodenameModRoot(extractDir) {
+  const queue = [{ dir: extractDir, depth: 0 }];
+  let bestMatch;
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) continue;
+    const entries = (await readDirEntries(current.dir)).filter((entry) => !entry.name.startsWith("."));
+    const directoryEntries = entries.filter((entry) => entry.isDirectory());
+    const dirNames = directoryEntries.map((entry) => entry.name.toLowerCase());
+    const hitCount = dirNames.filter((name) => CODENAME_CONTENT_DIRS.has(name)).length;
+
+    if (hitCount > 0) {
+      if (!bestMatch || hitCount > bestMatch.hitCount || (hitCount === bestMatch.hitCount && current.depth < bestMatch.depth)) {
+        bestMatch = { dir: current.dir, hitCount, depth: current.depth };
+      }
+    }
+
+    if (current.depth >= 5) {
+      continue;
+    }
+
+    for (const entry of directoryEntries) {
+      queue.push({ dir: path.join(current.dir, entry.name), depth: current.depth + 1 });
+    }
+  }
+
+  return bestMatch?.dir;
+}
+
 function parsePercent(line) {
   const match = line.match(/(\d{1,3})%/);
   if (!match) {
@@ -625,10 +667,63 @@ async function extractRarWithUnrar(archivePath, outputDir, cancelState, webConte
 }
 
 async function downloadToFile(url, outputPath, cancelState, webContents, jobId) {
-  const response = await fetch(url, { signal: cancelState.controller.signal });
+  const normalizedUrl = String(url || "").trim();
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(normalizedUrl);
+  } catch {
+    throw new Error("Invalid download URL");
+  }
+  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+    throw new Error(`Unsupported download protocol: ${parsedUrl.protocol}`);
+  }
 
-  if (!response.ok || !response.body) {
-    throw new Error(`Download failed (${response.status})`);
+  const maxAttempts = 3;
+  const timeoutMs = 45_000;
+  let response;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const timeoutController = new AbortController();
+    const timeout = setTimeout(() => timeoutController.abort("timeout"), timeoutMs);
+    const signal = AbortSignal.any([cancelState.controller.signal, timeoutController.signal]);
+    try {
+      response = await fetch(normalizedUrl, { signal });
+      clearTimeout(timeout);
+      if (response.ok && response.body) {
+        break;
+      }
+      const responseText = await response.text().catch(() => "");
+      const preview = responseText.trim().slice(0, 140);
+      throw new Error(
+        `HTTP ${response.status} from ${parsedUrl.host}${preview ? `: ${preview}` : ""}`,
+      );
+    } catch (error) {
+      clearTimeout(timeout);
+      const message = error instanceof Error ? error.message : String(error);
+      const lower = message.toLowerCase();
+      const isTimeout = lower.includes("timeout") || lower.includes("timed out") || lower.includes("aborted");
+      const isDns = lower.includes("enotfound") || lower.includes("dns");
+      const isTls = lower.includes("certificate") || lower.includes("tls") || lower.includes("ssl");
+      const isHttp = lower.includes("http ");
+      const mapped = isHttp
+        ? message
+        : isDns
+          ? `DNS lookup failed for ${parsedUrl.host}`
+          : isTls
+            ? `TLS handshake failed for ${parsedUrl.host}`
+            : isTimeout
+              ? `Download timeout from ${parsedUrl.host}`
+              : `Network fetch failed from ${parsedUrl.host}: ${message}`;
+      lastError = new Error(`${mapped}. Check URL access in a browser and retry.`);
+      if (attempt >= maxAttempts || isHttp) {
+        break;
+      }
+    }
+  }
+
+  if (!response || !response.ok || !response.body) {
+    throw lastError || new Error(`Download failed from ${parsedUrl.host}`);
   }
 
   const totalBytes = Number(response.headers.get("content-length") || "0") || undefined;
@@ -952,10 +1047,23 @@ async function installArchiveInternal(webContents, payload) {
             await moveDirectory(extractTempPath, resolvedInstallPath);
             finalInstallPath = resolvedInstallPath;
           } else {
-            const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
-            const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
-            const modRoot = await ensureModFolderStructure(extractTempPath, safeFolderName);
-            const destination = path.join(resolvedInstallPath, safeFolderName);
+            const isCodenameModsInstall = /(^|[\\/])engines[\\/]codename([\\/]|$)/i.test(installPath || "");
+            let destinationName;
+            let modRoot;
+            if (isCodenameModsInstall) {
+              const detectedRoot = await detectCodenameModRoot(extractTempPath);
+              if (detectedRoot) {
+                modRoot = detectedRoot;
+                destinationName = path.basename(detectedRoot);
+              }
+            }
+            if (!modRoot || !destinationName) {
+              const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
+              const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
+              modRoot = await ensureModFolderStructure(extractTempPath, safeFolderName);
+              destinationName = safeFolderName;
+            }
+            const destination = path.join(resolvedInstallPath, destinationName);
             await removePath(destination);
             await ensureDir(resolvedInstallPath);
             await moveDirectory(modRoot, destination);

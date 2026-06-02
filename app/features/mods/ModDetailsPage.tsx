@@ -19,8 +19,9 @@ import {
   X,
 } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
-import { detectRequiredEngineFromCategories, modInstallerService } from "../../services/funkhub";
+import { detectRequiredEngineFromCategories, formatEngineName } from "../../services/funkhub";
 import type { GameBananaMember, GameBananaModProfile } from "../../services/funkhub";
+import type { EngineSlug } from "../../services/funkhub";
 import { UserProfileModal } from "./UserProfileModal";
 
 function formatCompact(value?: number): string {
@@ -30,13 +31,13 @@ function formatCompact(value?: number): string {
   return String(value);
 }
 
-function formatDate(ts?: number, unknown = "—"): string {
+function formatDate(ts?: number, unknown = "-"): string {
   if (!ts) return unknown;
   return new Date(ts * 1000).toLocaleDateString();
 }
 
 function formatRelativeTime(ts?: number): string {
-  if (!ts) return "—";
+  if (!ts) return "-";
   const diff = Date.now() - ts * 1000;
   if (diff < 60_000) return "now";
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`;
@@ -47,7 +48,7 @@ function formatRelativeTime(ts?: number): string {
 }
 
 function formatBytes(bytes?: number): string {
-  if (!bytes || bytes <= 0) return "—";
+  if (!bytes || bytes <= 0) return "-";
   const units = ["B", "KB", "MB", "GB"];
   let value = bytes;
   let unit = 0;
@@ -92,45 +93,6 @@ function sanitizeRichHtml(input?: string): string {
   return sanitized;
 }
 
-function buildRichTextSrcDoc(rawHtml: string): string {
-  const html = sanitizeRichHtml(rawHtml);
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      :root { color-scheme: dark; }
-      body {
-        margin: 0;
-        padding: 0.75rem 0;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-        font-size: 14px;
-        line-height: 1.7;
-        color: rgba(255,255,255,.9);
-        background: transparent;
-      }
-      h1,h2,h3,h4,h5,h6 { margin: .7rem 0 .45rem; color: white; }
-      p { margin: .5rem 0; }
-      ul,ol { padding-left: 1.25rem; }
-      blockquote { border-left: 3px solid rgba(255,255,255,.18); margin: .75rem 0; padding: .25rem .75rem; }
-      img { max-width: 100%; border-radius: 0.5rem; }
-      a { color: #8ec5ff; text-decoration: underline; }
-      .GreenColor { color: #86efac; }
-      .RedColor { color: #fca5a5; }
-      .BlueColor { color: #93c5fd; }
-      .OrangeColor { color: #fdba74; }
-      .YellowColor { color: #fde68a; }
-      .WhiteColor { color: #ffffff; }
-      .GreyColor { color: #d4d4d8; }
-      .Bold, strong { font-weight: 700; }
-      .Italic, em { font-style: italic; }
-    </style>
-  </head>
-  <body>${html}</body>
-</html>`;
-}
-
 const FNF_LOADING_MESSAGES = [
   "Loading the beats...",
   "Warming up the crew...",
@@ -160,6 +122,8 @@ export function ModDetailsPage() {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [installMode, setInstallMode] = useState<"executable" | "mod_folder">("mod_folder");
   const [selectedEngineId, setSelectedEngineId] = useState<string>("");
+  const [pendingInstallFileId, setPendingInstallFileId] = useState<number | null>(null);
+  const [pendingMismatch, setPendingMismatch] = useState<{ required: string; selected: string } | null>(null);
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
   const [loadingMsgIndex] = useState(() => Math.floor(Math.random() * FNF_LOADING_MESSAGES.length));
 
@@ -179,15 +143,9 @@ export function ModDetailsPage() {
         if (cancelled) return;
         setProfile(next);
         setActiveMediaIndex(0);
-        const detectedSlug = detectRequiredEngineFromCategories(next) ?? next.requiredEngine;
-        const matching = detectedSlug
-          ? installedEngines.find((engine) => engine.slug === detectedSlug)
-          : undefined;
         const fallback = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
-        setSelectedEngineId((matching ?? fallback)?.id ?? "");
-        const defaultExecutable = modInstallerService.isExecutableCategoryMod(next)
-          || next.files.some((file) => modInstallerService.isExecutableMod(next, file));
-        setInstallMode(defaultExecutable ? "executable" : "mod_folder");
+        setSelectedEngineId(fallback?.id ?? "");
+        setInstallMode("mod_folder");
       })
       .catch((err) => {
         if (cancelled) return;
@@ -240,17 +198,28 @@ export function ModDetailsPage() {
     : [];
 
   const installAsExecutable = installMode === "executable";
-  const detectedEngineSlug = profile
-    ? (detectRequiredEngineFromCategories(profile) ?? profile.requiredEngine)
-    : undefined;
   const selectedEngine = installedEngines.find((engine) => engine.id === selectedEngineId);
-  const detectedEngineInstalled = detectedEngineSlug
-    ? installedEngines.find((engine) => engine.slug === detectedEngineSlug)
-    : undefined;
+  const requiredEngine = profile ? (detectRequiredEngineFromCategories(profile) ?? profile.requiredEngine) : undefined;
 
-  const hasDependencyWarning = Boolean(
-    !installAsExecutable && detectedEngineSlug && selectedEngine && selectedEngine.slug !== detectedEngineSlug,
-  );
+  const beginInstallFlow = (fileId: number) => {
+    setPendingInstallFileId(fileId);
+  };
+
+  const confirmInstallFlow = () => {
+    if (!profile || !pendingInstallFileId) return;
+    if (!installAsExecutable && requiredEngine && selectedEngine && selectedEngine.slug !== requiredEngine) {
+      setPendingMismatch({ required: requiredEngine, selected: selectedEngine.slug });
+      return;
+    }
+    installMod(
+      profile.id,
+      pendingInstallFileId,
+      installAsExecutable ? undefined : (selectedEngineId || undefined),
+      0,
+      { forceInstallType: installAsExecutable ? "executable" : "standard_mod" },
+    );
+    setPendingInstallFileId(null);
+  };
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
@@ -325,23 +294,29 @@ export function ModDetailsPage() {
                 <div className="space-y-3 rounded-2xl border border-border bg-card p-3 md:p-4">
                   <div className="overflow-hidden rounded-xl border border-border bg-secondary/30">
                     <div className="relative aspect-video">
-                      {mediaGallery[Math.min(activeMediaIndex, mediaGallery.length - 1)]?.type === "video" ? (
-                        <iframe
-                          src={mediaGallery[Math.min(activeMediaIndex, mediaGallery.length - 1)].embedUrl}
-                          title={`YouTube embed ${activeMediaIndex + 1}`}
-                          loading="eager"
-                          className="h-full w-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                      ) : (
-                        <img
-                          src={mediaGallery[Math.min(activeMediaIndex, mediaGallery.length - 1)]?.url ?? ""}
-                          alt={profile.name}
-                          className="h-full w-full object-cover"
-                          loading="eager"
-                        />
-                      )}
+                      {(() => {
+                        const currentItem = getCurrentItem(activeMediaIndex);
+                        if (currentItem?.type === "video") {
+                          return (
+                            <iframe
+                              src={currentItem.embedUrl}
+                              title={`YouTube embed ${activeMediaIndex + 1}`}
+                              loading="eager"
+                              className="h-full w-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          );
+                        }
+                        return (
+                          <img
+                            src={currentItem?.url ?? ""}
+                            alt={profile.name}
+                            className="h-full w-full object-cover"
+                            loading="eager"
+                          />
+                        );
+                      })()}
                       {mediaGallery.length > 1 && (
                         <>
                           <button
@@ -392,11 +367,9 @@ export function ModDetailsPage() {
                 <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
                   <h2 className="mb-3 text-base font-semibold text-foreground">{t("mod.description", "Description")}</h2>
                   {profile.text?.trim() ? (
-                    <iframe
-                      title="Mod description"
-                      sandbox="allow-popups allow-popups-to-escape-sandbox"
-                      srcDoc={buildRichTextSrcDoc(profile.text)}
-                      className="w-full min-h-[340px] rounded-lg border border-border bg-secondary/20"
+                    <div
+                      className="prose prose-invert max-w-none text-sm leading-relaxed [&_a]:text-blue-300 [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_img]:rounded-lg"
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(profile.text) }}
                     />
                   ) : (
                     <p className="text-sm text-muted-foreground">{profile.description}</p>
@@ -407,47 +380,7 @@ export function ModDetailsPage() {
               <div className="rounded-2xl border border-border bg-card p-4 md:p-5">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-base font-semibold text-foreground">{t("mod.files", "Files")}</h2>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={installMode}
-                      onChange={(event) => setInstallMode(event.target.value as "executable" | "mod_folder")}
-                      className="rounded-lg border border-border bg-input-background px-2.5 py-1.5 text-xs text-foreground"
-                    >
-                      <option value="mod_folder">{t("mod.installModeModFolder", "Mod folder (default)")}</option>
-                      <option value="executable">{t("mod.installModeExecutable", "Standalone executable")}</option>
-                    </select>
-
-                    {!installAsExecutable && (
-                      <select
-                        value={selectedEngineId}
-                        onChange={(event) => setSelectedEngineId(event.target.value)}
-                        className="rounded-lg border border-border bg-input-background px-2.5 py-1.5 text-xs text-foreground"
-                      >
-                        {installedEngines.map((engine) => (
-                          <option key={engine.id} value={engine.id}>{engine.name} {engine.version}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
                 </div>
-
-                {hasDependencyWarning && !installAsExecutable && (
-                  <div className="mb-3 rounded-lg border border-warning/25 bg-warning/10 p-2.5 text-xs text-foreground">
-                    <p>
-                      {t("mod.engineMismatch", "This mod targets")} <span className="font-medium">{detectedEngineSlug}</span>
-                      {", "}{t("mod.engineMismatchSelected", "but selected engine is")} <span className="font-medium">{selectedEngine?.slug}</span>.
-                    </p>
-                    {detectedEngineInstalled && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedEngineId(detectedEngineInstalled.id)}
-                        className="mt-1.5 rounded bg-warning/20 px-2 py-1 font-medium hover:bg-warning/30"
-                      >
-                        {t("mod.switchToEngine", "Switch to")} {detectedEngineInstalled.name}
-                      </button>
-                    )}
-                  </div>
-                )}
 
                 <div className="space-y-3">
                   {profile.files.length === 0 && (
@@ -495,14 +428,7 @@ export function ModDetailsPage() {
                       <div className="mt-3 flex flex-wrap gap-2">
                         <motion.button
                           type="button"
-                          onClick={() => installMod(
-                            profile.id,
-                            file.id,
-                            installAsExecutable ? undefined : (selectedEngineId || undefined),
-                            0,
-                            { forceInstallType: installAsExecutable ? "executable" : "standard_mod" },
-                          )}
-                          disabled={!installAsExecutable && installedEngines.length === 0}
+                          onClick={() => beginInstallFlow(file.id)}
                           whileTap={{ scale: 0.95 }}
                           className="inline-flex items-center gap-1.5 rounded-lg bg-primary/90 px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
                         >
@@ -586,49 +512,50 @@ export function ModDetailsPage() {
             <aside className="space-y-4">
               <div className="rounded-2xl border border-border bg-card p-4">
                 <h2 className="mb-3 text-sm font-semibold text-foreground">{t("mod.stats", "Stats")}</h2>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2"><span className="inline-flex items-center gap-1 text-muted-foreground"><Heart className="h-3.5 w-3.5" /> Likes</span><span>{formatCompact(profile.likeCount)}</span></div>
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2"><span className="inline-flex items-center gap-1 text-muted-foreground"><Download className="h-3.5 w-3.5" /> Downloads</span><span>{formatCompact(profile.downloadCount)}</span></div>
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2"><span className="inline-flex items-center gap-1 text-muted-foreground"><Eye className="h-3.5 w-3.5" /> Views</span><span>{formatCompact(profile.viewCount)}</span></div>
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2"><span className="inline-flex items-center gap-1 text-muted-foreground"><MessageCircle className="h-3.5 w-3.5" /> Posts</span><span>{formatCompact(profile.postCount)}</span></div>
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2"><span className="text-muted-foreground">Added</span><span>{formatRelativeTime(profile.dateAdded)}</span></div>
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2"><span className="text-muted-foreground">Updated</span><span>{formatRelativeTime(profile.dateUpdated ?? profile.dateModified)}</span></div>
+                <div className="space-y-3 text-sm">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary/30 px-2.5 py-2 text-xs">
+                      <Heart className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Likes</span>
+                      <span className="ml-auto font-medium text-foreground">{formatCompact(profile.likeCount)}</span>
+                    </div>
+                    <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary/30 px-2.5 py-2 text-xs">
+                      <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Downloads</span>
+                      <span className="ml-auto font-medium text-foreground">{formatCompact(profile.downloadCount)}</span>
+                    </div>
+                    <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary/30 px-2.5 py-2 text-xs">
+                      <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Views</span>
+                      <span className="ml-auto font-medium text-foreground">{formatCompact(profile.viewCount)}</span>
+                    </div>
+                    <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary/30 px-2.5 py-2 text-xs">
+                      <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Posts</span>
+                      <span className="ml-auto font-medium text-foreground">{formatCompact(profile.postCount)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2">
+                    <span className="text-muted-foreground">Added</span>
+                    <span>{formatRelativeTime(profile.dateAdded)}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2">
+                    <span className="text-muted-foreground">Updated</span>
+                    <span>{formatRelativeTime(profile.dateUpdated ?? profile.dateModified)}</span>
+                  </div>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-border bg-card p-4">
                 <h2 className="mb-3 text-sm font-semibold text-foreground">{t("mod.submitter", "Submitter")}</h2>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (profile.submitter?.id) {
-                      setSelectedSubmitter({
-                        id: profile.submitter.id,
-                        name: profile.submitter.name,
-                        avatarUrl: profile.submitter.avatarUrl,
-                      });
-                    }
-                  }}
-                  className="inline-flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/30 p-2.5 text-left hover:bg-secondary"
-                >
+                <div className="inline-flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/30 p-2.5 text-left">
                   {profile.submitter?.avatarUrl
                     ? <img src={profile.submitter.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" loading="lazy" />
                     : <User className="h-5 w-5" />}
                   <div className="min-w-0">
-                    <p className="line-clamp-1 text-sm font-semibold text-foreground">{profile.submitter?.name ?? "—"}</p>
+                    <p className="line-clamp-1 text-sm font-semibold text-foreground">{profile.submitter?.name ?? "-"}</p>
                     <p className="text-xs text-muted-foreground">{profile.submitter?.profileUrl ?? ""}</p>
                   </div>
-                </button>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-card p-4">
-                <h2 className="mb-3 text-sm font-semibold text-foreground">{t("mod.details", "Details")}</h2>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2"><span className="text-muted-foreground">Version</span><span>{profile.version ?? "—"}</span></div>
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2"><span className="text-muted-foreground">Subscribers</span><span>{formatCompact(profile.subscriberCount)}</span></div>
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-3 py-2"><span className="text-muted-foreground">Thanks</span><span>{formatCompact(profile.thanksCount)}</span></div>
-                  {profile.license && <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2"><p className="mb-1 text-xs text-muted-foreground">License</p><p className="text-xs text-foreground">{profile.license}</p></div>}
-                  {profile.devNotes && <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2"><p className="mb-1 text-xs text-muted-foreground">Dev notes</p><p className="text-xs text-foreground whitespace-pre-wrap">{profile.devNotes}</p></div>}
                 </div>
               </div>
 
@@ -656,6 +583,132 @@ export function ModDetailsPage() {
           navigate(`/mods/${openModId}`, { state: { from: location.pathname + location.search } });
         }}
       />
+
+      {pendingMismatch ? (
+        <div className="fixed inset-0 z-[60] bg-black/75 p-4">
+          <div className="mx-auto mt-[14vh] w-full max-w-lg rounded-2xl border border-destructive/40 bg-card p-4">
+            <h3 className="text-base font-semibold text-destructive">{t("mod.wrongEngineTitle", "WRONG ENGINE")}</h3>
+            <p className="mt-2 text-sm text-foreground">
+              {t("mod.wrongEngineBody", "This mod targets")} <span className="font-semibold">{formatEngineName(pendingMismatch.required as EngineSlug)}</span>
+              {", "}{t("mod.wrongEngineBody2", "but selected engine is")} <span className="font-semibold">{formatEngineName(pendingMismatch.selected as EngineSlug)}</span>.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingMismatch(null)}
+                className="rounded-lg border border-border bg-card px-3 py-2 text-sm hover:bg-secondary"
+              >
+                {t("common.cancel", "Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const required = pendingMismatch.required;
+                  setPendingMismatch(null);
+                  setPendingInstallFileId(null);
+                  navigate("/engines", { state: { openAddEngine: true, preselectEngineSlug: required } });
+                }}
+                className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-medium text-foreground hover:bg-primary/20"
+              >
+                {t("mod.goInstallEngine", "Go install")} {formatEngineName(pendingMismatch.required as EngineSlug)}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingMismatch(null);
+                  if (!profile || !pendingInstallFileId) return;
+                  installMod(
+                    profile.id,
+                    pendingInstallFileId,
+                    installAsExecutable ? undefined : (selectedEngineId || undefined),
+                    0,
+                    { forceInstallType: installAsExecutable ? "executable" : "standard_mod" },
+                  );
+                  setPendingInstallFileId(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                {t("common.continue", "Continue")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingInstallFileId ? (
+        <div className="fixed inset-0 z-50 bg-black/70 p-4">
+          <div className="mx-auto mt-[10vh] w-full max-w-xl rounded-2xl border border-border bg-card p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">{t("mod.installSetupTitle", "Install setup")}</h3>
+                <p className="mt-1 text-xs text-muted-foreground">{t("mod.installSetupDetected", "Choose how to install this mod.")}</p>
+              </div>
+              <button
+                type="button"
+                className="rounded-lg border border-border bg-secondary/40 p-1.5 hover:bg-secondary"
+                onClick={() => setPendingInstallFileId(null)}
+                aria-label={t("common.close", "Close")}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="mb-3 text-xs text-muted-foreground">{t("mod.installSetupOverride", "Select executable or mod folder, then confirm install.")}</p>
+
+            <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setInstallMode("executable")}
+                className={`rounded-lg border px-3 py-2 text-left text-sm ${installMode === "executable" ? "border-primary bg-primary/10 text-foreground" : "border-border bg-secondary/20 text-muted-foreground hover:bg-secondary/40"}`}
+              >
+                {t("mod.installModeExecutable", "Install as executable")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setInstallMode("mod_folder")}
+                className={`rounded-lg border px-3 py-2 text-left text-sm ${installMode === "mod_folder" ? "border-primary bg-primary/10 text-foreground" : "border-border bg-secondary/20 text-muted-foreground hover:bg-secondary/40"}`}
+              >
+                {t("mod.installModeModFolder", "Install as mod folder")}
+              </button>
+            </div>
+
+            {installMode === "mod_folder" && (
+              <div className="mb-3">
+                <label className="mb-1.5 block text-xs text-muted-foreground">{t("mod.selectEngine", "Select engine")}</label>
+                <select
+                  value={selectedEngineId}
+                  onChange={(event) => setSelectedEngineId(event.target.value)}
+                  className="w-full rounded-lg border border-border bg-input-background px-2.5 py-2 text-sm text-foreground"
+                >
+                  {installedEngines.map((engine) => (
+                    <option key={engine.id} value={engine.id}>{engine.name} {engine.version}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingInstallFileId(null)}
+                className="rounded-lg border border-border bg-card px-3 py-2 text-sm hover:bg-secondary"
+              >
+                {t("common.cancel", "Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={confirmInstallFlow}
+                disabled={installMode === "mod_folder" && !selectedEngineId}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Download className="h-4 w-4" />
+                {t("mod.install", "Install")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
+

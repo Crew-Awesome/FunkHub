@@ -1,7 +1,7 @@
-# Global owner — review required on all PRs
+# Global owner - review required on all PRs
 * @immalloy
 
-# Electron / desktop bridge — extra scrutiny
+# Electron / desktop bridge - extra scrutiny
 /electron/ @immalloy
 
 # Release and CI pipelines

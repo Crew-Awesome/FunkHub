@@ -1,5 +1,4 @@
 export { gameBananaApiService } from "./gamebananaApi";
-export { gameJoltApiService } from "./gamejoltApi";
 export { engineCatalogService } from "./engineCatalog";
 export { downloadManager } from "./downloadManager";
 export { modInstallerService } from "./installer";

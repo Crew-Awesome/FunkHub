@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router";
-import { type LucideIcon, Library, Download, RefreshCw, Settings as SettingsIcon, Cpu } from "lucide-react";
+import { type LucideIcon, Library, Download, Settings as SettingsIcon, Cpu } from "lucide-react";
 import { motion } from "motion/react";
 import { useI18n } from "../providers";
 
@@ -8,20 +8,18 @@ type SidebarNavItem = {
   path: string;
   aliases?: string[];
   icon?: LucideIcon;
-  platform?: "gamebanana" | "gamejolt";
+  platform?: "gamebanana";
 };
 
 const navItems: SidebarNavItem[] = [
   { platform: "gamebanana", labelKey: "nav.gamebanana", path: "/gamebanana", aliases: ["/discover", "/"] },
-  { platform: "gamejolt", labelKey: "nav.gamejolt", path: "/gamejolt" },
   { icon: Library, labelKey: "nav.library", path: "/library" },
   { icon: Download, labelKey: "nav.downloads", path: "/downloads" },
-  { icon: RefreshCw, labelKey: "nav.updates", path: "/updates" },
   { icon: Cpu, labelKey: "nav.engines", path: "/engines" },
 ];
 
-function SidebarIcon({ icon: Icon, platform, isActive }: { icon?: LucideIcon; platform?: "gamebanana" | "gamejolt"; isActive: boolean }) {
-  const brandTone = platform === "gamebanana" ? "#FCEF40" : "#CCFF00";
+function SidebarIcon({ icon: Icon, platform, isActive }: { icon?: LucideIcon; platform?: "gamebanana"; isActive: boolean }) {
+  const brandTone = "#FCEF40";
   const themedBrandColor = isActive
     ? `color-mix(in oklab, ${brandTone} 72%, hsl(var(--primary)) 28%)`
     : `color-mix(in oklab, ${brandTone} 50%, hsl(var(--muted-foreground)) 50%)`;
@@ -36,20 +34,6 @@ function SidebarIcon({ icon: Icon, platform, isActive }: { icon?: LucideIcon; pl
         fill="currentColor"
       >
         <path d="M14.249 0v3h1.5V1.5h1.505V3h-1.505v4.5h1.5v-3h3.002V3h-1.505V0Zm6.002 4.498v1.5h1.5V4.501Zm1.5 1.5v10.503h1.5V5.998Zm0 10.503h-1.5V19.5h1.5zm-1.5 2.998h-1.505v1.5h1.5zm-1.5 1.5h-3.002v1.5h3.001zm-3.002 1.5H6.75V24h9zm-8.999 0V21h-3v1.5zm-3-1.5v-1.497H2.248v1.5zm-1.501-1.497v-2.997H9.75v-1.5H.748v4.497zm7.502-4.497h2.997v-1.5H9.751Zm2.997-1.5h1.5v-1.501h-1.5zm1.5-1.501h1.501V7.506h-1.5z" />
-      </svg>
-    );
-  }
-
-  if (platform === "gamejolt") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        className="w-5 h-5"
-        style={{ color: themedBrandColor }}
-        fill="currentColor"
-      >
-        <path d="M6.353 0v2.824H4.94v2.823H3.53v2.824H2.118v2.823H.706v2.824h8.47v2.823H7.765v2.824H6.353v2.823h1.412v-1.412h1.411v-1.411h1.412v-1.412H12V16.94h1.412v-1.41h1.412v-1.411h1.411v-1.412h1.412v-1.412h1.412V9.882h1.412V8.471h1.411V7.059h-4.235V5.647h1.412V4.235h1.412V2.824h1.411V1.412h1.412V0zm0 22.588H4.94V24h1.412zM7.765 2.824h9.882v1.411h-1.412v1.412h-1.411V7.06h-1.412v1.41H12v1.411h1.412v1.412H12V9.882h-1.412v1.412H9.176V9.882H7.765v1.412H6.353V9.882H4.94V8.471h1.412V5.647h1.412zM6.353 8.47v1.411h1.412v-1.41zm2.823 1.411h1.412v-1.41H9.176zm5.648 0h1.411v1.412h-1.411Z" />
       </svg>
     );
   }

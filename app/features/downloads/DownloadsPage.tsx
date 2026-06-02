@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "motion/react";
+﻿import { motion, AnimatePresence } from "motion/react";
 import { RotateCcw, X, Download, CheckCircle2, AlertCircle, Clock, Zap, Trash2 } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
 
@@ -29,7 +29,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function Downloads() {
   const { t } = useI18n();
-  const { downloads, cancelDownload, retryDownload, clearDownloads, clearActiveDownloads, clearCompletedDownloads, clearFailedDownloads } = useFunkHub();
+  const { downloads, cancelDownload, retryDownload, clearDownloads } = useFunkHub();
   const activeDownloads = downloads.filter((task) => task.status === "queued" || task.status === "downloading" || task.status === "installing");
   const completedDownloads = downloads.filter((task) => task.status === "completed");
   const failedDownloads = downloads.filter((task) => task.status === "failed");
@@ -47,47 +47,12 @@ export function Downloads() {
           <h1 className="text-3xl font-bold text-foreground">{t("downloads.title", "Downloads")}</h1>
           {hasAny && (
             <p className="text-sm text-muted-foreground mt-0.5">
-              {activeDownloads.length > 0 && `${activeDownloads.length} active`}
-              {activeDownloads.length > 0 && (completedDownloads.length > 0 || failedDownloads.length > 0) && " · "}
-              {completedDownloads.length > 0 && `${completedDownloads.length} completed`}
-              {failedDownloads.length > 0 && (completedDownloads.length > 0 || activeDownloads.length > 0) && " · "}
-              {failedDownloads.length > 0 && `${failedDownloads.length} failed`}
+              {activeDownloads.length > 0 ? `${activeDownloads.length} active` : ""}
             </p>
           )}
         </div>
         {hasAny && (
           <div className="flex items-center gap-2">
-            {/* Granular clear options */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={clearActiveDownloads}
-              disabled={activeDownloads.length === 0}
-              title={t("downloads.clearActive", "Clear Active")}
-              className="px-2.5 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-xs text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {t("downloads.clearActiveShort", "Active ({{count}})", { count: activeDownloads.length })}
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={clearCompletedDownloads}
-              disabled={completedDownloads.length === 0}
-              title={t("downloads.clearCompleted", "Clear Completed")}
-              className="px-2.5 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-xs text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {t("downloads.clearCompletedShort", "Done ({{count}})", { count: completedDownloads.length })}
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={clearFailedDownloads}
-              disabled={failedDownloads.length === 0}
-              title={t("downloads.clearFailed", "Clear Failed")}
-              className="px-2.5 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-xs text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {t("downloads.clearFailedShort", "Failed ({{count}})", { count: failedDownloads.length })}
-            </motion.button>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -159,19 +124,12 @@ export function Downloads() {
                         <span className="text-muted-foreground">{t("downloads.progress", "Progress")}</span>
                         <span className="font-medium text-foreground tabular-nums">{percent}%</span>
                       </div>
-                      <div className="h-1.5 bg-secondary rounded-full overflow-hidden relative">
-                        <motion.div
-                          className={`h-full origin-left rounded-full ${isInstalling ? "bg-success" : "bg-gradient-to-r from-primary to-chart-3"}`}
-                          initial={{ scaleX: 0 }}
-                          animate={{ scaleX: Math.max(0, Math.min(1, download.progress)) }}
-                          transition={{ duration: 0.4, ease: "easeOut" }}
-                        />
-                        {!isInstalling && download.status === "downloading" && (
-                          <div className="absolute inset-0 overflow-hidden rounded-full pointer-events-none">
-                            <div className="animate-shimmer absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-                          </div>
-                        )}
-                      </div>
+                      <progress
+                        value={Math.max(0, Math.min(100, percent))}
+                        max={100}
+                        aria-label={`${download.fileName} progress`}
+                        className={`block h-2 w-full overflow-hidden rounded-full bg-secondary [&::-webkit-progress-bar]:bg-secondary [&::-webkit-progress-value]:transition-all [&::-webkit-progress-value]:duration-300 [&::-webkit-progress-value]:ease-out [&::-moz-progress-bar]:transition-all [&::-moz-progress-bar]:duration-300 [&::-moz-progress-bar]:ease-out ${isInstalling ? "[&::-webkit-progress-value]:bg-success [&::-moz-progress-bar]:bg-success" : "[&::-webkit-progress-value]:bg-primary [&::-moz-progress-bar]:bg-primary"}`}
+                      />
                     </div>
                   </motion.div>
                 );
@@ -201,7 +159,7 @@ export function Downloads() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{download.fileName}</p>
-                    <p className="text-xs text-muted-foreground">{t("downloads.completed", "Completed")} · {formatBytes(download.totalBytes)}</p>
+                    <p className="text-xs text-muted-foreground">{download.totalBytes ? `${t("downloads.completed", "Completed")} - ${formatBytes(download.totalBytes)}` : t("downloads.completed", "Completed")}</p>
                   </div>
                 </motion.div>
               ))}
@@ -276,3 +234,4 @@ export function Downloads() {
     </div>
   );
 }
+
