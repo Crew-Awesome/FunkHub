@@ -32,6 +32,7 @@ export function Library() {
     setModPinned,
     setModNotes,
     renameInstalledMod,
+    updateInstalledModMetadata,
     openExternalUrl,
     detectWineRuntimes,
   } = useFunkHub();
@@ -54,6 +55,7 @@ export function Library() {
   const [deleteFilesOnRemove, setDeleteFilesOnRemove] = useState(true);
   const [selectedProfileShots, setSelectedProfileShots] = useState<string[]>([]);
   const [showLaunchSettings, setShowLaunchSettings] = useState(false);
+  const [showMetadataEditor, setShowMetadataEditor] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [launchMode, setLaunchMode] = useState<"native" | "wine" | "wine64" | "proton">("native");
   const [launchPath, setLaunchPath] = useState("");
@@ -61,6 +63,9 @@ export function Library() {
   const [detectedRuntimes, setDetectedRuntimes] = useState<Array<{ type: "wine" | "wine64" | "proton"; path: string; label: string }> | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [metaName, setMetaName] = useState("");
+  const [metaVersion, setMetaVersion] = useState("");
+  const [metaAuthor, setMetaAuthor] = useState("");
 
   const selectedMod = installedMods.find((mod) => mod.id === selectedModId) ?? installedMods[0];
   const isRunning = Boolean(selectedMod && runningLaunchIds.has(selectedMod.id));
@@ -151,6 +156,9 @@ export function Library() {
     setLaunchPath(selectedMod.launcherPath ?? "");
     setLaunchExecutablePath(selectedMod.executablePath ?? "");
     setNotesValue(selectedMod.notes ?? "");
+    setMetaName(selectedMod.modName);
+    setMetaVersion(selectedMod.version ?? "");
+    setMetaAuthor(selectedMod.author ?? "");
     setIsEditingTitle(false);
   }, [selectedMod?.id]);
 
@@ -647,6 +655,13 @@ export function Library() {
                     </button>
                   )}
                   <button
+                    onClick={() => setShowMetadataEditor(true)}
+                    className="h-9 w-9 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground flex items-center justify-center transition-colors"
+                    aria-label={t("library.editMetadata", "Edit Metadata")}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => setShowRemoveConfirm(true)}
                     className="h-9 w-9 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition-colors"
                     aria-label={t("library.remove", "Remove mod")}
@@ -902,6 +917,9 @@ export function Library() {
               <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary text-left" onClick={() => { setCollectionTargetId(ctxMod.id); setNewCollectionInput(""); setContextMenu(null); }}>
                 <Tag className="w-3.5 h-3.5" />{t("library.manageCollections", "Collections")}
               </button>
+              <button className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary text-left" onClick={() => { setSelectedModId(ctxMod.id); setShowMetadataEditor(true); setContextMenu(null); }}>
+                <Pencil className="w-3.5 h-3.5" />{t("library.editMetadata", "Edit Metadata")}
+              </button>
               <div className="border-t border-border my-1" />
               <button
                 className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-destructive/10 text-destructive text-left"
@@ -989,6 +1007,37 @@ export function Library() {
               className="px-3 py-2 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive text-sm"
             >
               {t("library.remove", "Remove")}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showMetadataEditor} onOpenChange={setShowMetadataEditor}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("library.editMetadata", "Edit Metadata")}</DialogTitle>
+            <DialogDescription>{selectedMod.modName}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 mt-3">
+            <input value={metaName} onChange={(e) => setMetaName(e.target.value)} placeholder={t("library.modName", "Mod name")} className="w-full px-3 py-2 rounded-lg border border-border bg-input-background text-sm" />
+            <input value={metaVersion} onChange={(e) => setMetaVersion(e.target.value)} placeholder={t("library.version", "Version")} className="w-full px-3 py-2 rounded-lg border border-border bg-input-background text-sm" />
+            <input value={metaAuthor} onChange={(e) => setMetaAuthor(e.target.value)} placeholder={t("library.authorOptional", "Author (optional)")} className="w-full px-3 py-2 rounded-lg border border-border bg-input-background text-sm" />
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <button onClick={() => setShowMetadataEditor(false)} className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm">{t("library.cancel", "Cancel")}</button>
+            <button
+              onClick={() => {
+                if (!metaName.trim()) {
+                  toast.error(t("library.modNameRequired", "Mod name is required."));
+                  return;
+                }
+                updateInstalledModMetadata(selectedMod.id, { modName: metaName.trim(), version: metaVersion, author: metaAuthor });
+                setShowMetadataEditor(false);
+                toast.success(t("library.metadataSaved", "Metadata saved."));
+              }}
+              className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
+            >
+              {t("library.save", "Save")}
             </button>
           </div>
         </DialogContent>

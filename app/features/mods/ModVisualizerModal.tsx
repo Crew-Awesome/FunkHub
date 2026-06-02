@@ -3,7 +3,8 @@ import { motion } from "motion/react";
 import { Download, Clock3, User, ExternalLink, ChevronLeft, ChevronRight, Tag } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
 import { modInstallerService, detectRequiredEngineFromCategories } from "../../services/funkhub";
-import type { GameBananaMember, GameBananaModProfile } from "../../services/funkhub";
+import type { EngineSlug, GameBananaMember, GameBananaModProfile } from "../../services/funkhub";
+import { useNavigate } from "react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../shared/ui/dialog";
 
 interface ModVisualizerModalProps {
@@ -65,6 +66,7 @@ const FNF_LOADING_MESSAGES = [
 ];
 
 export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: ModVisualizerModalProps) {
+  const navigate = useNavigate();
   const { t } = useI18n();
   const { getModProfile, installMod, installedEngines } = useFunkHub();
   const [loading, setLoading] = useState(false);
@@ -75,6 +77,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
   const [selectedEngineId, setSelectedEngineId] = useState<string>("");
   const [installMode, setInstallMode] = useState<"executable" | "mod_folder">("mod_folder");
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [pendingMissingEngine, setPendingMissingEngine] = useState<EngineSlug | undefined>(undefined);
 
   useEffect(() => {
     if (!open || !modId) {
@@ -141,6 +144,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
   const hasDependencyWarning = Boolean(
     !installAsExecutable && detectedEngineSlug && selectedEngine && selectedEngine.slug !== detectedEngineSlug,
   );
+  const canInstallAsModFolder = installAsExecutable || (installedEngines.length > 0 && (!detectedEngineSlug || installedEngines.some((engine) => engine.slug === detectedEngineSlug)));
 
   useEffect(() => {
     if (!loading) {
@@ -414,13 +418,19 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
                           <span>{formatBytes(file.fileSize, "-")}</span>
                         </div>
                         <motion.button
-                          onClick={() => installMod(
-                            profile.id,
-                            file.id,
-                            installAsExecutable ? undefined : (selectedEngineId || undefined),
-                            0,
-                            { forceInstallType: installAsExecutable ? "executable" : "standard_mod" },
-                          )}
+                          onClick={() => {
+                            if (!canInstallAsModFolder) {
+                              setPendingMissingEngine(detectedEngineSlug);
+                              return;
+                            }
+                            installMod(
+                              profile.id,
+                              file.id,
+                              installAsExecutable ? undefined : (selectedEngineId || undefined),
+                              0,
+                              { forceInstallType: installAsExecutable ? "executable" : "standard_mod" },
+                            );
+                          }}
                           disabled={!installAsExecutable && installedEngines.length === 0}
                           whileTap={{ scale: 0.94 }}
                           whileHover={{ scale: 1.02 }}
@@ -439,6 +449,18 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
           </div>
         )}
       </DialogContent>
+      {pendingMissingEngine !== undefined ? (
+        <div className="fixed inset-0 z-[70] bg-black/75 p-4">
+          <div className="mx-auto mt-[18vh] w-full max-w-md rounded-2xl border border-warning/30 bg-card p-4">
+            <h3 className="text-base font-semibold text-foreground">{t("mod.engineRequiredTitle", "Engine required")}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{t("mod.engineRequiredBody", "Install the required engine in Engines before installing this mod as a mod folder.")}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setPendingMissingEngine(undefined)} className="rounded-lg border border-border bg-card px-3 py-2 text-sm hover:bg-secondary">{t("common.cancel", "Cancel")}</button>
+              <button type="button" onClick={() => { const slug = pendingMissingEngine; setPendingMissingEngine(undefined); onClose(); navigate("/engines", { state: { openAddEngine: true, preselectEngineSlug: slug } }); }} className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">{t("mod.goToEngines", "Go to Engines")}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </Dialog>
   );
 }

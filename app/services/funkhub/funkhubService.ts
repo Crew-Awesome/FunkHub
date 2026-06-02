@@ -882,6 +882,34 @@ export class FunkHubService {
     funkHubStorageService.saveInstalledMods(this.installedMods);
   }
 
+  updateInstalledModMetadata(installedId: string, patch: Partial<InstalledMod>): void {
+    const target = this.installedMods.find((mod) => mod.id === installedId);
+    if (!target) {
+      throw new Error("Installed mod not found");
+    }
+
+    const next: InstalledMod = {
+      ...target,
+      ...patch,
+      modName: (patch.modName ?? target.modName).trim() || target.modName,
+      version: patch.version?.trim() || undefined,
+      author: patch.author?.trim() || undefined,
+      description: patch.description?.trim() || undefined,
+      notes: patch.notes?.trim() || undefined,
+      requiredEngine: patch.requiredEngine || undefined,
+      launcher: patch.launcher ?? target.launcher,
+      launcherPath: patch.launcherPath?.trim() || undefined,
+      executablePath: patch.executablePath?.trim() || undefined,
+      thumbnailUrl: patch.thumbnailUrl?.trim() || undefined,
+      tags: patch.tags && patch.tags.length > 0 ? patch.tags : undefined,
+    };
+
+    this.installedMods = this.installedMods.map((mod) => (
+      mod.id === installedId ? next : mod
+    ));
+    funkHubStorageService.saveInstalledMods(this.installedMods);
+  }
+
   async removeInstalledMod(installedId: string, options?: { deleteFiles?: boolean }): Promise<void> {
     const installed = this.installedMods.find((mod) => mod.id === installedId);
     if (!installed) {

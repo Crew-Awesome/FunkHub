@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS: FunkHubSettings = {
   downloadsDirectory: "",
   dataRootDirectory: "",
   firstRunCompleted: false,
+  onboardingTourCompleted: false,
+  onboardingTourSkippedAt: undefined,
   maxConcurrentDownloads: 3,
   compatibilityChecks: true,
   checkAppUpdatesOnStartup: true,

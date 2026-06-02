@@ -65,6 +65,7 @@ export function Discover() {
   const [showRatingPicker, setShowRatingPicker] = useState(false);
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
   const [showCategoryPanel, setShowCategoryPanel] = useState(false);
+  const [showHiddenCategories, setShowHiddenCategories] = useState(false);
   const [bestOfIndex, setBestOfIndex] = useState(0);
   const [bestOfStripOffset, setBestOfStripOffset] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -204,10 +205,21 @@ export function Discover() {
     return discoverMods.filter((mod) => (mod.submitter?.name ?? "").toLowerCase().includes(usernameFilter));
   }, [discoverMods, usernameFilter]);
 
+  const curatedCategories = useMemo(() => {
+    const hiddenNames = new Set(["other/misc", "translations", "legacy"]);
+    const priorityNames = ["basegame/vslice", "codename", "ale-psych", "psych", "fps-plus", "executables"];
+    const byName = (name: string) => categories.find((c) => c.name.trim().toLowerCase() === name);
+    const prioritized = priorityNames.map(byName).filter((c): c is CategoryNode => Boolean(c));
+    const hidden = categories.filter((c) => hiddenNames.has(c.name.trim().toLowerCase()));
+    const remainder = categories.filter((c) => !prioritized.some((p) => p.id === c.id) && !hidden.some((h) => h.id === c.id));
+    const visibleRoot = [...prioritized, ...remainder];
+    return showHiddenCategories ? [...visibleRoot, ...hidden] : visibleRoot;
+  }, [categories, showHiddenCategories]);
+
   const filteredCategoryTree = useMemo(() => {
     const term = categorySearch.trim().toLowerCase();
     if (!term) {
-      return categories;
+      return curatedCategories;
     }
 
     const filterNodes = (nodes: CategoryNode[]): CategoryNode[] => nodes
@@ -217,8 +229,8 @@ export function Discover() {
       }))
       .filter((node) => node.name.toLowerCase().includes(term) || node.children.length > 0);
 
-    return filterNodes(categories);
-  }, [categories, categorySearch]);
+    return filterNodes(curatedCategories);
+  }, [curatedCategories, categorySearch]);
 
   const toggleExpanded = (categoryId: number) => {
     setExpandedCategoryIds((current) => (
@@ -301,6 +313,13 @@ export function Discover() {
           className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
       </div>
+      <button
+        type="button"
+        onClick={() => setShowHiddenCategories((v) => !v)}
+        className="mb-3 text-xs text-primary hover:underline"
+      >
+        {showHiddenCategories ? t("discover.hideHiddenCategories", "Hide hidden categories") : t("discover.showHiddenCategories", "Show hidden categories")}
+      </button>
       <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-1">
         <button
           onClick={() => {

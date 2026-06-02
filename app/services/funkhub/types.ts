@@ -236,6 +236,8 @@ export interface FunkHubSettings {
   downloadsDirectory: string;
   dataRootDirectory: string;
   firstRunCompleted: boolean;
+  onboardingTourCompleted?: boolean;
+  onboardingTourSkippedAt?: number;
   maxConcurrentDownloads: number;
   compatibilityChecks: boolean;
   checkAppUpdatesOnStartup: boolean;

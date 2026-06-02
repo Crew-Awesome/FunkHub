@@ -17,6 +17,7 @@ export function Settings() {
     browseFolder,
     setDefaultEngine,
     wipeData,
+    startOnboardingTour,
   } = useFunkHub();
 
   const [activeTab, setActiveTab] = useState<"folders" | "data">("folders");
@@ -83,6 +84,15 @@ export function Settings() {
               <option value="" disabled={installedEngines.length > 0}>{installedEngines.length > 0 ? "Select default engine" : "No installed engines"}</option>
               {installedEngines.map((engine) => <option key={engine.id} value={engine.id}>{engine.name} ({engine.version})</option>)}
             </select>
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => void startOnboardingTour()}
+                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-secondary"
+              >
+                {t("settings.replayTutorial", "Replay Tutorial")}
+              </button>
+            </div>
           </section>
         </div>
       )}

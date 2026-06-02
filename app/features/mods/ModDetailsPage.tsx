@@ -124,6 +124,7 @@ export function ModDetailsPage() {
   const [selectedEngineId, setSelectedEngineId] = useState<string>("");
   const [pendingInstallFileId, setPendingInstallFileId] = useState<number | null>(null);
   const [pendingMismatch, setPendingMismatch] = useState<{ required: string; selected: string } | null>(null);
+  const [pendingMissingEngine, setPendingMissingEngine] = useState<EngineSlug | undefined>(undefined);
   const [selectedSubmitter, setSelectedSubmitter] = useState<Pick<GameBananaMember, "id" | "name" | "avatarUrl"> | undefined>(undefined);
   const [loadingMsgIndex] = useState(() => Math.floor(Math.random() * FNF_LOADING_MESSAGES.length));
 
@@ -212,6 +213,14 @@ export function ModDetailsPage() {
 
   const confirmInstallFlow = () => {
     if (!profile || !pendingInstallFileId) return;
+    if (!installAsExecutable && (!selectedEngineId || installedEngines.length === 0)) {
+      setPendingMissingEngine(requiredEngine);
+      return;
+    }
+    if (!installAsExecutable && requiredEngine && !installedEngines.some((engine) => engine.slug === requiredEngine)) {
+      setPendingMissingEngine(requiredEngine);
+      return;
+    }
     if (!installAsExecutable && requiredEngine && selectedEngine && selectedEngine.slug !== requiredEngine) {
       setPendingMismatch({ required: requiredEngine, selected: selectedEngine.slug });
       return;
@@ -708,6 +717,34 @@ export function ModDetailsPage() {
               >
                 <Download className="h-4 w-4" />
                 {t("mod.install", "Install")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingMissingEngine !== undefined ? (
+        <div className="fixed inset-0 z-[65] bg-black/75 p-4">
+          <div className="mx-auto mt-[16vh] w-full max-w-md rounded-2xl border border-warning/30 bg-card p-4">
+            <h3 className="text-base font-semibold text-foreground">{t("mod.engineRequiredTitle", "Engine required")}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("mod.engineRequiredBody", "Install the required engine in Engines before installing this mod as a mod folder.")}
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setPendingMissingEngine(undefined)} className="rounded-lg border border-border bg-card px-3 py-2 text-sm hover:bg-secondary">
+                {t("common.cancel", "Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const slug = pendingMissingEngine;
+                  setPendingMissingEngine(undefined);
+                  setPendingInstallFileId(null);
+                  navigate("/engines", { state: { openAddEngine: true, preselectEngineSlug: slug } });
+                }}
+                className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                {t("mod.goToEngines", "Go to Engines")}
               </button>
             </div>
           </div>

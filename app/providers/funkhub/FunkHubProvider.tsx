@@ -97,6 +97,7 @@ interface FunkHubContextValue {
   setModPinned: (installedId: string, pinned: boolean) => void;
   setModNotes: (installedId: string, notes: string) => void;
   renameInstalledMod: (installedId: string, newName: string) => void;
+  updateInstalledModMetadata: (installedId: string, patch: Partial<InstalledMod>) => void;
   openExternalUrl: (url: string) => Promise<void>;
   removeInstalledMod: (installedId: string, options?: { deleteFiles?: boolean }) => Promise<void>;
   updateSettings: (patch: Partial<FunkHubSettings>) => Promise<void>;
@@ -132,6 +133,8 @@ interface FunkHubContextValue {
   clearActiveDownloads: () => Promise<void>;
   clearDisabledMods: () => Promise<void>;
   clearUnpinnedMods: () => Promise<void>;
+  onboardingTourNonce: number;
+  startOnboardingTour: () => Promise<void>;
 }
 
 const FunkHubContext = createContext<FunkHubContextValue | undefined>(undefined);
@@ -171,6 +174,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
   );
   const startupUpdateCheckedRef = useRef(false);
   const [runningLaunchIds, setRunningLaunchIds] = useState<Set<string>>(new Set());
+  const [onboardingTourNonce, setOnboardingTourNonce] = useState(0);
   const launchStartTimesRef = useRef<Map<string, number>>(new Map());
   const t = useCallback((key: string, fallback: string, vars?: Record<string, string | number>) => {
     return translate(normalizeLocale(settings.locale), key, fallback, vars);
@@ -809,6 +813,10 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         funkHubService.renameInstalledMod(installedId, newName);
         setInstalledMods(funkHubService.getInstalledMods());
       },
+      updateInstalledModMetadata: (installedId, patch) => {
+        funkHubService.updateInstalledModMetadata(installedId, patch);
+        setInstalledMods(funkHubService.getInstalledMods());
+      },
       openExternalUrl: async (url) => {
         await funkHubService.openExternalUrl(url);
       },
@@ -957,6 +965,15 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         funkHubStorageService.clearUnpinnedMods();
         setInstalledMods(funkHubStorageService.getInstalledMods());
       },
+      onboardingTourNonce,
+      startOnboardingTour: async () => {
+        const next = await funkHubService.updateSettings({
+          firstRunCompleted: true,
+          onboardingTourCompleted: false,
+        });
+        setSettings(next);
+        setOnboardingTourNonce((v) => v + 1);
+      },
     }),
     [
       loading,
@@ -994,6 +1011,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       getModProfile,
       listModsBySubmitter,
       runningLaunchIds,
+      onboardingTourNonce,
     ],
   );
 
