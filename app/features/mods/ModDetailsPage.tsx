@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useFunkHub, useI18n } from "../../providers";
-import { detectRequiredEngineFromCategories, formatEngineName } from "../../services/funkhub";
+import { detectRequiredEngineFromCategories, formatEngineName, modInstallerService } from "../../services/funkhub";
 import type { GameBananaMember, GameBananaModProfile } from "../../services/funkhub";
 import type { EngineSlug } from "../../services/funkhub";
 import { UserProfileModal } from "./UserProfileModal";
@@ -143,9 +143,14 @@ export function ModDetailsPage() {
         if (cancelled) return;
         setProfile(next);
         setActiveMediaIndex(0);
+        const detectedSlug = detectRequiredEngineFromCategories(next) ?? next.requiredEngine;
+        const matchingEngine = detectedSlug
+          ? installedEngines.find((engine) => engine.slug === detectedSlug)
+          : undefined;
         const fallback = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
-        setSelectedEngineId(fallback?.id ?? "");
-        setInstallMode("mod_folder");
+        setSelectedEngineId((matchingEngine ?? fallback)?.id ?? "");
+        const defaultExecutable = !detectedSlug || modInstallerService.isExecutableCategoryMod(next);
+        setInstallMode(defaultExecutable ? "executable" : "mod_folder");
       })
       .catch((err) => {
         if (cancelled) return;

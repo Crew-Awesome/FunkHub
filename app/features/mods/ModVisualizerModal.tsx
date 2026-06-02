@@ -96,8 +96,7 @@ export function ModVisualizerModal({ modId, open, onClose, onOpenSubmitter }: Mo
             : undefined;
           const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
           setSelectedEngineId((matchingEngine ?? defaultEngine)?.id ?? "");
-          const defaultExecutable = modInstallerService.isExecutableCategoryMod(next)
-            || next.files.some((file) => modInstallerService.isExecutableMod(next, file));
+          const defaultExecutable = !detectedSlug || modInstallerService.isExecutableCategoryMod(next);
           setInstallMode(defaultExecutable ? "executable" : "mod_folder");
         }
       })

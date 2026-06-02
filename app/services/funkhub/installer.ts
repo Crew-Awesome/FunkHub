@@ -101,16 +101,11 @@ export class ModInstallerService {
     }
 
     if (input.requiredEngine !== input.selectedEngine.slug) {
-      if (input.userSelectedEngine) {
-        return {
-          compatible: true,
-          warning: `Continuing with selected engine ${input.selectedEngine.slug} even though metadata suggests ${input.requiredEngine}.`,
-        };
-      }
-
       return {
-        compatible: false,
-        warning: `This mod targets ${input.requiredEngine} but selected engine is ${input.selectedEngine.slug}.`,
+        compatible: true,
+        warning: input.userSelectedEngine
+          ? `Continuing with selected engine ${input.selectedEngine.slug} even though metadata suggests ${input.requiredEngine}.`
+          : `Metadata suggests ${input.requiredEngine}, but using ${input.selectedEngine.slug}.`,
       };
     }
 

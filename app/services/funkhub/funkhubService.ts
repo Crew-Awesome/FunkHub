@@ -1162,11 +1162,16 @@ export class FunkHubService {
           ? { ...profileFile, downloadUrl: input.downloadUrlOverride }
           : profileFile;
 
+        const requiredEngineSlug = modInstallerService.detectRequiredEngine(profile);
         const preferredEngine = input.selectedEngineId
           ? this.installedEngines.find((engine) => engine.id === input.selectedEngineId)
           : undefined;
+        const detectedEngine = !input.selectedEngineId && requiredEngineSlug
+          ? this.installedEngines.find((engine) => engine.slug === requiredEngineSlug)
+          : undefined;
 
         const selectedEngine = preferredEngine
+          ?? detectedEngine
           ?? this.installedEngines.find((engine) => engine.isDefault)
           ?? this.installedEngines[0];
 
