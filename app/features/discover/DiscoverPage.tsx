@@ -206,12 +206,14 @@ export function Discover() {
   }, [discoverMods, usernameFilter]);
 
   const curatedCategories = useMemo(() => {
-    const hiddenNames = new Set(["other/misc", "translations", "legacy"]);
-    const priorityNames = ["basegame/vslice", "codename", "ale-psych", "psych", "fps-plus", "executables"];
-    const byName = (name: string) => categories.find((c) => c.name.trim().toLowerCase() === name);
-    const prioritized = priorityNames.map(byName).filter((c): c is CategoryNode => Boolean(c));
-    const hidden = categories.filter((c) => hiddenNames.has(c.name.trim().toLowerCase()));
-    const remainder = categories.filter((c) => !prioritized.some((p) => p.id === c.id) && !hidden.some((h) => h.id === c.id));
+    const PRIMARY_CATEGORY_IDS = [29202, 34764, 44037, 28367, 43850, 3827, 43798, 44036] as const;
+    const HIDDEN_CATEGORY_IDS = [8367, 29203, 29204] as const;
+    const primaryIdSet = new Set<number>(PRIMARY_CATEGORY_IDS);
+    const hiddenIdSet = new Set<number>(HIDDEN_CATEGORY_IDS);
+    const byId = (id: number) => categories.find((c) => c.id === id);
+    const prioritized = PRIMARY_CATEGORY_IDS.map(byId).filter((c): c is CategoryNode => Boolean(c));
+    const hidden = HIDDEN_CATEGORY_IDS.map(byId).filter((c): c is CategoryNode => Boolean(c));
+    const remainder = categories.filter((c) => !primaryIdSet.has(c.id) && !hiddenIdSet.has(c.id));
     const visibleRoot = [...prioritized, ...remainder];
     return showHiddenCategories ? [...visibleRoot, ...hidden] : visibleRoot;
   }, [categories, showHiddenCategories]);
