@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'Bigstage';
-  src: url('./assets/Bigstage.woff2') format('woff2');
+  src: url('../app/assets/fonts/Bigstage.woff2') format('woff2');
   font-style: normal;
   font-weight: 700;
   font-display: swap;
