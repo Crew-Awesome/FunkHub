@@ -939,14 +939,6 @@ export class FunkHubService {
       throw new Error("Installed mod not found");
     }
 
-    const engine = this.installedEngines.find((entry) => entry.slug === installed.engine)
-      ?? this.installedEngines.find((entry) => entry.isDefault)
-      ?? this.installedEngines[0];
-
-    if (!engine) {
-      throw new Error("No engine installation found");
-    }
-
     if (!window.funkhubDesktop?.launchEngine) {
       throw new Error("Desktop bridge unavailable for launching");
     }
@@ -960,6 +952,14 @@ export class FunkHubService {
         launchId: installedId,
       });
       return;
+    }
+
+    const engine = this.installedEngines.find((entry) => entry.slug === installed.engine)
+      ?? this.installedEngines.find((entry) => entry.isDefault)
+      ?? this.installedEngines[0];
+
+    if (!engine) {
+      throw new Error("No engine installation found");
     }
 
     const modFolderName = installed.installPath.split(/[\\/]/).pop() ?? "";
