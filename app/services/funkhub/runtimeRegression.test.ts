@@ -40,4 +40,21 @@ describe("runtime regressions", () => {
   it("keeps rar recognized as an archive", () => {
     expect(modInstallerService.isArchive({ fileName: "mod.rar" })).toBe(true);
   });
+
+  it("sorts and limits directory entries", async () => {
+    const fakeFs = {
+      readdir: vi.fn(async () => [
+        { name: "z-file.txt", isFile: () => true, isDirectory: () => false },
+        { name: "b-dir", isFile: () => false, isDirectory: () => true },
+        { name: "a-dir", isFile: () => false, isDirectory: () => true },
+      ]),
+    };
+
+    const result = await directory.listDirectoryEntries(fakeFs, "C:\\root", { limit: 2 });
+
+    expect(result.entries.map((entry) => entry.name)).toEqual(["a-dir", "b-dir"]);
+    expect(result.truncated).toBe(true);
+    expect(result.total).toBe(3);
+    expect(result.limit).toBe(2);
+  });
 });
