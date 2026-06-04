@@ -83,4 +83,34 @@ describe("runtime regressions", () => {
       launchId: "mod-1",
     }));
   });
+
+  it("records linked manual mod imports without copying into the data root", async () => {
+    const engine: InstalledEngine = {
+      id: "engine-1",
+      slug: "psych",
+      name: "Psych Engine",
+      version: "1.0.0",
+      installPath: "engines/psych/1",
+      modsPath: "engines/psych/1/mods",
+      isDefault: true,
+      installedAt: Date.now(),
+    };
+    writeStorage("funkhub-installed-engines", [engine]);
+    const importModFolder = vi.fn(async () => ({
+      ok: true,
+      installPath: "C:\\External\\VS. Sky Reborn",
+      linked: true,
+    }));
+    window.funkhubDesktop = {
+      importModFolder,
+      pickFolder: vi.fn(async () => ({ canceled: false, path: "C:\\External\\VS. Sky Reborn" })),
+    } as unknown as typeof window.funkhubDesktop;
+
+    const service = new FunkHubService();
+    const installed = await service.addManualModFromFolder({ engineId: "engine-1", importMode: "link" });
+
+    expect(importModFolder).toHaveBeenCalledWith(expect.objectContaining({ importMode: "link" }));
+    expect(installed.linked).toBe(true);
+    expect(installed.installPath).toBe("C:\\External\\VS. Sky Reborn");
+  });
 });
