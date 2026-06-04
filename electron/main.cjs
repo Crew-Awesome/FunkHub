@@ -1,4 +1,5 @@
 const path = require("node:path");
+const fs = require("node:fs");
 const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const {
   handleInstallArchive,
@@ -32,6 +33,30 @@ const {
 
 let mainWindow = null;
 const pendingDeepLinks = [];
+
+function getStartupLogPath() {
+  return path.join(app.getPath("userData"), "logs", "startup.log");
+}
+
+function appendStartupLog(message, error) {
+  try {
+    const logPath = getStartupLogPath();
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    const details = error instanceof Error
+      ? `${error.stack || error.message}`
+      : String(error || "");
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${message}${details ? `\n${details}` : ""}\n`, "utf-8");
+  } catch {
+  }
+}
+
+process.on("uncaughtException", (error) => {
+  appendStartupLog("Uncaught exception", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  appendStartupLog("Unhandled rejection", reason);
+});
 
 function extractDeepLinkFromArgv(argv) {
   if (!Array.isArray(argv)) {
@@ -317,13 +342,21 @@ app.whenReady().then(() => {
     return handleScanCommonEnginePaths();
   });
 
-  createWindow();
+  try {
+    createWindow();
+  } catch (error) {
+    appendStartupLog("Failed to create main window", error);
+    throw error;
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
+}).catch((error) => {
+  appendStartupLog("Electron startup failed", error);
+  app.quit();
 });
 
 app.on("window-all-closed", () => {
