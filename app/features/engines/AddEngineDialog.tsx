@@ -322,7 +322,7 @@ export function AddEngineDialog({ open, onOpenChange }: AddEngineDialogProps) {
                   </section>
                 ) : !hasReleaseStep && selectedRelease ? (
                   <div className="rounded-xl border border-border bg-secondary/15 px-4 py-3 text-sm text-foreground">
-                    <span className="text-muted-foreground">{t("engines.installerStepRelease", "Release")}:</span> {selectedRelease.badge} · {selectedRelease.title}
+                    <span className="text-muted-foreground">{t("engines.installerStepRelease", "Release")}:</span> {selectedRelease.badge} - {selectedRelease.title}
                   </div>
                 ) : null}
 
