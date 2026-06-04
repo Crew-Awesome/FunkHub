@@ -733,7 +733,7 @@ export class FunkHubService {
     }
   }
 
-  addEngineInstallation(input: { slug: EngineSlug; version: string; installPath: string; modsPath: string; customName?: string }): InstalledEngine {
+  addEngineInstallation(input: { slug: EngineSlug; version: string; installPath: string; modsPath: string; customName?: string; linked?: boolean }): InstalledEngine {
     const engine: InstalledEngine = {
       id: crypto.randomUUID(),
       slug: input.slug,
@@ -744,6 +744,7 @@ export class FunkHubService {
       modsPath: input.modsPath,
       isDefault: this.installedEngines.length === 0,
       installedAt: Date.now(),
+      linked: input.linked || undefined,
     };
 
     this.installedEngines = [engine, ...this.installedEngines.map((item) => ({ ...item }))];
@@ -791,7 +792,7 @@ export class FunkHubService {
       throw new Error("Engine installation not found");
     }
 
-    if (window.funkhubDesktop?.deletePath) {
+    if (!installed.linked && window.funkhubDesktop?.deletePath) {
       const result = await window.funkhubDesktop.deletePath({ targetPath: installed.installPath });
       if (!result.ok) {
         throw new Error(result.error || "Failed to remove engine files");
