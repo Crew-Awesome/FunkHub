@@ -1360,12 +1360,10 @@ async function handleLaunchEngine(payload) {
   const rootPath = dataRootDirectory
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
-  const absolutePath = path.isAbsolute(installPath)
-    ? path.resolve(installPath)
-    : safeJoin(rootPath, installPath);
-  if (!isPathInside(rootPath, absolutePath)) {
-    throw new Error("installPath must be inside FunkHub data root");
-  }
+  const absolutePath = resolveRuntimePath(rootPath, installPath, {
+    allowExternal: path.isAbsolute(installPath),
+    errorMessage: "installPath must be inside FunkHub data root",
+  });
   let launchable;
   if (typeof executablePath === "string" && executablePath.trim().length > 0) {
     const rawExecutable = executablePath.trim();
@@ -1565,9 +1563,10 @@ async function handleOpenPath(payload) {
   const rootPath = dataRootDirectory
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
-  const absolutePath = path.isAbsolute(targetPath)
-    ? path.resolve(targetPath)
-    : safeJoin(rootPath, targetPath);
+  const absolutePath = resolveRuntimePath(rootPath, targetPath, {
+    allowExternal: path.isAbsolute(targetPath),
+    errorMessage: "targetPath must be inside FunkHub data root",
+  });
   if (!isPathInside(rootPath, absolutePath)) {
     throw new Error("targetPath must be inside FunkHub data root");
   }
@@ -1590,9 +1589,10 @@ async function handleOpenAnyPath(payload) {
   const rootPath = dataRootDirectory
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
-  const absolutePath = path.isAbsolute(targetPath)
-    ? path.resolve(targetPath)
-    : safeJoin(rootPath, targetPath);
+  const absolutePath = resolveRuntimePath(rootPath, targetPath, {
+    allowExternal: path.isAbsolute(targetPath),
+    errorMessage: "targetPath must be inside FunkHub data root",
+  });
 
   const error = await shell.openPath(absolutePath);
   if (error) {
@@ -1663,11 +1663,10 @@ async function handleInspectEngineInstall(payload) {
   const rootPath = dataRootDirectory
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
-  const absolutePath = safeJoin(rootPath, installPath);
-
-  if (!isPathInside(rootPath, absolutePath)) {
-    throw new Error("installPath must be inside FunkHub data root");
-  }
+  const absolutePath = resolveRuntimePath(rootPath, installPath, {
+    allowExternal: path.isAbsolute(installPath),
+    errorMessage: "installPath must be inside FunkHub data root",
+  });
 
   try {
     const stats = await fs.stat(absolutePath);
