@@ -64,8 +64,8 @@ interface FunkHubContextValue {
   listModsBySubmitter: (input: { submitterId: number; categoryId?: number; page?: number; perPage?: number }) => Promise<GameBananaModSummary[]>;
   installMod: (modId: number, fileId: number, selectedEngineId?: string, priority?: number, options?: InstallOptions) => void;
   installEngine: (slug: InstalledEngine["slug"], downloadUrl: string, version: string, options?: { allowMissingExecutable?: boolean }) => Promise<void>;
-  importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string, sourcePath?: string, customName?: string) => Promise<void>;
-  addManualModFromFolder: (engineId: string, sourcePath?: string, modName?: string) => Promise<void>;
+  importEngineFromFolder: (slug: InstalledEngine["slug"], versionHint?: string, sourcePath?: string, customName?: string, importMode?: "copy" | "link") => Promise<void>;
+  addManualModFromFolder: (engineId: string, sourcePath?: string, modName?: string, importMode?: "copy" | "link") => Promise<void>;
   updateEngine: (engineId: string) => Promise<void>;
   uninstallEngine: (engineId: string) => Promise<void>;
   launchEngine: (
@@ -728,12 +728,12 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         });
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
-      importEngineFromFolder: async (slug, versionHint, sourcePath, customName) => {
-        await funkHubService.importEngineFromFolder({ slug, versionHint, sourcePath, customName });
+      importEngineFromFolder: async (slug, versionHint, sourcePath, customName, importMode) => {
+        await funkHubService.importEngineFromFolder({ slug, versionHint, sourcePath, customName, importMode });
         setInstalledEngines(funkHubService.getInstalledEngines());
       },
-      addManualModFromFolder: async (engineId, sourcePath, modName) => {
-        await funkHubService.addManualModFromFolder({ engineId, sourcePath, modName });
+      addManualModFromFolder: async (engineId, sourcePath, modName, importMode) => {
+        await funkHubService.addManualModFromFolder({ engineId, sourcePath, modName, importMode });
         setInstalledMods(funkHubService.getInstalledMods());
       },
       updateEngine: async (engineId) => {
