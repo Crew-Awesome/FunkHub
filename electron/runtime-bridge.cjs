@@ -851,6 +851,16 @@ async function installRawStandalonePackage({ resolvedInstallPath, archiveName, t
   return resolvedInstallPath;
 }
 
+async function preserveFailedArchive({ resolvedInstallPath, installSubdir, archiveName, tempArchivePath, jobId }) {
+  const folderNameBase = installSubdir || stripKnownArchiveExtension(archiveName) || `manual-extract-${jobId}`;
+  const safeFolderName = sanitizeInstallFolderName(folderNameBase, `manual-extract-${jobId}`);
+  const safeArchiveName = sanitizeArchiveFileName(archiveName, `package-${jobId}.bin`);
+  const destinationDir = path.join(resolvedInstallPath, safeFolderName);
+  await ensureDir(destinationDir);
+  await fs.copyFile(tempArchivePath, path.join(destinationDir, safeArchiveName));
+  return path.join(destinationDir, safeArchiveName);
+}
+
 async function resolveInstallDirs(mode, installPath) {
   const settings = await getEffectiveSettings();
   const defaultRoot = getDefaultDataRoot();
@@ -999,6 +1009,19 @@ async function installArchiveInternal(webContents, payload) {
             await extractNestedArchiveIfPresent(extractTempPath, cancelState, webContents, jobId);
             await flattenSingleTopFolder(extractTempPath);
           }
+        }
+
+        if (!recoveredFromRarFallback && mode === "mod" && archiveSignature === "rar") {
+          const preservedArchivePath = await preserveFailedArchive({
+            resolvedInstallPath,
+            installSubdir,
+            archiveName,
+            tempArchivePath,
+            jobId,
+          });
+          throw new Error(
+            `RAR extraction failed. The archive was kept at ${preservedArchivePath}. Extract it manually or install unrar, then import the extracted folder.`,
+          );
         }
 
         if (!recoveredFromRarFallback && mode === "mod") {
