@@ -334,7 +334,8 @@ export function Library() {
                     return;
                   }
                   const defaultEngine = installedEngines.find((engine) => engine.isDefault) ?? installedEngines[0];
-                  await addManualModFromFolder(defaultEngine.id);
+                  const linkInstead = window.confirm(t("library.addManualImportMode", "Link this folder instead of copying it into FunkHub? Select Cancel to copy."));
+                  await addManualModFromFolder(defaultEngine.id, undefined, undefined, linkInstead ? "link" : "copy");
                   toast.success(t("library.addManualSuccess", "Manual mod added."));
                 } catch (error) {
                   toast.error(error instanceof Error ? error.message : t("library.addManualError", "Failed to add manual mod"));
