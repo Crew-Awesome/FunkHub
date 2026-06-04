@@ -1567,9 +1567,6 @@ async function handleOpenPath(payload) {
     allowExternal: path.isAbsolute(targetPath),
     errorMessage: "targetPath must be inside FunkHub data root",
   });
-  if (!isPathInside(rootPath, absolutePath)) {
-    throw new Error("targetPath must be inside FunkHub data root");
-  }
   const error = await shell.openPath(absolutePath);
   if (error) {
     return { ok: false, error };
