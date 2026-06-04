@@ -1093,7 +1093,7 @@ export class FunkHubService {
     return installed;
   }
 
-  async addManualModFromFolder(input: { engineId: string; sourcePath?: string; modName?: string }): Promise<InstalledMod> {
+  async addManualModFromFolder(input: { engineId: string; sourcePath?: string; modName?: string; importMode?: "copy" | "link" }): Promise<InstalledMod> {
     const engine = this.installedEngines.find((entry) => entry.id === input.engineId);
     if (!engine) {
       throw new Error("Engine installation not found");
@@ -1113,6 +1113,7 @@ export class FunkHubService {
       sourcePath,
       targetModsPath: engine.modsPath,
       installSubdir: folderName,
+      importMode: input.importMode ?? "copy",
     });
 
     if (!result.ok || !result.installPath) {
@@ -1131,6 +1132,7 @@ export class FunkHubService {
       requiredEngine: engine.slug,
       sourceFileId: 0,
       manual: true,
+      linked: result.linked || undefined,
     };
 
     this.installedMods = [installed, ...this.installedMods];
