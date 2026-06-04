@@ -1814,6 +1814,7 @@ async function handleImportModFolder(payload) {
   const sourcePath = payload?.sourcePath;
   const targetModsPath = payload?.targetModsPath;
   const installSubdir = payload?.installSubdir;
+  const importMode = payload?.importMode === "link" ? "link" : "copy";
 
   if (!sourcePath || !targetModsPath || !installSubdir) {
     throw new Error("sourcePath, targetModsPath and installSubdir are required");
@@ -1836,6 +1837,14 @@ async function handleImportModFolder(payload) {
     throw new Error("target path must be inside FunkHub data root");
   }
 
+  if (importMode === "link") {
+    return {
+      ok: true,
+      installPath: sourceAbsolute,
+      linked: true,
+    };
+  }
+
   await ensureDir(targetRoot);
   await removePath(targetInstall);
   await fs.cp(sourceAbsolute, targetInstall, { recursive: true });
@@ -1843,6 +1852,7 @@ async function handleImportModFolder(payload) {
   return {
     ok: true,
     installPath: path.relative(rootPath, targetInstall).replace(/\\/g, "/"),
+    linked: false,
   };
 }
 
