@@ -433,7 +433,7 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       if (settings.compatibilityChecks && hasExe) {
         const exeFiles = rawFileList.filter((f) => /\.(exe|msi|bat|cmd|ps1|sh|appimage|dmg|pkg)$/i.test(f));
         const proceed = window.confirm(
-          `⚠️ This archive contains executable file(s):\n\n${exeFiles.slice(0, 5).join("\n")}${exeFiles.length > 5 ? `\n…and ${exeFiles.length - 5} more` : ""}\n\nOnly install mods from sources you trust.\n\nContinue installing "${profile.name}"?`,
+          `Warning: this archive contains executable file(s):\n\n${exeFiles.slice(0, 5).join("\n")}${exeFiles.length > 5 ? `\n...and ${exeFiles.length - 5} more` : ""}\n\nOnly install mods from sources you trust.\n\nContinue installing "${profile.name}"?`,
         );
         if (!proceed) return;
       }
