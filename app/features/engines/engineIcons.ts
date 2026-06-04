@@ -1,11 +1,11 @@
 import type { EngineSlug } from "../../services/funkhub";
-import psychIcon from "../../../styles/assets/engine_psych.png";
-import basegameIcon from "../../../styles/assets/engine_basegame.png";
-import codenameIcon from "../../../styles/assets/engine_codename.png";
-import fpsPlusIcon from "../../../styles/assets/engine_fps_plus.png";
-import jsEngineIcon from "../../../styles/assets/engine_js_engine.png";
-import alePsychIcon from "../../../styles/assets/engine_ale_psych.png";
-import pSliceIcon from "../../../styles/assets/engine_p_slice.png";
+import psychIcon from "./assets/engine_psych.png";
+import basegameIcon from "./assets/engine_basegame.png";
+import codenameIcon from "./assets/engine_codename.png";
+import fpsPlusIcon from "./assets/engine_fps_plus.png";
+import jsEngineIcon from "./assets/engine_js_engine.png";
+import alePsychIcon from "./assets/engine_ale_psych.png";
+import pSliceIcon from "./assets/engine_p_slice.png";
 
 const remoteIconUrls: Partial<Record<EngineSlug, string>> = {
   "fnf-love": "https://raw.githubusercontent.com/Stilic/FNF-LOVE/main/art/logo.png",
