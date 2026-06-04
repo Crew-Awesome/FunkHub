@@ -833,9 +833,9 @@ async function detectArchiveSignature(filePath) {
 }
 
 async function installRawModPackage({ resolvedInstallPath, installSubdir, archiveName, tempArchivePath, jobId }) {
-  const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
-  const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
-  const safeArchiveName = path.basename(archiveName || `package-${jobId}.bin`).replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `package-${jobId}.bin`;
+  const folderNameBase = installSubdir || stripKnownArchiveExtension(archiveName) || `mod-${jobId}`;
+  const safeFolderName = sanitizeInstallFolderName(folderNameBase, `mod-${jobId}`);
+  const safeArchiveName = sanitizeArchiveFileName(archiveName, `package-${jobId}.bin`);
   const destinationDir = path.join(resolvedInstallPath, safeFolderName);
   await removePath(destinationDir);
   await ensureDir(destinationDir);
@@ -844,7 +844,7 @@ async function installRawModPackage({ resolvedInstallPath, installSubdir, archiv
 }
 
 async function installRawStandalonePackage({ resolvedInstallPath, archiveName, tempArchivePath, jobId }) {
-  const safeArchiveName = path.basename(archiveName || `package-${jobId}.bin`).replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `package-${jobId}.bin`;
+  const safeArchiveName = sanitizeArchiveFileName(archiveName, `package-${jobId}.bin`);
   await removePath(resolvedInstallPath);
   await ensureDir(resolvedInstallPath);
   await fs.copyFile(tempArchivePath, path.join(resolvedInstallPath, safeArchiveName));
@@ -1053,8 +1053,8 @@ async function installArchiveInternal(webContents, payload) {
               }
             }
             if (!modRoot || !destinationName) {
-              const folderNameBase = installSubdir || archiveName.replace(/\.[^.]+$/, "") || `mod-${jobId}`;
-              const safeFolderName = folderNameBase.replace(/[^A-Za-z0-9._ -]/g, "_").trim() || `mod-${jobId}`;
+              const folderNameBase = installSubdir || stripKnownArchiveExtension(archiveName) || `mod-${jobId}`;
+              const safeFolderName = sanitizeInstallFolderName(folderNameBase, `mod-${jobId}`);
               modRoot = await ensureModFolderStructure(extractTempPath, safeFolderName);
               destinationName = safeFolderName;
             }
