@@ -1763,6 +1763,7 @@ async function handleImportEngineFolder(payload) {
   const sourcePath = payload?.sourcePath;
   const slug = payload?.slug;
   const version = payload?.version;
+  const importMode = payload?.importMode === "link" ? "link" : "copy";
 
   if (!sourcePath || !slug) {
     throw new Error("sourcePath and slug are required");
@@ -1777,18 +1778,23 @@ async function handleImportEngineFolder(payload) {
   const { rootPath, enginesPath } = await resolveInstallDirs("engine", `engines/${slug}`);
   await ensureDir(enginesPath);
 
-  const safeVersion = (version || "imported").toString().replace(/[^A-Za-z0-9._-]+/g, "-") || "imported";
+  const safeVersion = sanitizePathSegment(version || "imported", "imported");
   const relInstallPath = `engines/${slug}/${safeVersion}-${Date.now()}`;
   const absoluteInstallPath = safeJoin(rootPath, relInstallPath);
 
-  await removePath(absoluteInstallPath);
-  await ensureDir(path.dirname(absoluteInstallPath));
-  await fs.cp(sourceAbsolute, absoluteInstallPath, { recursive: true });
-  await ensureDir(path.join(absoluteInstallPath, "mods"));
-
-  const launchablePath = await findLaunchableExecutable(absoluteInstallPath, [slug, path.basename(sourceAbsolute), "funkin", "engine"]);
-  if (!launchablePath) {
+  const effectiveInstallPath = importMode === "link" ? sourceAbsolute : absoluteInstallPath;
+  if (importMode === "copy") {
     await removePath(absoluteInstallPath);
+    await ensureDir(path.dirname(absoluteInstallPath));
+    await fs.cp(sourceAbsolute, absoluteInstallPath, { recursive: true });
+    await ensureDir(path.join(absoluteInstallPath, "mods"));
+  }
+
+  const launchablePath = await findLaunchableExecutable(effectiveInstallPath, [slug, path.basename(sourceAbsolute), "funkin", "engine"]);
+  if (!launchablePath) {
+    if (importMode === "copy") {
+      await removePath(absoluteInstallPath);
+    }
     return {
       ok: false,
       error: "Imported folder has no launchable executable for this platform",
@@ -1797,9 +1803,10 @@ async function handleImportEngineFolder(payload) {
 
   return {
     ok: true,
-    installPath: relInstallPath,
-    modsPath: `${relInstallPath}/mods`,
+    installPath: importMode === "link" ? effectiveInstallPath : relInstallPath,
+    modsPath: importMode === "link" ? path.join(effectiveInstallPath, "mods") : `${relInstallPath}/mods`,
     detectedVersion: detectVersionFromName(path.basename(sourceAbsolute)) || version || "imported",
+    linked: importMode === "link",
   };
 }
 
