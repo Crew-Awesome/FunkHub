@@ -30,4 +30,10 @@ describe("runtime regressions", () => {
       randomUUID: () => "test-uuid",
     });
   });
+
+  it("preserves VS-prefixed names when sanitizing install folders", () => {
+    expect(sanitizeModFolderName("VS. Sky Reborn")).toBe("VS. Sky Reborn");
+    expect(pathUtils.stripKnownArchiveExtension("VS. Sky Reborn")).toBe("VS. Sky Reborn");
+    expect(pathUtils.stripKnownArchiveExtension("VS. Sky Reborn.rar")).toBe("VS. Sky Reborn");
+  });
 });
