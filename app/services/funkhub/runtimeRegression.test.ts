@@ -57,4 +57,30 @@ describe("runtime regressions", () => {
     expect(result.total).toBe(3);
     expect(result.limit).toBe(2);
   });
+
+  it("launches standalone mods without requiring an installed engine", async () => {
+    const standalone: InstalledMod = {
+      id: "mod-1",
+      modId: -1,
+      modName: "Standalone",
+      gamebananaUrl: "",
+      installedAt: Date.now(),
+      installPath: "executables/standalone",
+      engine: "basegame",
+      sourceFileId: 0,
+      standalone: true,
+    };
+    writeStorage("funkhub-installed-mods", [standalone]);
+    writeStorage("funkhub-installed-engines", []);
+    const launchEngine = vi.fn(async () => ({ ok: true }));
+    window.funkhubDesktop = { launchEngine } as unknown as typeof window.funkhubDesktop;
+
+    const service = new FunkHubService();
+    await service.launchInstalledMod("mod-1");
+
+    expect(launchEngine).toHaveBeenCalledWith(expect.objectContaining({
+      installPath: "executables/standalone",
+      launchId: "mod-1",
+    }));
+  });
 });
