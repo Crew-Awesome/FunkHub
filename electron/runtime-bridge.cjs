@@ -1729,36 +1729,26 @@ async function handleListDirectory(payload) {
 
   const directoriesOnly = payload?.directoriesOnly === true;
   const filesOnly = payload?.filesOnly === true;
+  const limit = payload?.limit;
 
   const { dataRootDirectory } = await getEffectiveSettings();
   const rootPath = dataRootDirectory
     ? path.resolve(dataRootDirectory)
     : getDefaultDataRoot();
-  const absolutePath = path.isAbsolute(targetPath)
-    ? path.resolve(targetPath)
-    : safeJoin(rootPath, targetPath);
+  const absolutePath = resolveRuntimePath(rootPath, targetPath, {
+    allowExternal: path.isAbsolute(targetPath),
+    errorMessage: "targetPath must be inside FunkHub data root",
+  });
 
   try {
-    const entries = await fs.readdir(absolutePath, { withFileTypes: true });
-    const normalized = entries
-      .filter((entry) => {
-        if (directoriesOnly) {
-          return entry.isDirectory();
-        }
-        if (filesOnly) {
-          return entry.isFile();
-        }
-        return entry.isFile() || entry.isDirectory();
-      })
-      .map((entry) => ({
-        name: entry.name,
-        path: path.join(absolutePath, entry.name),
-        isDirectory: entry.isDirectory(),
-      }));
+    const listed = await listDirectoryEntries(fs, absolutePath, { directoriesOnly, filesOnly, limit });
 
     return {
       ok: true,
-      entries: normalized,
+      entries: listed.entries,
+      truncated: listed.truncated,
+      total: listed.total,
+      limit: listed.limit,
     };
   } catch (error) {
     return {
