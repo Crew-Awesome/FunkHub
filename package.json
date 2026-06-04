@@ -13,12 +13,8 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "test:windows": "scripts\\test-windows.bat",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "electron:dev": "vite --host 127.0.0.1 --port 5173 & electron ./electron/main.cjs",
     "electron:start": "electron ./electron/main.cjs",
     "typecheck": "tsc --noEmit -p tsconfig.ci.json",
