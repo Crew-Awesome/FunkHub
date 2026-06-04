@@ -163,6 +163,7 @@ export interface InstalledMod {
   latestVersion?: string;
   pinned?: boolean;
   notes?: string;
+  linked?: boolean;
 }
 
 export type EngineSlug =
@@ -317,20 +318,24 @@ export interface DesktopBridge {
     sourcePath: string;
     slug: EngineSlug;
     version?: string;
+    importMode?: "copy" | "link";
   }) => Promise<{
     ok: boolean;
     installPath?: string;
     modsPath?: string;
     detectedVersion?: string;
+    linked?: boolean;
     error?: string;
   }>;
   importModFolder: (payload: {
     sourcePath: string;
     targetModsPath: string;
     installSubdir: string;
+    importMode?: "copy" | "link";
   }) => Promise<{
     ok: boolean;
     installPath?: string;
+    linked?: boolean;
     error?: string;
   }>;
   inspectPath: (payload: { targetPath: string }) => Promise<{
@@ -413,6 +418,7 @@ export interface InstalledEngine {
   installedAt: number;
   updateAvailable?: boolean;
   latestVersion?: string;
+  linked?: boolean;
 }
 
 export type EngineHealth = "ready" | "missing_binary" | "broken_install";
