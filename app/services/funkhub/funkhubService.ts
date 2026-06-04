@@ -83,7 +83,7 @@ function sanitizePathSegment(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "latest";
 }
 
-function sanitizeModFolderName(value: string): string {
+export function sanitizeModFolderName(value: string): string {
   return value.trim().replace(/[<>:"/\\|?*\x00-\x1F]+/g, "_").replace(/\s+/g, " ").replace(/^\.+$/, "").trim() || "manual-mod";
 }
 
