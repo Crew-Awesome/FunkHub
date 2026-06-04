@@ -3,16 +3,16 @@ setlocal
 
 cd /d "%~dp0.."
 
-where npm >nul 2>&1
+where bun >nul 2>&1
 if errorlevel 1 (
-  echo [FunkHub] npm was not found in PATH.
-  echo Install Node.js first: https://nodejs.org/
+  echo [FunkHub] Bun was not found in PATH.
+  echo Install Bun first: https://bun.sh/
   exit /b 1
 )
 
 if not exist "node_modules" (
   echo [FunkHub] Installing dependencies...
-  call npm.cmd install
+  call bun install --frozen-lockfile
   if errorlevel 1 (
     echo [FunkHub] Failed to install dependencies.
     exit /b 1
@@ -20,7 +20,7 @@ if not exist "node_modules" (
 )
 
 echo [FunkHub] Building Windows desktop app...
-call npm.cmd run build:desktop:win
+call bun run build:desktop:win
 if errorlevel 1 (
   echo [FunkHub] Build failed.
   exit /b 1
