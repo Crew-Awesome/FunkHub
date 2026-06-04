@@ -36,4 +36,8 @@ describe("runtime regressions", () => {
     expect(pathUtils.stripKnownArchiveExtension("VS. Sky Reborn")).toBe("VS. Sky Reborn");
     expect(pathUtils.stripKnownArchiveExtension("VS. Sky Reborn.rar")).toBe("VS. Sky Reborn");
   });
+
+  it("keeps rar recognized as an archive", () => {
+    expect(modInstallerService.isArchive({ fileName: "mod.rar" })).toBe(true);
+  });
 });
