@@ -1060,7 +1060,7 @@ export class FunkHubService {
     }
   }
 
-  async importEngineFromFolder(input: { slug: EngineSlug; versionHint?: string; sourcePath?: string; customName?: string }): Promise<InstalledEngine> {
+  async importEngineFromFolder(input: { slug: EngineSlug; versionHint?: string; sourcePath?: string; customName?: string; importMode?: "copy" | "link" }): Promise<InstalledEngine> {
     const sourcePath = input.sourcePath || await this.pickFolder({ title: "Select engine folder to import" });
     if (!sourcePath) {
       throw new Error("Engine import cancelled");
@@ -1074,6 +1074,7 @@ export class FunkHubService {
       sourcePath,
       slug: input.slug,
       version: input.versionHint,
+      importMode: input.importMode ?? "copy",
     });
 
     if (!result.ok || !result.installPath || !result.modsPath) {
@@ -1086,6 +1087,7 @@ export class FunkHubService {
       installPath: result.installPath,
       modsPath: result.modsPath,
       customName: input.customName?.trim() || undefined,
+      linked: result.linked,
     });
     await this.refreshEngineHealth(installed.id);
     return installed;
