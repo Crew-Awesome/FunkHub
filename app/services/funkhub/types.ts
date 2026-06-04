@@ -345,9 +345,12 @@ export interface DesktopBridge {
     absolutePath?: string;
     error?: string;
   }>;
-  listDirectory: (payload: { targetPath: string; directoriesOnly?: boolean; filesOnly?: boolean }) => Promise<{
+  listDirectory: (payload: { targetPath: string; directoriesOnly?: boolean; filesOnly?: boolean; limit?: number }) => Promise<{
     ok: boolean;
     entries: Array<{ name: string; path: string; isDirectory: boolean }>;
+    truncated?: boolean;
+    total?: number;
+    limit?: number;
     error?: string;
   }>;
   pickFolder: (payload?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>;
