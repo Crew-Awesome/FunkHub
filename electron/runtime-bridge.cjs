@@ -6,8 +6,18 @@ const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
 const { app, BrowserWindow } = require("electron");
 const { path7za } = require("7zip-bin");
+const {
+  ARCHIVE_EXTENSIONS,
+  stripKnownArchiveExtension,
+  sanitizeInstallFolderName,
+  sanitizeArchiveFileName,
+  sanitizePathSegment,
+  safeJoin,
+  isPathInside,
+  resolveRuntimePath,
+} = require("./runtime/path-utils.cjs");
+const { listDirectoryEntries } = require("./runtime/directory.cjs");
 
-const ARCHIVE_EXTENSIONS = [".zip", ".rar", ".7z"];
 const GITHUB_RELEASES_URL = "https://github.com/Crew-Awesome/FunkHub/releases/latest";
 const jobState = new Map();
 const runningProcesses = new Map(); // launchId -> { pid, installPath, startTime, child }
@@ -308,21 +318,6 @@ function emitProgress(webContents, payload) {
   }
 
   webContents.send("funkhub:install-progress", payload);
-}
-
-function safeJoin(base, requestedPath) {
-  const normalized = path
-    .normalize(requestedPath || "")
-    .replace(/^([A-Za-z]:)?[\\/]+/, "")
-    .replace(/\.\.(?:[\\/]|$)/g, "");
-  return path.join(base, normalized);
-}
-
-function isPathInside(basePath, targetPath) {
-  const baseResolved = path.resolve(basePath);
-  const targetResolved = path.resolve(targetPath);
-  const relative = path.relative(baseResolved, targetResolved);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 async function ensureDir(dirPath) {
