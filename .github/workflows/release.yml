@@ -30,12 +30,9 @@ jobs:
             package_cmd: node ./node_modules/electron-builder/cli.js --linux AppImage --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION}
           - os: windows-latest
             artifact: FunkHub-windows
-            package_cmd: node ./node_modules/electron-builder/cli.js --win nsis portable --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION}
+            package_cmd: node ./node_modules/electron-builder/cli.js --win portable --x64 --publish never --config.extraMetadata.version=${BUILD_VERSION}
             artifact_glob: |
               dist-desktop/*.exe
-              dist-desktop/**/latest*.yml
-              dist-desktop/**/builder-*.yml
-              dist-desktop/**/*.blockmap
           - os: macos-latest
             artifact: FunkHub-macos
             package_cmd: node ./node_modules/electron-builder/cli.js --mac dmg zip --publish never --config.extraMetadata.version=${BUILD_VERSION}
@@ -126,15 +123,15 @@ jobs:
           fi
           find dist-desktop -type f -name "*.AppImage" -print
 
-      - name: Verify Windows installer output
+      - name: Verify Windows portable output
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           $files = Get-ChildItem -Path dist-desktop -Filter *.exe -File
           if ($files.Count -eq 0) {
-            Write-Error "No Windows installers (.exe) were produced under dist-desktop/."
+            Write-Error "No Windows portable executable (.exe) was produced under dist-desktop/."
           }
-          $files | ForEach-Object { Write-Host "Found Windows installer: $($_.FullName)" }
+          $files | ForEach-Object { Write-Host "Found Windows portable executable: $($_.FullName)" }
 
       - name: Verify macOS installer output
         if: matrix.os == 'macos-latest'
@@ -214,7 +211,6 @@ jobs:
           set -euo pipefail
           linux_count=$(find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage" | wc -l | tr -d ' ')
           windows_count=$(find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe" | wc -l | tr -d ' ')
-          windows_update_metadata_count=$(find release-artifacts/FunkHub-windows -type f -name "latest*.yml" | wc -l | tr -d ' ')
           mac_dmg_count=$(find release-artifacts/FunkHub-macos -type f -name "*.dmg" | wc -l | tr -d ' ')
           mac_zip_count=$(find release-artifacts/FunkHub-macos -type f -name "*.zip" | wc -l | tr -d ' ')
           mac_update_metadata_count=$(find release-artifacts/FunkHub-macos -type f -name "latest*.yml" | wc -l | tr -d ' ')
@@ -223,11 +219,7 @@ jobs:
             exit 1
           fi
           if [[ "$windows_count" -eq 0 ]]; then
-            echo "Release payload missing Windows .exe installers."
-            exit 1
-          fi
-          if [[ "$windows_update_metadata_count" -eq 0 ]]; then
-            echo "Release payload missing Windows updater metadata (latest*.yml)."
+            echo "Release payload missing Windows portable executable."
             exit 1
           fi
           if [[ "$mac_dmg_count" -eq 0 ]]; then
@@ -245,7 +237,6 @@ jobs:
           find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage" -print
           find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe" -print
           find release-artifacts/FunkHub-macos -type f -name "*.dmg" -print
-          find release-artifacts/FunkHub-windows -type f -name "latest*.yml" -print
           find release-artifacts/FunkHub-macos -type f -name "*.zip" -print
           find release-artifacts/FunkHub-macos -type f -name "latest*.yml" -print
 
@@ -260,7 +251,7 @@ jobs:
               find release-artifacts/FunkHub-linux-appimage -type f -name "*.AppImage"
               find release-artifacts/FunkHub-linux-appimage -type f -name "latest-linux*.yml"
               find release-artifacts/FunkHub-linux-appimage -type f -name "*.blockmap"
-              find release-artifacts/FunkHub-windows -type f \( -name "*.exe" -o -name "latest*.yml" -o -name "*.blockmap" \)
+              find release-artifacts/FunkHub-windows -type f -name "*.exe"
               find release-artifacts/FunkHub-macos -type f \( -name "*.dmg" -o -name "*.zip" -o -name "latest*.yml" -o -name "*.blockmap" \)
             } | sort
           )
@@ -286,6 +277,44 @@ jobs:
             printf '%s\n' "${files[@]}"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Pick GameBanana upload asset
+        id: gamebanana_asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t windows_assets < <(find release-artifacts/FunkHub-windows -maxdepth 1 -type f -name "*.exe" | sort)
+          if [[ "${#windows_assets[@]}" -ne 1 ]]; then
+            echo "Expected exactly one Windows portable executable for GameBanana, found ${#windows_assets[@]}."
+            printf '%s\n' "${windows_assets[@]}"
+            exit 1
+          fi
+          echo "path=${windows_assets[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to GameBanana
+        id: gitbanana
+        uses: Microck/gitbanana@v1
+        with:
+          submission-id: ${{ vars.GAMEBANANA_SUBMISSION_ID }}
+          api-section: Tool
+          page-section: tools
+          asset: ${{ steps.gamebanana_asset.outputs.path }}
+          release-tag: ${{ github.ref_name }}
+          release-name: FunkHub ${{ github.ref_name }}
+          release-notes: |
+            FunkHub ${{ github.ref_name }}
+
+            - See the GitHub release for full release details.
+          storage-state-b64-gz: ${{ secrets.GAMEBANANA_STORAGE_STATE_B64_GZ }}
+          debug-dir: ${{ runner.temp }}/gitbanana-debug
+
+      - name: Upload gitbanana debug artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitbanana-debug-${{ github.ref_name }}
+          path: ${{ runner.temp }}/gitbanana-debug
+          if-no-files-found: ignore
 
       - name: Create GitHub Release and upload binaries
         uses: softprops/action-gh-release@v2
