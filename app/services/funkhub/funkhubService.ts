@@ -917,6 +917,10 @@ export class FunkHubService {
       return;
     }
 
+    if (options?.deleteFiles && installed.linked) {
+      throw new Error("Linked mod files are external and will not be deleted by FunkHub");
+    }
+
     if (options?.deleteFiles && window.funkhubDesktop?.deletePath) {
       const result = await window.funkhubDesktop.deletePath({ targetPath: installed.installPath });
       if (!result.ok) {
