@@ -244,8 +244,6 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
       }
 
       if (selectedCategoryId === undefined) {
-        // No search, no category - use Subfeed (Ripe / New / Updated)
-        // Subfeed returns up to ~15 items/page regardless of perPage, so check mods.length > 0
         const paged = await funkHubService.getSubfeedPage({
           sort: subfeedSort,
           page: discoverPage,
@@ -262,7 +260,6 @@ export function FunkHubProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Category selected - use Mod/Index with user-chosen sort
       const paged = await funkHubService.listModsPage({
         categoryId: selectedCategoryId,
         page: discoverPage,
