@@ -13,5 +13,5 @@
     "types": ["vite/client"],
     "resolveJsonModule": true
   },
-  "include": ["app", "main.tsx", "vite.config.ts"]
+  "include": ["app", "vite.config.ts"]
 }

@@ -5,6 +5,7 @@
   },
   "include": [
     "app/App.tsx",
+    "app/main.tsx",
     "app/router.tsx",
     "app/app-shell/**/*.tsx",
     "app/features/**/*.tsx",
