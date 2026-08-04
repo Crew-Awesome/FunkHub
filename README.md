@@ -1,3 +1,9 @@
+# THIS APP IS OUTDATED, BROKEN AND USELESS, PLEASE MOVE TO WEEKBOX, WEEKBOX TRANSFER FROM FUNKHUB WILL COME SOON
+
+
+
+
+
 # FunkHub
 
 ![Windows](https://img.shields.io/badge/Windows-Supported-2ea44f)
